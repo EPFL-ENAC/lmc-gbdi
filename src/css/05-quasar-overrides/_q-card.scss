@@ -1,0 +1,8 @@
+@use '../02-tokens' as tokens;
+
+// Guideline cards are flat with a hairline border (p.25).
+.q-card {
+  border-radius: tokens.$card-radius;
+  box-shadow: none;
+  border: tokens.$card-border-width solid tokens.$card-border-color;
+}

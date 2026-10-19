@@ -1,0 +1,5 @@
+// Quasar hook point (quasar.config.js → build.sassVariables).
+// Delegates to the token bridge. To change a token, edit it in
+// 02-tokens/ (options → decisions → components); the token files are Sass
+// modules, so variables set here would not reach them.
+@import './02-tokens/quasar-bridge';

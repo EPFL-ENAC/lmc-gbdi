@@ -1,0 +1,204 @@
+// ============================================================================
+// DECISIONS — semantic tokens. "What is this colour FOR?"
+// Only references options. Components and app code read these, never raw hex.
+// Rule followed throughout: keep the GBDI design as printed; where the PDF
+// is silent, follow gbdi.io; contrast figures are noted, not "fixed".
+// ============================================================================
+@use 'options' as opt;
+
+// ---------------------------------------------------------------------------
+// Brand
+// ---------------------------------------------------------------------------
+// Primary Green: small splashes — buttons on the website, illustration
+// highlights, icons, hero numbers. Never large background fills (p.14).
+$color-primary: opt.$tokens-colors-primary-green !default;
+// Green Dark: green copy smaller than 24pt (p.17); hover of green controls.
+// 6.19:1 on white.
+$color-primary-strong: opt.$tokens-colors-green-dark !default;
+$color-accent: opt.$tokens-colors-orange-bright !default; // "Green Bright + Light + Orange Bright" (p.16)
+
+// ---------------------------------------------------------------------------
+// Surfaces
+// ---------------------------------------------------------------------------
+$color-surface: opt.$tokens-colors-white !default; // page + white standard card
+$color-surface-muted: opt.$tokens-colors-green-grey-card !default; // grey card, buttons, page bands, table head
+$color-surface-highlight: opt.$tokens-colors-green-grey-accent !default; // highlight colour (p.19)
+$color-border: opt.$tokens-colors-green-grey-border !default; // card border (p.19, p.25)
+// Control border: the "Download" button outline is Green-Grey Accent (p.6).
+$color-border-control: opt.$tokens-colors-green-grey-accent !default;
+
+// ---------------------------------------------------------------------------
+// Text
+// ---------------------------------------------------------------------------
+$color-text: opt.$tokens-colors-black !default; // heading + text colour, 10.7:1
+$color-text-muted: opt.$tokens-colors-grey-dark !default; // secondary text, 5.92:1
+// Grey Text — the guideline "Paragraph colour" for lead/intro paragraphs
+// (p.13) and the faded words of display lines ("Better Buildings", p.35).
+$color-text-lead: opt.$tokens-colors-grey-text !default;
+$color-text-on-primary: opt.$tokens-colors-white !default;
+$color-text-link: opt.$tokens-colors-green-dark !default;
+$color-text-disabled: opt.$tokens-colors-grey-text !default;
+
+// ---------------------------------------------------------------------------
+// Status
+// ---------------------------------------------------------------------------
+$color-status-success: opt.$tokens-colors-green-dark !default;
+$color-status-info: opt.$tokens-colors-blue-dark !default;
+$color-status-warning: opt.$tokens-colors-orange-dark !default;
+// WARNING: not GBDI — see the box in _options.scss.
+$color-status-error: opt.$tokens-colors-suggested-red-not-gbdi !default;
+
+// ---------------------------------------------------------------------------
+// Focus
+// ---------------------------------------------------------------------------
+$focus-ring-color: opt.$tokens-colors-green-dark !default;
+$focus-ring-width: 2px !default;
+$focus-ring-offset: 2px !default;
+
+// ---------------------------------------------------------------------------
+// Hero tones — (fill, number, text) triples, p.17 and p.25:
+// "Pastel on card backgrounds · Bright on copy >= 60pt · Dark on copy < 24pt"
+// Orange is not drawn as a hero card in the PDF; it follows the same rule
+// except the number: Orange Bright on Orange Pastel is 1.8:1, so the number
+// uses Orange Dark (#CC7212, palette p.14) like the text — 2.9:1.
+// ---------------------------------------------------------------------------
+$hero-tones: (
+  'green': (
+    bg: opt.$tokens-colors-green-pastel,
+    number: opt.$tokens-colors-green-bright,
+    text: opt.$tokens-colors-green-dark,
+  ),
+  'blue': (
+    bg: opt.$tokens-colors-blue-pastel,
+    number: opt.$tokens-colors-blue-bright,
+    text: opt.$tokens-colors-blue-dark,
+  ),
+  'purple': (
+    bg: opt.$tokens-colors-purple-pastel,
+    number: opt.$tokens-colors-purple-bright,
+    text: opt.$tokens-colors-purple-dark,
+  ),
+  'orange': (
+    bg: opt.$tokens-colors-orange-pastel,
+    number: opt.$tokens-colors-orange-dark,
+    text: opt.$tokens-colors-orange-dark,
+  ),
+) !default;
+
+// ---------------------------------------------------------------------------
+// Data visualisation (p.15–16) — the secondary palette's main job.
+// Categorical order: green first (builds brand equity), then blue, purple,
+// orange. Each hue ships a 4-step ramp for stacked / range bars.
+// ---------------------------------------------------------------------------
+$dataviz-categorical: (
+  opt.$tokens-colors-green-bright,
+  opt.$tokens-colors-blue-bright,
+  opt.$tokens-colors-purple-bright,
+  opt.$tokens-colors-orange-bright
+) !default;
+$dataviz-ramps: (
+  'green': (opt.$tokens-colors-green-dark, opt.$tokens-colors-green-bright, opt.$tokens-colors-green-light, opt.$tokens-colors-green-pastel),
+  'blue': (opt.$tokens-colors-blue-dark, opt.$tokens-colors-blue-bright, opt.$tokens-colors-blue-light, opt.$tokens-colors-blue-pastel),
+  'purple': (opt.$tokens-colors-purple-dark, opt.$tokens-colors-purple-bright, opt.$tokens-colors-purple-light, opt.$tokens-colors-purple-pastel),
+  'orange': (opt.$tokens-colors-orange-dark, opt.$tokens-colors-orange-bright, opt.$tokens-colors-orange-light, opt.$tokens-colors-orange-pastel),
+) !default;
+$dataviz-highlight: opt.$tokens-colors-orange-bright !default; // the dot on range charts (p.16)
+$dataviz-gridline: opt.$tokens-colors-green-grey-border !default;
+$dataviz-axis-text: opt.$tokens-colors-grey-dark !default;
+
+// ---------------------------------------------------------------------------
+// Illustration (p.24)
+// ---------------------------------------------------------------------------
+$illustration-stroke: opt.$tokens-colors-grey-dark !default;
+$illustration-stroke-width: opt.$tokens-illustration-stroke-width !default;
+$illustration-accent: opt.$tokens-colors-green-grey-accent !default;
+
+// ---------------------------------------------------------------------------
+// Typography
+// ---------------------------------------------------------------------------
+$text-font-family-display: opt.$tokens-typography-font-family-display !default;
+$text-font-family: opt.$tokens-typography-font-family-base !default;
+
+$text-size-display-xl: opt.$tokens-typography-font-size-display-xl !default;
+$text-size-display-lg: opt.$tokens-typography-font-size-display-lg !default;
+$text-size-display-md: opt.$tokens-typography-font-size-display-md !default;
+$text-size-display-xl-tablet: opt.$tokens-typography-font-size-display-xl-tablet !default;
+$text-size-display-lg-tablet: opt.$tokens-typography-font-size-display-lg-tablet !default;
+$text-size-display-mobile: opt.$tokens-typography-font-size-display-mobile !default;
+$text-size-heading-lg: opt.$tokens-typography-font-size-heading-lg !default;
+$text-size-heading-md: opt.$tokens-typography-font-size-heading-md !default;
+$text-size-lg: opt.$tokens-typography-font-size-body-lg !default;
+$text-size-base: opt.$tokens-typography-font-size-body-md !default;
+$text-size-sm: opt.$tokens-typography-font-size-sm !default;
+$text-size-xs: opt.$tokens-typography-font-size-xs !default;
+
+$text-line-height-display: opt.$tokens-typography-line-height-display !default;
+$text-line-height-tight: opt.$tokens-typography-line-height-tight !default;
+$text-line-height-base: opt.$tokens-typography-line-height-body !default;
+$text-line-height-paragraph: opt.$tokens-typography-line-height-paragraph !default;
+$text-line-height-hero: opt.$tokens-typography-line-height-hero !default;
+$text-line-height-relaxed: opt.$tokens-typography-line-height-relaxed !default;
+
+$text-weight-light: opt.$tokens-typography-font-weight-light !default;
+$text-weight-regular: opt.$tokens-typography-font-weight-regular !default;
+$text-weight-medium: opt.$tokens-typography-font-weight-medium !default;
+$text-weight-bold: opt.$tokens-typography-font-weight-bold !default;
+$text-letter-spacing-display: opt.$tokens-typography-letter-spacing-display !default;
+$text-letter-spacing-body: opt.$tokens-typography-letter-spacing-body !default;
+$text-letter-spacing-label: opt.$tokens-typography-letter-spacing-label !default;
+
+// ---------------------------------------------------------------------------
+// Spacing (semantic names, same as co2-calculator)
+// ---------------------------------------------------------------------------
+$spacing-xxs: opt.$tokens-spacing-1 !default;
+$spacing-xs: opt.$tokens-spacing-4 !default;
+$spacing-sm: opt.$tokens-spacing-8 !default;
+$spacing-md: opt.$tokens-spacing-12 !default;
+$spacing-lg: opt.$tokens-spacing-16 !default;
+$spacing-xl: opt.$tokens-spacing-24 !default;
+$spacing-xxl: opt.$tokens-spacing-32 !default;
+$spacing-page: opt.$tokens-spacing-48 !default;
+
+// Radii
+$radius-xs: opt.$tokens-border-radius-xs !default; // chips
+$radius-default: opt.$tokens-border-radius-sm !default; // buttons, inputs, swatches, hero cards
+$radius-default-px: opt.$tokens-border-radius-sm-px !default;
+$radius-card: opt.$tokens-border-radius-md !default; // standard cards
+$radius-panel: opt.$tokens-border-radius-lg !default; // large panels
+$radius-pill: opt.$tokens-border-radius-full !default;
+
+// Borders
+$border-width: opt.$tokens-border-width !default;
+
+// Heights
+$size-control-md: opt.$tokens-size-control-md !default;
+$size-control-sm: opt.$tokens-size-control-sm !default;
+$size-chip: opt.$tokens-size-chip !default;
+
+// Layout
+$layout-page-width: opt.$tokens-layout-page-width !default;
+$layout-page-padding-x: opt.$tokens-spacing-16 !default;
+$layout-page-padding-y: opt.$tokens-spacing-48 !default;
+$layout-gap-y: opt.$tokens-spacing-24 !default;
+
+$modal-width-lg: opt.$tokens-layout-modal-width-lg !default;
+$modal-width-md: opt.$tokens-layout-modal-width-md !default;
+$modal-width-sm: opt.$tokens-layout-modal-width-sm !default;
+
+// Breakpoints [gbdi.io]
+$breakpoint-mobile-max: opt.$tokens-breakpoint-mobile-max !default;
+$breakpoint-tablet-max: opt.$tokens-breakpoint-tablet-max !default;
+$breakpoint-desktop-min: opt.$tokens-breakpoint-desktop-min !default;
+
+// Elevation — flat by default; shadow only for floating layers.
+$shadow-floating: opt.$tokens-box-shadow-floating !default;
+
+// Motion
+$transition-default: opt.$tokens-transitions-default !default;
+
+// Link
+$link-color: $color-text-link !default;
+$link-underline-color: $color-text-link !default;
+$link-underline-offset: opt.$tokens-spacing-2 !default;
+$link-hover-color: $color-text !default;
+$link-hover-underline-color: $color-primary !default;

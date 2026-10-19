@@ -1,0 +1,42 @@
+@use 'sass:map';
+@use '../02-tokens' as tokens;
+
+// Hero card (p.17, p.25): pastel fill, big number, one short line.
+// ONE set of hero cards per page/application.
+//   <div class="gbdi-hero-card gbdi-hero-card--green">   (green|blue|purple|orange)
+//     <p class="gbdi-hero-card__number">42%</p>
+//     <p class="gbdi-hero-card__text">of global carbon emissions …</p>
+//   </div>
+.gbdi-hero-card {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-sm;
+  padding: tokens.$hero-card-padding;
+  border-radius: tokens.$hero-card-radius;
+
+  &__number {
+    font-family: tokens.$hero-card-number-font-family;
+    font-size: tokens.$hero-card-number-font-size;
+    line-height: tokens.$hero-card-number-line-height;
+    letter-spacing: tokens.$text-letter-spacing-display;
+  }
+
+  &__text {
+    font-size: tokens.$hero-card-text-font-size;
+    line-height: tokens.$hero-card-text-line-height;
+  }
+
+  @each $tone, $t in tokens.$hero-card-tones {
+    &--#{$tone} {
+      background-color: map.get($t, bg);
+
+      .gbdi-hero-card__number {
+        color: map.get($t, number);
+      }
+
+      .gbdi-hero-card__text {
+        color: map.get($t, text);
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+/* ==========================================================================
+   GBDI fonts (brand p.11–12)
+     SK Modernist — display font, headings >= 32px
+     Satoshi      — supporting font, small headings + body
+   Plain CSS: list it FIRST in quasar.config.js → css: ['00-fonts/fonts.css', 'app.scss']
+   (an @import of a remote stylesheet must open the bundled CSS).
+
+   Satoshi: Fontshare (Indian Type Foundry), free for commercial use under
+   the ITF Free Font EULA. The EULA allows serving it from ITF's own CDN but
+   not re-hosting it publicly, so the files are NOT committed to this public
+   repository: we use Fontshare's hosted CSS. Not on Google Fonts.
+
+   SK Modernist: free download (Sean Kane), no licence text found. Not on
+   Google Fonts. The family name and file are the ones gbdi.io serves (Framer
+   CDN, CORS open). Prefer /fonts/Sk-Modernist-Regular.woff2 once GBDI has
+   confirmed the web-embedding terms; see public/fonts/README.md.
+   ========================================================================== */
+
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap');
+
+@font-face {
+  font-family: 'Sk-Modernist';
+  src:
+    url('/fonts/Sk-Modernist-Regular.woff2') format('woff2'),
+    url('https://framerusercontent.com/assets/U4a3WwEPRrwt3tIJ4K5o30x8NGI.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}

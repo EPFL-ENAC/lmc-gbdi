@@ -1,0 +1,64 @@
+// Runtime CSS custom properties — for code that cannot read Sass
+// (charts, inline styles, canvas). Prefixed --gbdi-.
+@use 'sass:list';
+@use 'sass:map';
+@use 'decisions' as dec;
+@use 'components' as comp;
+@use 'options' as opt;
+
+:root {
+  // Brand + surfaces + text
+  --gbdi-color-primary: #{dec.$color-primary};
+  --gbdi-color-primary-strong: #{dec.$color-primary-strong};
+  --gbdi-color-accent: #{dec.$color-accent};
+  --gbdi-color-surface: #{dec.$color-surface};
+  --gbdi-color-surface-muted: #{dec.$color-surface-muted};
+  --gbdi-color-surface-highlight: #{dec.$color-surface-highlight};
+  --gbdi-color-border: #{dec.$color-border};
+  --gbdi-color-border-control: #{dec.$color-border-control};
+  --gbdi-color-text: #{dec.$color-text};
+  --gbdi-color-text-muted: #{dec.$color-text-muted};
+  --gbdi-color-text-lead: #{dec.$color-text-lead};
+  --gbdi-color-text-on-primary: #{dec.$color-text-on-primary};
+  --gbdi-focus-ring: #{dec.$focus-ring-width} solid #{dec.$focus-ring-color};
+
+  // Typography
+  --gbdi-font-display: #{dec.$text-font-family-display};
+  --gbdi-font-sans: #{dec.$text-font-family};
+
+  // Spacing + radii
+  --gbdi-spacing-xs: #{dec.$spacing-xs};
+  --gbdi-spacing-sm: #{dec.$spacing-sm};
+  --gbdi-spacing-md: #{dec.$spacing-md};
+  --gbdi-spacing-lg: #{dec.$spacing-lg};
+  --gbdi-spacing-xl: #{dec.$spacing-xl};
+  --gbdi-radius: #{dec.$radius-default};
+  --gbdi-radius-card: #{dec.$radius-card};
+  --gbdi-radius-panel: #{dec.$radius-panel};
+  --gbdi-size-control: #{dec.$size-control-md};
+
+  // Hero tones: --gbdi-hero-<tone>-{bg,number,text}
+  @each $tone, $t in dec.$hero-tones {
+    --gbdi-hero-#{$tone}-bg: #{map.get($t, bg)};
+    --gbdi-hero-#{$tone}-number: #{map.get($t, number)};
+    --gbdi-hero-#{$tone}-text: #{map.get($t, text)};
+  }
+
+  // Data viz: --gbdi-dataviz-1..4 (categorical) and
+  // --gbdi-dataviz-<hue>-1..4 (dark → pastel ramp)
+  @each $c in dec.$dataviz-categorical {
+    --gbdi-dataviz-#{list.index(dec.$dataviz-categorical, $c)}: #{$c};
+  }
+  @each $hue, $ramp in dec.$dataviz-ramps {
+    @for $i from 1 through list.length($ramp) {
+      --gbdi-dataviz-#{$hue}-#{$i}: #{list.nth($ramp, $i)};
+    }
+  }
+  --gbdi-dataviz-highlight: #{dec.$dataviz-highlight};
+  --gbdi-dataviz-gridline: #{dec.$dataviz-gridline};
+  --gbdi-dataviz-axis-text: #{dec.$dataviz-axis-text};
+
+  // Illustration
+  --gbdi-illustration-stroke: #{dec.$illustration-stroke};
+  --gbdi-illustration-accent: #{dec.$illustration-accent};
+}

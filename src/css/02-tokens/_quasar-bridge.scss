@@ -1,0 +1,155 @@
+// ============================================================================
+// QUASAR BRIDGE — maps GBDI tokens onto Quasar's Sass variables.
+// Loaded by quasar.variables.scss (build-time) so Quasar generates its
+// colour classes (`text-primary`, `bg-positive`, …) and component CSS from
+// GBDI values. No raw values here: everything comes from the token layers.
+// ============================================================================
+@use 'components' as comp;
+@use 'decisions' as dec;
+@use 'options' as opt;
+
+// Brand colours → Quasar palette
+// color="primary"   → Primary Green (buttons, accents, toggles, progress)
+// color="secondary" → Black (neutral solid buttons)
+// color="accent"    → Orange Bright (sparingly, p.16)
+$primary: dec.$color-primary !default;
+$secondary: dec.$color-text !default;
+$accent: dec.$color-accent !default;
+$dark: opt.$tokens-colors-black !default;
+$dark-page: opt.$tokens-colors-black !default;
+$positive: dec.$color-status-success !default;
+$negative: dec.$color-status-error !default;
+$info: dec.$color-status-info !default;
+$warning: dec.$color-status-warning !default;
+
+// Spacing
+$space-base: dec.$spacing-lg !default;
+$space-x-base: $space-base !default;
+$space-y-base: $space-base !default;
+$space-none: (x: 0, y: 0) !default;
+$space-xs: (x: dec.$spacing-xs, y: dec.$spacing-xs) !default;
+$space-sm: (x: dec.$spacing-sm, y: dec.$spacing-sm) !default;
+$space-md: (x: dec.$spacing-lg, y: dec.$spacing-lg) !default;
+$space-lg: (x: dec.$spacing-xl, y: dec.$spacing-xl) !default;
+$space-xl: (x: dec.$spacing-page, y: dec.$spacing-page) !default;
+
+// Typography — Satoshi everywhere; h1–h3 switch to SK Modernist in
+// 03-layout/_typography.scss (Quasar has a single font-family variable).
+$typography-font-family: dec.$text-font-family !default;
+$body-font-size: dec.$text-size-base !default;
+$body-line-height: dec.$text-line-height-base !default;
+$h1: (
+  size: dec.$text-size-display-xl,
+  line-height: dec.$text-line-height-display,
+  letter-spacing: dec.$text-letter-spacing-display,
+  weight: dec.$text-weight-regular,
+) !default;
+$h2: (
+  size: dec.$text-size-display-lg,
+  line-height: dec.$text-line-height-display,
+  letter-spacing: dec.$text-letter-spacing-display,
+  weight: dec.$text-weight-regular,
+) !default;
+$h3: (
+  size: dec.$text-size-display-md,
+  line-height: dec.$text-line-height-display,
+  letter-spacing: dec.$text-letter-spacing-display,
+  weight: dec.$text-weight-regular,
+) !default;
+$h4: (
+  size: dec.$text-size-heading-lg,
+  line-height: dec.$text-line-height-base,
+  letter-spacing: normal,
+  weight: dec.$text-weight-regular,
+) !default;
+$h5: (
+  size: dec.$text-size-heading-md,
+  line-height: dec.$text-line-height-base,
+  letter-spacing: normal,
+  weight: dec.$text-weight-bold,
+) !default;
+$h6: (
+  size: dec.$text-size-base,
+  line-height: dec.$text-line-height-base,
+  letter-spacing: normal,
+  weight: dec.$text-weight-bold,
+) !default;
+
+// Buttons
+$button-border-radius: comp.$button-radius !default;
+$button-push-border-radius: comp.$button-radius !default;
+$button-font-size: comp.$button-size-md-font-size !default;
+$button-line-height: comp.$button-size-md-line-height !default;
+$button-font-weight: comp.$button-font-weight !default;
+$button-shadow: none !default;
+$button-shadow-active: none !default;
+$button-transition: comp.$button-transition-duration !default;
+$button-padding: comp.$button-size-md-padding-y comp.$button-size-md-padding-x !default;
+$button-dense-padding: comp.$button-size-sm-padding-y comp.$button-size-sm-padding-x !default;
+
+// Separators, borders, radius
+$separator-color: dec.$color-border !default;
+$separator-dark-color: rgb(255 255 255 / 28%) !default;
+$generic-border-radius: dec.$radius-default-px !default;
+$layout-border: dec.$border-width solid $separator-color !default;
+
+// Inputs
+$input-font-size: comp.$field-font-size !default;
+$input-text-color: comp.$field-color !default;
+$input-label-color: comp.$field-label-color !default;
+
+// Cards & hovers — flat surfaces
+$generic-hover-transition: dec.$transition-default !default;
+$shadow-color: opt.$tokens-colors-black !default;
+
+// Dimmed backgrounds
+$dimmed-background: rgb(62 62 62 / 40%) !default;
+$light-dimmed-background: rgb(255 255 255 / 60%) !default;
+
+// Menu
+$menu-background: dec.$color-surface !default;
+$menu-box-shadow: dec.$shadow-floating !default;
+
+// Tooltip
+$tooltip-color: comp.$tooltip-color !default;
+$tooltip-background: comp.$tooltip-bg !default;
+$tooltip-padding: comp.$tooltip-padding-y comp.$tooltip-padding-x !default;
+$tooltip-border-radius: comp.$tooltip-radius !default;
+$tooltip-fontsize: comp.$tooltip-font-size !default;
+$tooltip-mobile-padding: comp.$tooltip-padding-y comp.$tooltip-padding-x !default;
+$tooltip-mobile-fontsize: comp.$tooltip-font-size !default;
+
+// Table
+$table-border-color: comp.$table-border-color !default;
+$table-hover-background: rgb(62 62 62 / 3%) !default;
+$table-selected-background: rgb(24 157 126 / 8%) !default;
+$table-border-radius: dec.$radius-default !default;
+$table-transition: $generic-hover-transition !default;
+$table-box-shadow: none !default;
+
+// Badge
+$badge-font-size: comp.$badge-font-size !default;
+$badge-line-height: 1 !default;
+
+// Dialog / toolbar
+$dialog-title-font-size: dec.$text-size-heading-lg !default;
+$dialog-title-line-height: dec.$text-line-height-base !default;
+$toolbar-min-height: 56px !default;
+$toolbar-padding: 0 dec.$spacing-lg !default;
+$toolbar-title-font-size: dec.$text-size-lg !default;
+$toolbar-title-font-weight: dec.$text-weight-medium !default;
+
+// Breakpoints [gbdi.io]: mobile <= 809px, tablet 810–1199px, desktop >= 1200px.
+// Quasar's md/lg keep their defaults (the site has no further steps).
+$breakpoint-xs: dec.$breakpoint-mobile-max !default;
+$breakpoint-sm: dec.$breakpoint-tablet-max !default;
+$breakpoint-md: 1439px !default;
+$breakpoint-lg: 1919px !default;
+
+// Flex gutters
+$flex-cols: 12 !default;
+$flex-gutter-xs: dec.$spacing-xs !default;
+$flex-gutter-sm: dec.$spacing-sm !default;
+$flex-gutter-md: dec.$spacing-lg !default;
+$flex-gutter-lg: dec.$spacing-xl !default;
+$flex-gutter-xl: dec.$spacing-page !default;

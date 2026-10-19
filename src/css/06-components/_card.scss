@@ -1,0 +1,47 @@
+@use '../02-tokens' as tokens;
+
+// Standard card (p.25): white or grey, heading + text, optional
+// illustration. Several may sit side by side.
+//   <article class="gbdi-card gbdi-card--grey">
+//     <img class="gbdi-card__illustration" …>
+//     <h3 class="gbdi-card__title">Better data</h3>
+//     <p class="gbdi-card__body">…</p>
+//   </article>
+.gbdi-card {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$card-gap;
+  padding: tokens.$card-padding;
+  background-color: tokens.$card-bg-white;
+  border: tokens.$card-border-width solid tokens.$card-border-color;
+  border-radius: tokens.$card-radius;
+
+  &--panel {
+    border-radius: tokens.$card-radius-panel;
+  }
+
+  &--grey {
+    background-color: tokens.$card-bg-grey;
+  }
+
+  &__title {
+    font-family: tokens.$text-font-family;
+    font-size: tokens.$card-title-font-size;
+    font-weight: tokens.$card-title-font-weight;
+    line-height: tokens.$text-line-height-base;
+    color: tokens.$color-text;
+  }
+
+  &__body {
+    font-size: tokens.$card-body-font-size;
+    line-height: tokens.$card-body-line-height;
+    color: tokens.$card-body-color;
+  }
+
+  // "Make sure the illustration has no white fill on a Green-Grey
+  // background" (p.19) — SVG illustrations should use fill="none".
+  &__illustration {
+    max-height: 10rem;
+    align-self: flex-start;
+  }
+}

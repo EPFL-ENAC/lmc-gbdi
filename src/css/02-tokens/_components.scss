@@ -1,0 +1,127 @@
+// ============================================================================
+// COMPONENT TOKENS — one block per component. Read decisions; use options
+// only where no decision fits.
+// ============================================================================
+@use 'decisions' as dec;
+@use 'options' as opt;
+
+// Header (website nav, p.36)
+$header-bg: dec.$color-surface-muted !default;
+$header-border-bottom: dec.$color-border !default;
+$header-border-bottom-weight: dec.$border-width !default;
+$header-z-index: opt.$tokens-z-index-top !default;
+$header-padding-x: opt.$tokens-spacing-32 !default;
+$header-padding-y: opt.$tokens-spacing-12 !default;
+$header-gap-x: opt.$tokens-spacing-32 !default;
+$header-logo-height: opt.$tokens-spacing-32 !default;
+$header-nav-font-size: dec.$text-size-sm !default;
+$header-nav-color: dec.$color-text !default;
+
+// Buttons
+// Primary: Primary Green, as the guidelines ask ("buttons on the website",
+// p.14). Note: white on #189D7E is 3.41:1 — passes for >= 18.66px bold
+// (WCAG "large text") only.
+// Secondary: the guideline "Download" button (p.6 …): Green-Grey Card fill,
+// 1px Green-Grey Accent border, 4px radius, 48px high.
+$button-radius: dec.$radius-default !default;
+$button-height: dec.$size-control-md !default;
+$button-height-dense: dec.$size-control-sm !default;
+$button-primary-bg-default: dec.$color-primary !default;
+$button-primary-bg-hover: dec.$color-primary-strong !default;
+$button-primary-color: dec.$color-text-on-primary !default;
+$button-secondary-bg-default: dec.$color-surface-muted !default;
+$button-secondary-bg-hover: dec.$color-surface-highlight !default;
+$button-secondary-color: dec.$color-text !default;
+$button-secondary-border-color: dec.$color-border-control !default;
+$button-disabled-bg: dec.$color-surface-muted !default;
+$button-disabled-color: dec.$color-text-disabled !default;
+$button-size-md-padding-x: opt.$tokens-spacing-16 !default;
+$button-size-md-padding-y: opt.$tokens-spacing-12 !default;
+$button-size-sm-padding-x: opt.$tokens-spacing-12 !default;
+$button-size-sm-padding-y: opt.$tokens-spacing-4 !default;
+$button-size-xs-padding-x: opt.$tokens-spacing-8 !default;
+$button-size-xs-padding-y: opt.$tokens-spacing-2 !default;
+$button-size-md-font-size: dec.$text-size-base !default;
+$button-size-md-line-height: dec.$text-line-height-base !default;
+$button-size-sm-font-size: dec.$text-size-sm !default;
+$button-font-weight: dec.$text-weight-medium !default;
+$button-transition-duration: dec.$transition-default !default;
+
+// Cards — Standard (p.25): white or grey, heading + text (+ illustration)
+$card-radius: dec.$radius-card !default;
+$card-border-width: dec.$border-width !default;
+$card-border-color: dec.$color-border !default;
+$card-bg-white: dec.$color-surface !default;
+$card-bg-grey: dec.$color-surface-muted !default;
+$card-padding: opt.$tokens-spacing-44 !default; // [measured] p.26
+$card-gap: opt.$tokens-spacing-16 !default;
+$card-title-font-size: dec.$text-size-heading-lg !default;
+$card-title-font-weight: dec.$text-weight-regular !default;
+$card-body-color: dec.$color-text-muted !default;
+$card-body-font-size: dec.$text-size-lg !default;
+$card-body-line-height: dec.$text-line-height-paragraph !default;
+$card-radius-panel: dec.$radius-panel !default; // wide cards / panels (p.19)
+
+// Cards — Hero (p.17, p.25): pastel fill, big number, short line.
+// "Only use these once on a single page or application."
+$hero-card-tones: dec.$hero-tones !default;
+$hero-card-radius: dec.$radius-default !default; // 4px [measured p.17, p.26]
+$hero-card-padding: opt.$tokens-spacing-32 !default;
+$hero-card-number-font-family: dec.$text-font-family-display !default;
+$hero-card-number-font-size: dec.$text-size-display-lg !default;
+$hero-card-number-line-height: dec.$text-line-height-tight !default;
+$hero-card-text-font-size: dec.$text-size-lg !default;
+$hero-card-text-line-height: dec.$text-line-height-hero !default;
+
+// Form fields (sign-in screen, p.41)
+$field-radius: dec.$radius-default !default;
+$field-bg: dec.$color-surface !default;
+$field-height: dec.$size-control-md !default;
+$field-border-color: dec.$color-border-control !default;
+$field-border-focus: dec.$focus-ring-color !default;
+$field-color: dec.$color-text !default;
+$field-placeholder-color: dec.$color-text-muted !default;
+$field-label-color: dec.$color-text-muted !default;
+$field-font-size: dec.$text-size-base !default;
+$field-padding-x: opt.$tokens-spacing-12 !default;
+$field-padding-y: opt.$tokens-spacing-8 !default;
+$field-disabled-bg: dec.$color-surface-muted !default;
+$field-disabled-color: dec.$color-text-disabled !default;
+
+// Table (Google Docs template, p.30): grey header row, hairline grid
+$table-header-bg: dec.$color-surface-muted !default;
+$table-header-color: dec.$color-text !default;
+$table-header-font-weight: dec.$text-weight-medium !default;
+$table-border-color: dec.$color-border !default;
+$table-cell-padding-x: opt.$tokens-spacing-12 !default;
+$table-cell-padding-y: opt.$tokens-spacing-8 !default;
+$table-font-size: dec.$text-size-sm !default;
+
+// Tooltip
+$tooltip-bg: dec.$color-text !default;
+$tooltip-color: dec.$color-text-on-primary !default;
+$tooltip-font-size: dec.$text-size-sm !default;
+$tooltip-padding-x: opt.$tokens-spacing-12 !default;
+$tooltip-padding-y: opt.$tokens-spacing-8 !default;
+$tooltip-radius: dec.$radius-default !default;
+$tooltip-max-width: dec.$modal-width-sm !default;
+$tooltip-shadow: dec.$shadow-floating !default;
+
+// Badge / chip
+$badge-bg: dec.$color-surface-highlight !default;
+$badge-height: dec.$size-chip !default;
+$badge-radius: dec.$radius-xs !default;
+$badge-color: dec.$color-text !default;
+$badge-font-size: dec.$text-size-xs !default;
+$badge-padding-x: opt.$tokens-spacing-8 !default;
+$badge-padding-y: opt.$tokens-spacing-2 !default;
+
+// Container
+$container-bg: dec.$color-surface !default;
+$container-border-color: dec.$color-border !default;
+$container-border-weight: dec.$border-width !default;
+$container-radius: dec.$radius-card !default;
+$container-padding-x: opt.$tokens-spacing-24 !default;
+$container-padding-y: opt.$tokens-spacing-24 !default;
+$container-padding-sm-x: opt.$tokens-spacing-16 !default;
+$container-padding-sm-y: opt.$tokens-spacing-16 !default;

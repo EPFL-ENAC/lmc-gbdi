@@ -1,0 +1,47 @@
+@use '../02-tokens' as tokens;
+
+// <q-btn unelevated no-caps color="primary" label="Sign up" />   → Primary Green
+// <q-btn unelevated no-caps class="btn-secondary" label="Download" />
+//                                       → the guideline "Download" button
+.q-btn {
+  text-transform: none; // sentence case, as in the guidelines
+  min-height: tokens.$button-height;
+  border-radius: tokens.$button-radius;
+
+  &.q-btn--dense {
+    min-height: tokens.$button-height-dense;
+  }
+
+  &.btn-primary,
+  &.bg-primary {
+    background-color: tokens.$button-primary-bg-default !important;
+    color: tokens.$button-primary-color !important;
+
+    &:hover {
+      background-color: tokens.$button-primary-bg-hover !important;
+    }
+  }
+
+  &.btn-secondary {
+    background-color: tokens.$button-secondary-bg-default;
+    color: tokens.$button-secondary-color;
+    border: tokens.$border-width solid tokens.$button-secondary-border-color;
+
+    &:hover {
+      background-color: tokens.$button-secondary-bg-hover;
+    }
+  }
+
+  &.disabled {
+    background-color: tokens.$button-disabled-bg !important;
+    color: tokens.$button-disabled-color !important;
+    opacity: 1 !important;
+  }
+
+  // Quasar's hover/focus overlay greys the brand fill; keep colours exact.
+  &.btn-primary .q-focus-helper,
+  &.bg-primary .q-focus-helper,
+  &.btn-secondary .q-focus-helper {
+    display: none;
+  }
+}
