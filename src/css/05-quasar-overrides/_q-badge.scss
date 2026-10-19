@@ -1,0 +1,12 @@
+@use '../02-tokens' as tokens;
+
+.q-badge {
+  font-size: tokens.$badge-font-size;
+  padding: tokens.$badge-padding-y tokens.$badge-padding-x;
+  min-height: tokens.$badge-height;
+  border-radius: tokens.$badge-radius;
+
+  &--rounded {
+    border-radius: tokens.$radius-pill;
+  }
+}

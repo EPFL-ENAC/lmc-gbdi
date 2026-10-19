@@ -1,0 +1,26 @@
+@use '../02-tokens' as tokens;
+
+// Table as in the Google Docs template (p.30): grey header row, hairlines.
+.q-table {
+  font-size: tokens.$table-font-size;
+
+  thead tr {
+    background-color: tokens.$table-header-bg;
+  }
+
+  th {
+    color: tokens.$table-header-color;
+    font-weight: tokens.$table-header-font-weight;
+    font-size: tokens.$table-font-size;
+  }
+
+  th,
+  td {
+    padding: tokens.$table-cell-padding-y tokens.$table-cell-padding-x;
+  }
+}
+
+.q-table__card {
+  box-shadow: none;
+  border: tokens.$border-width solid tokens.$table-border-color;
+}

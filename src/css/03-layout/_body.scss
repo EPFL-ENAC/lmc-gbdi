@@ -1,0 +1,9 @@
+@use '../02-tokens' as tokens;
+
+body {
+  font-family: tokens.$text-font-family;
+  font-size: tokens.$text-size-base;
+  line-height: tokens.$text-line-height-base;
+  color: tokens.$color-text;
+  background-color: tokens.$color-surface;
+}

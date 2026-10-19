@@ -1,0 +1,8 @@
+@use '../02-tokens' as tokens;
+
+// One focus style for every interactive element (Green Dark, 3:1+ on all
+// GBDI surfaces).
+:where(a, button, [tabindex], input, select, textarea, .q-btn):focus-visible {
+  outline: tokens.$focus-ring-width solid tokens.$focus-ring-color;
+  outline-offset: tokens.$focus-ring-offset;
+}

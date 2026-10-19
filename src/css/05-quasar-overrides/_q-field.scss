@@ -1,0 +1,28 @@
+@use '../02-tokens' as tokens;
+
+// Outlined fields as on the sign-in screen (p.41): 48px, 4px radius,
+// Green-Grey Accent outline like the "Download" button.
+.q-field--outlined {
+  .q-field__control {
+    min-height: tokens.$field-height;
+    border-radius: tokens.$field-radius;
+    background: tokens.$field-bg;
+
+    &::before {
+      border-color: tokens.$field-border-color;
+    }
+  }
+
+  &.q-field--focused .q-field__control::after {
+    border-color: tokens.$field-border-focus;
+    border-width: 2px;
+  }
+
+  &.q-field--disabled .q-field__control {
+    background: tokens.$field-disabled-bg;
+  }
+}
+
+.q-field__native::placeholder {
+  color: tokens.$field-placeholder-color;
+}

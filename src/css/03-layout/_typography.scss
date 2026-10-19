@@ -1,0 +1,63 @@
+@use '../02-tokens' as tokens;
+@use '../02-tokens/quasar-bridge' as q;
+
+// Brand rule (p.13): SK Modernist for large headings (>= 32px),
+// Satoshi for small headings (24px / 18px) and body text.
+h1,
+h2,
+h3,
+.text-h1,
+.text-h2,
+.text-h3,
+.text-display {
+  font-family: tokens.$text-font-family-display;
+  font-weight: tokens.$text-weight-regular;
+  color: tokens.$color-text;
+}
+
+h4,
+h5,
+h6,
+.text-h4,
+.text-h5,
+.text-h6 {
+  font-family: tokens.$text-font-family;
+  color: tokens.$color-text;
+}
+
+// Responsive display sizes [gbdi.io]: h1 68 → 50 → 32, h2 60 → 44 → 32
+// (desktop → tablet → mobile, the site's H1 / lead presets).
+@media (max-width: q.$breakpoint-sm) {
+  h1,
+  .text-h1 {
+    font-size: tokens.$text-size-display-xl-tablet;
+  }
+
+  h2,
+  .text-h2 {
+    font-size: tokens.$text-size-display-lg-tablet;
+  }
+}
+
+@media (max-width: q.$breakpoint-xs) {
+  h1,
+  .text-h1,
+  h2,
+  .text-h2 {
+    font-size: tokens.$text-size-display-mobile;
+  }
+}
+
+// Lead / intro paragraph in Grey Text — the guideline "Paragraph colour"
+// (p.13), as on the gbdi.io home page.
+.text-lead {
+  font-size: tokens.$text-size-lg;
+  line-height: tokens.$text-line-height-paragraph;
+  color: tokens.$color-text-lead;
+}
+
+// The faded words of a display line, as in "Better Buildings" (p.35):
+//   <h1>Open Data <span class="text-display-lead">Better Buildings</span></h1>
+.text-display-lead {
+  color: tokens.$color-text-lead;
+}

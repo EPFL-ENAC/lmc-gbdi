@@ -1,0 +1,52 @@
+// GBDI frontend — global stylesheet.
+// quasar.config.js → css: ['00-fonts/fonts.css', 'app.scss'] (fonts first).
+// Same ITCSS-inspired cascade as co2-calculator.
+
+// Map SCSS tokens to Quasar variables ahead of pulling in the framework CSS.
+@import './02-tokens/quasar-bridge';
+
+// Establish the cascade order.
+@layer reset, tokens, quasar-base, layout, quasar-overrides, components, utilities;
+
+@layer reset {
+  @import './01-reset/normalize';
+}
+
+@layer tokens {
+  @import './02-tokens/css-properties';
+}
+
+// Quasar wrapped in a layer, so anything below wins without !important.
+@layer quasar-base {
+  @import 'quasar/src/css/index.sass';
+}
+
+@layer layout {
+  @import './03-layout/body';
+  @import './03-layout/typography';
+  @import './03-layout/container';
+  @import './03-layout/grid';
+}
+
+@layer quasar-overrides {
+  @import './05-quasar-overrides/q-btn';
+  @import './05-quasar-overrides/q-card';
+  @import './05-quasar-overrides/q-field';
+  @import './05-quasar-overrides/q-table';
+  @import './05-quasar-overrides/q-tooltip';
+  @import './05-quasar-overrides/q-badge';
+}
+
+// GBDI-specific patterns Quasar does not have (standard card, hero card).
+// Vue SFC <style> blocks compile unlayered and therefore beat every layer.
+@layer components {
+  @import './06-components/card';
+  @import './06-components/hero-card';
+}
+
+@layer utilities {
+  @import './04-utils/spacing';
+  @import './04-utils/text';
+  @import './04-utils/link';
+  @import './04-utils/focus';
+}

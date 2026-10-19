@@ -1,0 +1,197 @@
+// ============================================================================
+// OPTIONS — the raw GBDI palette and scales.
+//
+// Source: "GBDI Brand Guidelines v01 · 2024" (Lazy Sundays studio).
+// This is the ONLY file allowed to hold raw values. Everything else reads
+// decisions (`_decisions.scss`) or component tokens (`_components.scss`).
+//
+// Provenance tags used below:
+//   [brand]     value printed in the guidelines (page number given)
+//   [measured]  measured in the PDF (vector paths / baselines); not printed as a number
+//   [structure] not in the guidelines; carried over from the co2-calculator
+//               token scale so layouts behave the same — replace if GBDI
+//               ever specifies one
+//   [gbdi.io]   read from the live site's CSS (Framer) where the PDF is silent
+//   [suggestion] NOT GBDI — see the WARNING box
+// ============================================================================
+
+// ---------------------------------------------------------------------------
+// Colour — Primary [brand p.14]
+// ---------------------------------------------------------------------------
+// Primary Green — RGB 24 157 126 · CMYK 81 15 63 1 · Pantone 339 U/C
+$tokens-colors-primary-green: #189d7e !default;
+
+// ---------------------------------------------------------------------------
+// Colour — Secondary palette [brand p.14] (pastel → light → bright → dark)
+// "Only use the pastels in large fill areas such as on cards."
+// "Don't use [Bright and Dark] in large background fill areas."
+// ---------------------------------------------------------------------------
+$tokens-colors-green-pastel: #eafaf0 !default;
+$tokens-colors-green-light: #a6dbc9 !default;
+$tokens-colors-green-bright: #189d7e !default; // = primary green
+$tokens-colors-green-dark: #206d59 !default;
+
+$tokens-colors-blue-pastel: #e9f7fe !default;
+$tokens-colors-blue-light: #9dd2f3 !default;
+$tokens-colors-blue-bright: #3592e3 !default;
+$tokens-colors-blue-dark: #31658d !default;
+
+// p.14 prints #EFECFE, p.25 (cards) prints #F0ECFE. The palette page wins.
+$tokens-colors-purple-pastel: #efecfe !default;
+$tokens-colors-purple-light: #baaef6 !default;
+$tokens-colors-purple-bright: #8671ef !default;
+$tokens-colors-purple-dark: #5c5cae !default;
+
+$tokens-colors-orange-pastel: #fee6c8 !default;
+$tokens-colors-orange-light: #fbca94 !default;
+$tokens-colors-orange-bright: #f59b3a !default;
+$tokens-colors-orange-dark: #cc7212 !default;
+
+// ---------------------------------------------------------------------------
+// Colour — Supporting palette [brand p.18]
+// ---------------------------------------------------------------------------
+$tokens-colors-black: #3e3e3e !default; // headings + text (soft black)
+$tokens-colors-grey-dark: #646464 !default; // also illustration stroke (p.24)
+// Grey Text: the guideline paragraph colour for lead text (p.13, p.35).
+// p.18 (palette page) prints #BCC4C2; p.13 and gbdi.io use #BEBFBF.
+// The palette page wins. 1.78:1 on white.
+$tokens-colors-grey-text: #bcc4c2 !default;
+$tokens-colors-green-grey-accent: #d5e6e2 !default; // highlight / illustration accent
+$tokens-colors-green-grey-border: #eef2f2 !default; // card border
+$tokens-colors-green-grey-card: #f6f8f8 !default; // standard card fill
+$tokens-colors-white: #ffffff !default;
+
+// ---------------------------------------------------------------------------
+// Colour — Status
+// ┌──────────────────────────────────────────────────────────────────────┐
+// │ WARNING: NOT PART OF THE GBDI DESIGN.                                │
+// │ The GBDI Brand Guidelines define no red / error colour. This value  │
+// │ is an IT4R SUGGESTION so Quasar has a `negative` colour (5.6:1 on   │
+// │ white). Get it validated by GBDI before release, or replace it.     │
+// └──────────────────────────────────────────────────────────────────────┘
+$tokens-colors-suggested-red-not-gbdi: #c62828 !default; // [suggestion] NOT GBDI
+
+// ---------------------------------------------------------------------------
+// Typography [brand p.11–13]
+// SK Modernist = display font (large headings, >= 32px).
+// Satoshi      = supporting font (small headings <= 24px + body).
+// Loaded by 00-fonts/fonts.css (Satoshi from Fontshare, SK Modernist as
+// served by gbdi.io). Family names match those.
+// ---------------------------------------------------------------------------
+// prettier-ignore
+$tokens-typography-font-family-display: 'Sk-Modernist', 'Satoshi', system-ui, -apple-system, 'Segoe UI', sans-serif !default;
+// prettier-ignore
+$tokens-typography-font-family-base: 'Satoshi', system-ui, -apple-system, 'Segoe UI', sans-serif !default;
+
+// Sizes [brand p.13] — pt on a 1920 x 1080 slide, read as CSS px.
+$tokens-typography-font-size-display-xl: 4.25rem !default; // 68
+$tokens-typography-font-size-display-lg: 3.75rem !default; // 60
+$tokens-typography-font-size-display-md: 2rem !default; // 32
+$tokens-typography-font-size-heading-lg: 1.5rem !default; // 24 (Satoshi)
+$tokens-typography-font-size-heading-md: 1.125rem !default; // 18 (Satoshi bold)
+$tokens-typography-font-size-body-lg: 1.125rem !default; // 18
+$tokens-typography-font-size-body-md: 1rem !default; // 16
+// Smaller UI sizes [gbdi.io]: 14px and 12px are the site's text presets.
+$tokens-typography-font-size-sm: 0.875rem !default; // 14
+$tokens-typography-font-size-xs: 0.75rem !default; // 12
+
+// Responsive display sizes [gbdi.io] — the site's H1 preset is
+// 60px desktop / 44px tablet / 32px mobile; its lead H2 50 / 40 / 32.
+$tokens-typography-font-size-display-lg-tablet: 2.75rem !default; // 44
+$tokens-typography-font-size-display-xl-tablet: 3.125rem !default; // 50
+$tokens-typography-font-size-display-mobile: 2rem !default; // 32
+
+// Line heights [measured in the PDF] — baseline-to-baseline distances
+// divided by the font size:
+//   display  p.13 "Open Data / Better buildings" 60px on a 75px pitch  -> 1.25
+//   body     p.13 "Body 18pt" 22px pitch, "Body 16pt" 19px pitch       -> 1.2
+//   paragraph p.13 grey paragraph 34px pitch, p.26 card body 23px pitch -> 1.3
+//   hero text p.26 hero card copy (18px) on a 26px pitch               -> 1.45
+// gbdi.io uses 110% (display), 130% (body), 160% (long-form text).
+$tokens-typography-line-height-display: 1.25 !default;
+$tokens-typography-line-height-tight: 1.1 !default; // [gbdi.io] single-line display
+$tokens-typography-line-height-body: 1.2 !default;
+$tokens-typography-line-height-paragraph: 1.3 !default;
+$tokens-typography-line-height-hero: 1.45 !default;
+$tokens-typography-line-height-relaxed: 1.6 !default; // [gbdi.io] long-form text
+
+$tokens-typography-font-weight-light: 300 !default;
+$tokens-typography-font-weight-regular: 400 !default;
+$tokens-typography-font-weight-medium: 500 !default;
+$tokens-typography-font-weight-bold: 700 !default;
+
+// [gbdi.io] letter spacing: -0.02em long-form body, -0.04em bold labels.
+$tokens-typography-letter-spacing-body: -0.02em !default;
+$tokens-typography-letter-spacing-label: -0.04em !default;
+$tokens-typography-letter-spacing-display: 0 !default;
+
+// ---------------------------------------------------------------------------
+// Spacing [structure] — 4px-based, same names as co2-calculator. The PDF
+// does not define a spacing scale; standard card padding measures 44px (p.26),
+// hero card padding 32px (p.26), card gap 16–24px.
+// ---------------------------------------------------------------------------
+$tokens-spacing-1: 0.0625rem !default;
+$tokens-spacing-2: 0.125rem !default;
+$tokens-spacing-4: 0.25rem !default;
+$tokens-spacing-8: 0.5rem !default;
+$tokens-spacing-12: 0.75rem !default;
+$tokens-spacing-16: 1rem !default;
+$tokens-spacing-24: 1.5rem !default;
+$tokens-spacing-32: 2rem !default;
+$tokens-spacing-44: 2.75rem !default; // [measured] standard card padding, p.26
+$tokens-spacing-48: 3rem !default;
+$tokens-spacing-64: 4rem !default;
+
+// ---------------------------------------------------------------------------
+// Radii [measured in the PDF] — read from the vector paths:
+//   2px   small swatches / legend chips (p.13, p.19, p.26)
+//   4px   palette swatches (p.15, p.18), hero cards (p.17, p.26), the
+//         "Download" button (p.6 …)
+//   8px   standard cards (p.26)
+//   10px  large panels and wide standard cards (p.2, p.13, p.19)
+//   40px  pill — [gbdi.io] (the site uses 4px, 8px and 40px)
+// ---------------------------------------------------------------------------
+$tokens-border-radius-xs: 0.125rem !default; // 2
+$tokens-border-radius-sm: 0.25rem !default; // 4
+$tokens-border-radius-sm-px: 4px !default; // Quasar needs a px value
+$tokens-border-radius-md: 0.5rem !default; // 8
+$tokens-border-radius-lg: 0.625rem !default; // 10
+$tokens-border-radius-full: 2.5rem !default; // 40
+
+// Borders [measured]: every card / button border in the PDF is 1px.
+$tokens-border-width: 1px !default;
+$tokens-illustration-stroke-width: 1px !default; // [brand p.24]
+
+// ---------------------------------------------------------------------------
+// Heights [measured in the PDF]
+//   48px  the "Download" button (137 x 49 on p.6 …)
+//   24px  legend chips (p.13, p.19)
+// ---------------------------------------------------------------------------
+$tokens-size-control-md: 3rem !default; // 48
+$tokens-size-control-sm: 2.25rem !default; // 36 — dense variant [structure]
+$tokens-size-chip: 1.5rem !default; // 24
+
+// ---------------------------------------------------------------------------
+// Breakpoints [gbdi.io] — the PDF has none. The site switches at
+// 810px (tablet) and 1200px (desktop).
+// ---------------------------------------------------------------------------
+$tokens-breakpoint-mobile-max: 809px !default;
+$tokens-breakpoint-tablet-max: 1199px !default;
+$tokens-breakpoint-desktop-min: 1200px !default;
+
+// ---------------------------------------------------------------------------
+// Layout / motion / elevation [structure]
+// ---------------------------------------------------------------------------
+$tokens-layout-page-width: 1320px !default;
+$tokens-layout-modal-width-lg: 75rem !default;
+$tokens-layout-modal-width-md: 30rem !default;
+$tokens-layout-modal-width-sm: 20rem !default;
+
+$tokens-transitions-default: 0.2s ease !default;
+
+// The PDF shows only flat surfaces (borders, no shadows). One soft shadow
+// is kept for floating layers (menus, tooltips) only.
+$tokens-box-shadow-floating: 0 2px 8px 0 rgb(62 62 62 / 16%) !default;
+
+$tokens-z-index-sticky: 2 !default;
+$tokens-z-index-top: 99 !default;
