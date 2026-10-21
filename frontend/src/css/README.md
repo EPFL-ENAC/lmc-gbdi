@@ -21,7 +21,7 @@ Every value in `_options.scss` carries its provenance tag.
 02-tokens/css-properties.scss   decisions → runtime CSS vars (--gbdi-*) for charts / inline styles
 ```
 
-In a component: `@use 'src/css/02-tokens' as tokens;` then `tokens.$color-text`.
+In a component: `@use '@/css/02-tokens' as tokens;` then `tokens.$color-text`.
 Never write hex in components — add an option, then a decision.
 
 To change a value, edit it in its own layer file. The token files are Sass

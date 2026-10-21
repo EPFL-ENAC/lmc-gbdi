@@ -1,0 +1,95 @@
+{{- if .Values.postgres.enabled }}
+{{- $name := printf "%s-postgres" .Release.Name }}
+{{- $secretName := printf "%s-db" .Release.Name }}
+{{- /* Reuse the password already in the cluster: postgres only sets it at
+       initdb, so a new random one would lock the backend out of the PVC. */}}
+{{- $existing := lookup "v1" "Secret" .Release.Namespace $secretName }}
+{{- $password := randAlphaNum 32 }}
+{{- if $existing }}
+{{- $password = index $existing.data "POSTGRES_PASSWORD" | b64dec }}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $secretName }}
+  labels:
+    {{- include "gbdi.labels" . | nindent 4 }}
+  annotations:
+    # The PVC outlives `helm uninstall`, so its password must too.
+    helm.sh/resource-policy: keep
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: {{ $password | quote }}
+  DB_URL: {{ printf "postgresql+psycopg://%s:%s@%s:5432/%s" .Values.postgres.user $password $name .Values.postgres.database | quote }}
+---
+# ponytail: single unreplicated postgres for local/dev clusters only. The
+# official image starts as root then drops to uid 70, which restricted
+# platforms (OpenShift) refuse; production uses an external database.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "gbdi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  serviceName: {{ $name }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "gbdi.labels" . | nindent 6 }}
+      app.kubernetes.io/component: postgres
+  template:
+    metadata:
+      labels:
+        {{- include "gbdi.labels" . | nindent 8 }}
+        app.kubernetes.io/component: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.user | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: POSTGRES_PASSWORD
+          ports:
+            - name: postgres
+              containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+          volumeMounts:
+            # postgres 18+ keeps PGDATA in a versioned subdir of /var/lib/postgresql.
+            - name: data
+              mountPath: /var/lib/postgresql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: {{ .Values.postgres.storage }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "gbdi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  selector:
+    {{- include "gbdi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+{{- end }}
