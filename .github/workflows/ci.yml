@@ -3,6 +3,9 @@ name: ci
 on:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -24,7 +27,7 @@ jobs:
       DB_URL: postgresql+psycopg://gbdi:gbdi@localhost:5432/gbdi
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.0 # no moving major tag
       - run: uv sync --locked
       - run: uv run ruff format --check . && uv run ruff check .
       - run: uv run pytest
