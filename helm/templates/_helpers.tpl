@@ -3,12 +3,15 @@ app.kubernetes.io/name: {{ .Chart.Name }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{/* Secret holding DB_URL: chart-managed with postgres.enabled, else the user's. */}}
+{{/* Secret holding DB_URL (and POSTGRES_PASSWORD for the in-chart postgres):
+     the user's when set, else chart-managed with postgres.enabled. */}}
 {{- define "gbdi.dbSecret" -}}
-{{- if .Values.postgres.enabled -}}
+{{- if .Values.database.existingSecret -}}
+{{ .Values.database.existingSecret }}
+{{- else if .Values.postgres.enabled -}}
 {{ .Release.Name }}-db
 {{- else -}}
-{{ required "database.existingSecret is required when postgres.enabled=false" .Values.database.existingSecret }}
+{{ fail "database.existingSecret is required when postgres.enabled=false" }}
 {{- end -}}
 {{- end }}
 

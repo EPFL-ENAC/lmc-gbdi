@@ -1,6 +1,7 @@
 {{- if .Values.postgres.enabled }}
 {{- $name := printf "%s-postgres" .Release.Name }}
-{{- $secretName := printf "%s-db" .Release.Name }}
+{{- $secretName := include "gbdi.dbSecret" . }}
+{{- if not .Values.database.existingSecret }}
 {{- /* Reuse the password already in the cluster: postgres only sets it at
        initdb, so a new random one would lock the backend out of the PVC. */}}
 {{- $existing := lookup "v1" "Secret" .Release.Namespace $secretName }}
@@ -22,6 +23,7 @@ stringData:
   POSTGRES_PASSWORD: {{ $password | quote }}
   DB_URL: {{ printf "postgresql+psycopg://%s:%s@%s:5432/%s" .Values.postgres.user $password $name .Values.postgres.database | quote }}
 ---
+{{- end }}
 # ponytail: single unreplicated postgres for local/dev clusters only. The
 # official image starts as root then drops to uid 70, which restricted
 # platforms (OpenShift) refuse; production uses an external database.
@@ -72,6 +74,9 @@ spec:
     - metadata:
         name: data
       spec:
+        {{- with .Values.postgres.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
         accessModes: [ReadWriteOnce]
         resources:
           requests:

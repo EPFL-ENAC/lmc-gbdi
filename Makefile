@@ -69,8 +69,9 @@ migration: ## Autogenerate a migration: make migration m="add user table"
 # =============================================================================
 
 .PHONY: lint
-lint: ## Lint the backend (ruff)
+lint: ## Lint the backend (ruff) and the frontend (oxlint, vue-tsc)
 	cd backend && uv run ruff format --check . && uv run ruff check .
+	cd frontend && npm run lint && npm run type-check
 
 .PHONY: format
 format: ## Format the backend (ruff)

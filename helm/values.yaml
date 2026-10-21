@@ -23,20 +23,21 @@ frontend:
     limits: { memory: 128Mi }
 
 database:
-  # Name of a Secret with a DB_URL key (postgresql+psycopg://user:pass@host:5432/db).
-  # Required when postgres.enabled=false.
+  # Name of a Secret with a DB_URL key (postgresql+psycopg://user:pass@host:5432/db),
+  # plus POSTGRES_PASSWORD when postgres.enabled. Required when postgres.enabled=false.
   existingSecret: ""
 
-# In-cluster PostgreSQL for local/dev clusters. Its password is generated
-# once and kept across upgrades and uninstalls (it must keep matching the
-# data on the PVC). That relies on helm's `lookup`, so helm CLI only: under
-# `helm template` / Argo CD use database.existingSecret instead.
+# In-cluster PostgreSQL for local/dev clusters. Without existingSecret its
+# password is generated once and kept across upgrades and uninstalls (it
+# must keep matching the data on the PVC). That relies on helm's `lookup`,
+# so helm CLI only: under `helm template` / Argo CD set existingSecret.
 postgres:
   enabled: true
   image: postgres:18-alpine
   user: gbdi
   database: gbdi
   storage: 1Gi
+  storageClass: ""  # empty = the cluster's default StorageClass
 
 ingress:
   enabled: true
