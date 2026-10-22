@@ -3,7 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 
 export default defineRouter(() =>
   createRouter({
-    history: createWebHistory(process.env.VUE_ROUTER_BASE),
+    history: createWebHistory(import.meta.env.QUASAR_VUE_ROUTER_BASE),
     routes: [
       {
         path: '/',
