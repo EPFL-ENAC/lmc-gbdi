@@ -1,0 +1,46 @@
+# Defaults run the stack in a local cluster with the images `docker compose
+# build` produces (see `make k8s-up`). Production overrides the image
+# repositories/tags, sets postgres.enabled=false and database.existingSecret.
+
+backend:
+  replicaCount: 1
+  image:
+    repository: gbdi-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { memory: 512Mi }
+
+frontend:
+  replicaCount: 1
+  image:
+    repository: gbdi-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { memory: 128Mi }
+
+database:
+  # Name of a Secret with a DB_URL key (postgresql+psycopg://user:pass@host:5432/db),
+  # plus POSTGRES_PASSWORD when postgres.enabled. Required when postgres.enabled=false.
+  existingSecret: ""
+
+# In-cluster PostgreSQL for local/dev clusters. Without existingSecret its
+# password is generated once and kept across upgrades and uninstalls (it
+# must keep matching the data on the PVC). That relies on helm's `lookup`,
+# so helm CLI only: under `helm template` / Argo CD set existingSecret.
+postgres:
+  enabled: true
+  image: postgres:18-alpine
+  user: gbdi
+  database: gbdi
+  storage: 1Gi
+  storageClass: ""  # empty = the cluster's default StorageClass
+
+ingress:
+  enabled: true
+  className: ""   # empty = the cluster's default IngressClass
+  host: ""        # empty = any host
+  tls: []         # e.g. [{ secretName: gbdi-tls, hosts: [gbdi.example.org] }]

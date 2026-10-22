@@ -1,0 +1,6 @@
+apiVersion: v2
+name: gbdi
+description: GBDI frontend (Quasar), backend (FastAPI) and an optional in-cluster PostgreSQL
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

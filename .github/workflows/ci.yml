@@ -1,0 +1,60 @@
+name: ci
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: gbdi
+          POSTGRES_PASSWORD: gbdi
+          POSTGRES_DB: gbdi
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U gbdi -d gbdi"
+          --health-interval 2s --health-retries 15
+    env:
+      DB_URL: postgresql+psycopg://gbdi:gbdi@localhost:5432/gbdi
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0 # no moving major tag
+      - run: uv sync --locked
+      - run: uv run ruff format --check . && uv run ruff check .
+      - run: uv run pytest
+      # Migrations apply on an empty database, and none is missing: `check`
+      # fails when the models differ from what the migrations build.
+      - run: uv run alembic upgrade head && uv run alembic check
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/package.json
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run type-check
+      - run: npm run build
+
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Default values (local clusters) and the existing-secret path Argo CD uses.
+      - run: helm lint helm && helm lint helm --set database.existingSecret=ci
