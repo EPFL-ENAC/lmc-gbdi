@@ -20,7 +20,9 @@ FROM python:3.14-alpine
 
 # The alpine base lags its package repo; take every fixed package now
 # rather than chase CVEs one by one (same as co2-calculator).
-RUN apk upgrade --no-cache
+# pip is unused at runtime (the venv comes from the builder) and its vendored
+# urllib3/msgpack/setuptools trip the HIGH vulnerability gate, so drop it.
+RUN apk upgrade --no-cache && pip uninstall --yes --no-cache-dir pip
 
 WORKDIR /app
 COPY --from=builder /app /app
