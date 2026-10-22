@@ -1,4 +1,17 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["eslint", "typescript", "unicorn", "oxc", "vue"]
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "vue"],
+  "overrides": [
+    {
+      // src/ runs in the browser: process is undefined there, and vue-tsc
+      // cannot catch it because Vite's types pull in @types/node.
+      "files": ["src/**"],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          { "name": "process", "message": "Use import.meta.env.QUASAR_* instead." }
+        ]
+      }
+    }
+  ]
 }
