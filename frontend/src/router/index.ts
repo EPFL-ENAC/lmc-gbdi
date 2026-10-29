@@ -8,7 +8,11 @@ export default defineRouter(() =>
       {
         path: '/',
         component: () => import('@/layouts/MainLayout.vue'),
-        children: [{ path: '', component: () => import('@/pages/IndexPage.vue') }],
+        children: [
+          { path: '', component: () => import('@/pages/IndexPage.vue') },
+          { path: 'demo', component: () => import('@/pages/DemoPage.vue') },
+          { path: 'demo/project', component: () => import('@/pages/ProjectPage.vue') },
+        ],
       },
     ],
   }),

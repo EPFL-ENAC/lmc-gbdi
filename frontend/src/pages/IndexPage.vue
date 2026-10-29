@@ -7,6 +7,7 @@
         <q-badge :color="status === 'ok' ? 'positive' : 'negative'" :label="status" />
       </p>
     </article>
+    <p><router-link class="link" to="/demo">Design demo</router-link></p>
   </q-page>
 </template>
 

@@ -1,0 +1,15 @@
+@use '../02-tokens' as tokens;
+
+// Line illustration (p.24): 1px Grey Dark stroke, Green-Grey Accent on the
+// shapes marked .accent, no fill elsewhere (no white fill on a grey card, p.19).
+//   <svg class="gbdi-illustration" …><path …/><path class="accent" …/></svg>
+.gbdi-illustration * {
+  fill: none;
+  stroke: tokens.$illustration-stroke;
+  stroke-width: tokens.$illustration-stroke-width;
+  vector-effect: non-scaling-stroke;
+}
+
+.gbdi-illustration .accent {
+  fill: tokens.$illustration-accent;
+}

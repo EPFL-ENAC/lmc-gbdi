@@ -36,8 +36,9 @@ Fonts live in a plain `00-fonts/fonts.css`, loaded before `app.scss`.
 
 Quasar's CSS is imported inside `@layer quasar-base`, so overrides win
 without `!important`; Vue SFC styles are unlayered and win over all layers.
-`06-components/` holds the two GBDI patterns Quasar lacks: `.gbdi-card`
-(standard card, `--grey`, `--panel`) and `.gbdi-hero-card--{green|blue|purple|orange}`.
+`06-components/` holds the GBDI patterns Quasar lacks: `.gbdi-card`
+(standard card, `--grey`, `--panel`), `.gbdi-hero-card--{green|blue|purple|orange}`
+and the `.gbdi-illustration` line-drawing hook.
 
 ## Wiring in `quasar.config.js`
 

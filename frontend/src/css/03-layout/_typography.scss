@@ -51,6 +51,7 @@ h6,
 // Lead / intro paragraph in Grey Text — the guideline "Paragraph colour"
 // (p.13), as on the gbdi.io home page.
 .text-lead {
+  max-width: 42rem; // a readable measure, as on gbdi.io
   font-size: tokens.$text-size-lg;
   line-height: tokens.$text-line-height-paragraph;
   color: tokens.$color-text-lead;
