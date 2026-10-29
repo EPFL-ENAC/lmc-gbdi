@@ -1,0 +1,33 @@
+code,name
+0.1,0.1 Treatment and demolition works & Facilitating works
+1.1,1.1 Foundations and piling
+1.2,1.2 Basement retaining walls and lowest slab
+2.1,2.1 Frame
+2.2,2.2 Upper floors
+2.3,2.3 Roof
+2.4,"2.4 Stairs, ramps and safety guarding"
+2.5,2.5 External envelope including roof finishes
+2.6,2.6 Windows and ext doors
+2.7,2.7 Internal walls
+2.8,2.8 Internal doors
+3.1,3.1 Wall finishes
+3.2,3.2 Floor finishes
+3.3,3.3 Ceiling finishes
+4.1,4.1 General FF&E
+4.2,4.2 Kitchen equipment
+4.3,4.3 Special equipment
+4.4,4.4 Loose FF&E
+4.5,4.5 IT
+4.6,4.6 Audio and visual
+5.1,5.1 Public Health
+5.2,"5.2 Heating, Ventilation and Cooling (HVAC)"
+5.3,5.3 Electrical installations
+5.4,5.4 On site renewable energy generation
+5.5,"5.5 Systems including Life safety, Fuel, Lift, Waste, and Builders work"
+6.0,6.0 Pre-fabricated buildings and building units
+7.1,7.1 Alterations
+7.2,"7.2 Repairs, Cleaning and Renovation"
+7.3,7.3 Damp-proof courses/fungus and beetle eradication
+8.1,"8.1 Roads, paths, pavings, surfaces, Fencing, railings, walls, External fixtures"
+8.2,"8.2 Soft landscape, planting, irrigation"
+8.3,"8.3 External drainage, External services, Minor building works"
