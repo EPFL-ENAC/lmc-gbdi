@@ -45,3 +45,10 @@ ingress:
   className: ""   # empty = the cluster's default IngressClass
   host: ""        # empty = any host
   tls: []         # e.g. [{ secretName: gbdi-tls, hosts: [gbdi.example.org] }]
+  # Workbook uploads: a COLA workbook is 10-30 MB and takes up to a minute to
+  # read. ingress-nginx defaults to 1 MB and 60 s; other controllers ignore these.
+  # 64 MB, not more: a 100 MB workbook would need more than the backend's 2 GiB.
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "64m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
