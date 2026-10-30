@@ -4,6 +4,7 @@
   "productName": "GBDI",
   "description": "GBDI frontend",
   "private": true,
+  "license": "GPL-3.0-or-later",
   "type": "module",
   "scripts": {
     "dev": "quasar dev",
