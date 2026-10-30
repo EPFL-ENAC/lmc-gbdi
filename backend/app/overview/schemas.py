@@ -56,6 +56,7 @@ class MaterialHotspot(BaseModel):
     gwp: float
     mass_kg: float
     share: float  # of whole-life GWP
+    share_of_mass: float | None  # of the total mass; None when no mass is declared
     gwp_per_kg: float | None  # None when the mass is zero
     gwp_by_stage: dict[str, float]  # keyed by StageTotal.key
 
@@ -65,6 +66,8 @@ class MassHotspot(BaseModel):
     epd_product: str
     mass_kg: float
     share_of_mass: float
+    gwp: float  # whole life, so a mass ranking shows its carbon too
+    share: float  # of whole-life GWP
 
 
 class MaterialClassTotal(BaseModel):

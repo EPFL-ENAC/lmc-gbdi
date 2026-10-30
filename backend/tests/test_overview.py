@@ -132,6 +132,13 @@ def test_hotspots_group_material_and_epd_product(overview):
     assert [m.material for m in overview.mass_hotspots] == ["Concrete", "Steel", ""]
 
 
+def test_each_ranking_carries_the_other_measure(overview):
+    """The passport ranks by mass or by carbon and draws both for the same ten."""
+    by_carbon, by_mass = overview.material_hotspots[0], overview.mass_hotspots[0]
+    assert by_carbon.share_of_mass == pytest.approx(350 / overview.total_mass_kg)
+    assert (by_mass.gwp, by_mass.share) == (65, pytest.approx(65 / 118))
+
+
 def test_data_types_weigh_by_gwp_fossil_and_report_the_undeclared(overview):
     shares = {d.key: d.share for d in overview.data_types}
     assert overview.data_type_weighting == "gwp_fossil_a1_a3"

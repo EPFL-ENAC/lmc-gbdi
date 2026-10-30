@@ -51,6 +51,7 @@ export interface MaterialHotspot {
   gwp: number;
   mass_kg: number;
   share: number;
+  share_of_mass: number | null; // null when no mass is declared
   gwp_per_kg: number | null;
   gwp_by_stage: Record<string, number>;
 }
@@ -60,6 +61,8 @@ export interface MassHotspot {
   epd_product: string;
   mass_kg: number;
   share_of_mass: number;
+  gwp: number;
+  share: number; // of the whole-life GWP
 }
 
 export interface MaterialClassTotal {
