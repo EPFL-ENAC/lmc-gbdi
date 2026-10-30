@@ -66,9 +66,27 @@ export interface DataTypeShare {
   share: number;
 }
 
+export interface ProjectField {
+  code: string;
+  label: string;
+  group: string;
+  value: string | null; // null: General Information leaves it blank
+}
+
+export interface ModuleCheck {
+  module: string;
+  declared: boolean;
+  has_result: boolean;
+  status: 'ok' | 'declared_no_result' | 'result_not_declared';
+}
+
 export interface Overview {
   project: ProjectInfo;
+  project_fields: ProjectField[];
   rows_read: number;
+  module_checks: ModuleCheck[];
+  modules_declared_without_result: number;
+  modules_with_undeclared_result: number;
   headline: Headline;
   stages: StageTotal[];
   elements: ElementTotal[];

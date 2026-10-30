@@ -116,6 +116,23 @@
         />
       </section>
 
+      <section class="project-section">
+        <h2 class="text-h3">Project details</h2>
+        <p class="u-text-muted">General Information, as declared. Choose the columns to compare.</p>
+        <ProjectFieldsTable :fields="overview.project_fields" />
+      </section>
+
+      <section class="project-section">
+        <h2 class="text-h3">Data checks</h2>
+        <p class="u-text-muted">Each life-cycle module declared in scope, against the results present.</p>
+        <ModuleChecks
+          :checks="overview.module_checks"
+          :rows-read="overview.rows_read"
+          :declared-without-result="overview.modules_declared_without_result"
+          :result-without-declaration="overview.modules_with_undeclared_result"
+        />
+      </section>
+
       <footer class="u-text-muted">
         <ol>
           <li>
@@ -130,40 +147,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed } from 'vue';
 import type { QTableColumn } from 'quasar';
-import BarsWithTable, { type Bar } from '@/components/BarsWithTable.vue';
+import BarsWithTable from '@/components/BarsWithTable.vue';
+import ModuleChecks from '@/components/ModuleChecks.vue';
+import ProjectFieldsTable from '@/components/ProjectFieldsTable.vue';
+import type { Bar } from '@/components/RankedBars.vue';
 import StageByElement from '@/components/StageByElement.vue';
-import {
-  fetchOverview,
-  type DataTypeShare,
-  type ElementTotal,
-  type MassHotspot,
-  type MaterialHotspot,
-  type Overview,
-  type StageTotal,
+import type {
+  DataTypeShare,
+  ElementTotal,
+  MassHotspot,
+  MaterialHotspot,
+  StageTotal,
 } from '@/api/overview';
+import { useOverview } from '@/composables/useOverview';
+import { figure, kg, materialName, one, percent, three, two, WEIGHTING } from '@/format';
 
-const overview = ref<Overview | null>(null);
-const error = ref<string | null>(null);
-
-onMounted(async () => {
-  try {
-    overview.value = await fetchOverview();
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : String(e);
-  }
-});
-
-// The reader's locale; no i18n in the app yet.
-const kg = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
-const one = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
-const two = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
-const three = new Intl.NumberFormat(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
-const percent = new Intl.NumberFormat(undefined, { style: 'percent', maximumFractionDigits: 1 });
-const figure = (value: number | null, format: Intl.NumberFormat) =>
-  value === null ? 'not declared' : format.format(value);
-const materialName = (material: string) => material || 'No material name';
+const { overview, error } = useOverview();
 const pairKey = (row: { material: string; epd_product: string }) => `${row.material}|${row.epd_product}`;
 
 const projectLine = computed(() => {
@@ -175,7 +176,7 @@ const projectLine = computed(() => {
     project?.reference_study_period_years ? `${project.reference_study_period_years}-year study period` : null,
   ]
     .filter(Boolean)
-    .join(' · ');
+    .join(', ');
 });
 
 const gwpColumn = { label: 'GWP (kg CO₂e)', field: 'gwp', format: (v: number) => kg.format(v), align: 'right' } as const;
@@ -216,11 +217,6 @@ const dataTypeColumns: QTableColumn<DataTypeShare>[] = [
   { name: 'share', ...shareColumn },
 ];
 
-const WEIGHTING: Record<Overview['data_type_weighting'], string> = {
-  gwp_fossil_a1_a3: 'Weighted by GWP fossil A1–A3.',
-  mass: 'Weighted by mass: no GWP fossil A1–A3 is declared.',
-  not_computed: 'Not computed: neither GWP fossil A1–A3 nor mass is declared.',
-};
 
 // Charts and tables read the same backend rows, in the backend's order.
 const elementRows = computed(() =>
@@ -232,7 +228,7 @@ const bar = (key: string, label: string, value: number, share?: number, muted = 
   key,
   label,
   value,
-  display: share === undefined ? kg.format(value) : `${kg.format(value)} · ${percent.format(share)}`,
+  display: share === undefined ? kg.format(value) : `${kg.format(value)}, ${percent.format(share)}`,
   muted,
 });
 const shareBar = (key: string, label: string, share: number, muted: boolean): Bar => ({

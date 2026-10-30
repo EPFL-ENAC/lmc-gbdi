@@ -7,7 +7,13 @@
         <q-badge :color="status === 'ok' ? 'positive' : 'negative'" :label="status" />
       </p>
     </article>
-    <p><router-link class="link" to="/demo">Design demo</router-link></p>
+    <ul>
+      <li><router-link class="link" to="/demo">Design demo</router-link></li>
+      <li><router-link class="link" to="/demo/project">Project overview</router-link></li>
+      <li><router-link class="link" to="/demo/project_1">Layout 1, spread</router-link></li>
+      <li><router-link class="link" to="/demo/project_2">Layout 2, section</router-link></li>
+      <li><router-link class="link" to="/demo/project_3">Layout 3, sheet</router-link></li>
+    </ul>
   </q-page>
 </template>
 

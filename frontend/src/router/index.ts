@@ -12,6 +12,10 @@ export default defineRouter(() =>
           { path: '', component: () => import('@/pages/IndexPage.vue') },
           { path: 'demo', component: () => import('@/pages/DemoPage.vue') },
           { path: 'demo/project', component: () => import('@/pages/ProjectPage.vue') },
+          // Three alternative layouts of the same overview, to compare.
+          { path: 'demo/project_1', component: () => import('@/pages/ProjectSpreadPage.vue') },
+          { path: 'demo/project_2', component: () => import('@/pages/ProjectSectionPage.vue') },
+          { path: 'demo/project_3', component: () => import('@/pages/ProjectSheetPage.vue') },
         ],
       },
     ],

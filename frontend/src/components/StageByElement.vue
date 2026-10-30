@@ -39,19 +39,13 @@
 </template>
 
 <script setup lang="ts">
+import { STAGE_COLORS } from '@/dataviz';
 import { computed } from 'vue';
 import type { QTableColumn } from 'quasar';
 import type { ElementStages, StageTotal } from '@/api/overview';
 
 const props = defineProps<{ stages: StageTotal[]; rows: ElementStages[] }>();
 
-// The brand's "Green Bright + Light + Orange Bright" set (p.16), led by Green Dark.
-const STAGE_COLORS = [
-  'var(--gbdi-dataviz-green-1)',
-  'var(--gbdi-dataviz-green-2)',
-  'var(--gbdi-dataviz-green-3)',
-  'var(--gbdi-dataviz-orange-2)',
-];
 
 // The reader's locale; no i18n in the app yet.
 const kg = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
