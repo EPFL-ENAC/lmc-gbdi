@@ -10,9 +10,6 @@
           <span class="text-display-lead">Building carbon overview</span>
         </h1>
         <p class="text-lead">{{ projectLine }}</p>
-        <div class="project-actions">
-          <q-btn v-if="!route.params.id" unelevated no-caps class="btn-secondary" label="Back to the demo" to="/demo" />
-        </div>
       </section>
 
       <!-- The page's one set of hero cards: the figure alone, its unit opens the line -->
@@ -161,12 +158,10 @@ import type {
   MaterialHotspot,
   StageTotal,
 } from '@/api/overview';
-import { useRoute } from 'vue-router';
 import { useOverview } from '@/composables/useOverview';
 import { figure, kg, materialName, one, percent, three, two, WEIGHTING } from '@/format';
 
 const { overview, error } = useOverview();
-const route = useRoute();
 const pairKey = (row: { material: string; epd_product: string }) => `${row.material}|${row.epd_product}`;
 
 const projectLine = computed(() => {
@@ -244,11 +239,6 @@ const shareBar = (key: string, label: string, share: number, muted: boolean): Ba
 
 <style scoped lang="scss">
 @use '@/css/02-tokens' as tokens;
-
-.project-actions {
-  display: flex;
-  gap: tokens.$spacing-sm;
-}
 
 .project-section {
   display: flex;

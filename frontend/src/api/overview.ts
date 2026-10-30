@@ -129,6 +129,4 @@ export interface Overview {
   data_types: DataTypeShare[];
 }
 
-// No id: the AT reference workbook of the design demo, from its CSV export.
-export const fetchOverview = (id?: number) =>
-  getJson<Overview>(id === undefined ? '/overview' : `/buildings/${id}/overview`);
+export const fetchOverview = (id: number) => getJson<Overview>(`/buildings/${id}/overview`);

@@ -1,5 +1,5 @@
 <template>
-  <!-- One stored building: which one, how to read it (the two candidate layouts), and
+  <!-- One stored building: which one, how to read it (the design demo's layouts), and
        a way to set it beside another. -->
   <div>
     <nav class="building-bar" aria-label="Building">
@@ -7,7 +7,7 @@
       <p class="building-bar__code">{{ current ? code(current) : '' }}</p>
       <q-btn-toggle
         :model-value="layout"
-        :options="LAYOUTS"
+        :options="LAYOUTS.map(({ label, value }) => ({ label, value }))"
         no-caps
         unelevated
         toggle-color="primary"
@@ -38,18 +38,13 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { code, fetchBuildings, type BuildingSummary } from '@/api/buildings';
-
-// The two layouts the team is choosing between, for any stored building.
-const LAYOUTS = [
-  { label: 'Overview', value: '' },
-  { label: 'Spread', value: '/spread' },
-];
+import { LAYOUTS } from '@/buildingLayouts';
 
 const route = useRoute();
 const router = useRouter();
 const buildings = ref<BuildingSummary[]>([]);
 const id = computed(() => Number(route.params.id));
-const layout = computed(() => (route.path.endsWith('/spread') ? '/spread' : ''));
+const layout = computed(() => LAYOUTS.find((l) => l.value && route.path.endsWith(l.value))?.value ?? '');
 const current = computed(() => buildings.value.find((b) => b.id === id.value));
 const others = computed(() =>
   buildings.value

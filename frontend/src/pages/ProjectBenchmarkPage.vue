@@ -61,7 +61,7 @@
         <div class="bench__aside">
           <h2 class="bench__title">Is the scope complete?</h2>
           <p class="bench__scope">
-            A rating is only as good as the modules behind it. A module declared without a result is either missing or reported inside another, as A1 is here inside A1–A3.
+            A rating is only as good as the modules behind it. A module declared without a result is either missing or reported inside another, as A1 often is inside A1–A3.
           </p>
         </div>
         <ModuleChecks

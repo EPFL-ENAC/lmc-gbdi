@@ -9,10 +9,19 @@
       <header class="section-page__head">
         <p class="section-page__name">{{ overview.project.project_name ?? 'Unnamed project' }}</p>
         <h1 class="section-page__statement">
-          {{ kg.format(overview.headline.whole_life) }} kg CO₂e over
-          {{ figure(overview.project.reference_study_period_years, kg) }} years
+          {{ kg.format(overview.headline.whole_life) }} kg CO₂e
+          <template v-if="overview.project.reference_study_period_years !== null">
+            over {{ kg.format(overview.project.reference_study_period_years) }} years
+          </template>
+          <template v-else>over its whole life</template>
           <span class="text-display-lead">
-            {{ figure(overview.headline.per_m2_useful, one) }} kg per m<sup>2</sup> of useful floor area
+            <template v-if="overview.headline.per_m2_useful !== null">
+              {{ one.format(overview.headline.per_m2_useful) }} kg per m<sup>2</sup> of useful floor area
+            </template>
+            <template v-else-if="overview.headline.per_m2_gross !== null">
+              {{ one.format(overview.headline.per_m2_gross) }} kg per m<sup>2</sup> of gross floor area
+            </template>
+            <template v-else>Floor area not declared</template>
           </span>
         </h1>
       </header>
@@ -76,7 +85,7 @@ import ProjectFieldsTable from '@/components/ProjectFieldsTable.vue';
 import RankedBars, { type Bar } from '@/components/RankedBars.vue';
 import StageByElement from '@/components/StageByElement.vue';
 import { useOverview } from '@/composables/useOverview';
-import { figure, kg, one, percent, WEIGHTING } from '@/format';
+import { kg, one, percent, WEIGHTING } from '@/format';
 
 const { overview, error } = useOverview();
 
