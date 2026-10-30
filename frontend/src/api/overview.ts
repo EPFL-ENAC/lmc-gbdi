@@ -17,6 +17,7 @@ export interface ProjectInfo {
 export interface Headline {
   whole_life: number;
   upfront: number;
+  upfront_share: number;
   per_m2_useful: number | null;
   per_m2_gross: number | null;
   per_m2_useful_per_year: number | null;
@@ -51,6 +52,7 @@ export interface MaterialHotspot {
   mass_kg: number;
   share: number;
   gwp_per_kg: number | null;
+  gwp_by_stage: Record<string, number>;
 }
 
 export interface MassHotspot {
@@ -80,6 +82,23 @@ export interface ModuleCheck {
   status: 'ok' | 'declared_no_result' | 'result_not_declared';
 }
 
+export interface BenchmarkBand {
+  label: string;
+  upper: number | null; // kg CO₂e per m²; null for the open-ended last band
+}
+
+export interface Benchmark {
+  key: string;
+  name: string;
+  source: string;
+  source_url: string;
+  scope: string;
+  basis: 'per_m2_gross' | 'per_m2_useful';
+  value: number | null;
+  bands: BenchmarkBand[];
+  band: string | null;
+}
+
 export interface Overview {
   project: ProjectInfo;
   project_fields: ProjectField[];
@@ -95,6 +114,10 @@ export interface Overview {
   element_stages: ElementStages[];
   material_hotspots: MaterialHotspot[];
   mass_hotspots: MassHotspot[];
+  total_mass_kg: number;
+  mass_other_share: number;
+  use_per_year: number | null;
+  benchmarks: Benchmark[];
   data_type_weighting: 'gwp_fossil_a1_a3' | 'mass' | 'not_computed';
   data_types: DataTypeShare[];
 }

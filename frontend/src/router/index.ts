@@ -16,6 +16,10 @@ export default defineRouter(() =>
           { path: 'demo/project_1', component: () => import('@/pages/ProjectSpreadPage.vue') },
           { path: 'demo/project_2', component: () => import('@/pages/ProjectSectionPage.vue') },
           { path: 'demo/project_3', component: () => import('@/pages/ProjectSheetPage.vue') },
+          // Three more, each after a practice of the building LCA field.
+          { path: 'demo/project_4', component: () => import('@/pages/ProjectBenchmarkPage.vue') },
+          { path: 'demo/project_5', component: () => import('@/pages/ProjectTimePage.vue') },
+          { path: 'demo/project_6', component: () => import('@/pages/ProjectPassportPage.vue') },
         ],
       },
     ],

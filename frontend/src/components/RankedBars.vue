@@ -7,7 +7,7 @@
         <span
           class="bars-chart__bar"
           :class="{ 'bars-chart__bar--muted': bar.muted }"
-          :style="{ width: `calc((100% - 7rem) * ${bar.fraction})` }"
+          :style="{ width: `calc((100% - 5.5rem) * ${bar.fraction})` }"
         />
         <span>{{ bar.display }}</span>
       </div>
@@ -29,7 +29,7 @@ export interface Bar {
 
 const props = defineProps<{ bars: Bar[]; caption: string; emptyLabel: string }>();
 
-// Chart geometry only: length relative to the largest magnitude (7rem stays for the
+// Chart geometry only: length relative to the largest magnitude (5.5rem stays for the
 // value label). ponytail: negatives are drawn by magnitude; their label keeps the sign.
 const drawn = computed(() => {
   const largest = Math.max(...props.bars.map((bar) => Math.abs(bar.value)));
@@ -47,7 +47,8 @@ const drawn = computed(() => {
 
 .bars-chart__row {
   display: grid;
-  grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+  // Proportional columns, so the bars keep their length in a narrow card too.
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   align-items: center;
   gap: tokens.$spacing-md;
   font-size: tokens.$text-size-xs;

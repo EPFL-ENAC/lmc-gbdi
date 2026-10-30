@@ -13,6 +13,9 @@
       <li><router-link class="link" to="/demo/project_1">Layout 1, spread</router-link></li>
       <li><router-link class="link" to="/demo/project_2">Layout 2, section</router-link></li>
       <li><router-link class="link" to="/demo/project_3">Layout 3, sheet</router-link></li>
+      <li><router-link class="link" to="/demo/project_4">Layout 4, benchmark</router-link></li>
+      <li><router-link class="link" to="/demo/project_5">Layout 5, time</router-link></li>
+      <li><router-link class="link" to="/demo/project_6">Layout 6, passport</router-link></li>
     </ul>
   </q-page>
 </template>
