@@ -181,6 +181,7 @@ def hotspots(
             gwp=float(p["gwp"]),
             mass_kg=float(p["mass"]),
             share=float(p["gwp"] / whole_life),
+            share_of_mass=float(p["mass"] / total_mass) if total_mass else None,
             gwp_per_kg=float(p["gwp"] / p["mass"]) if p["mass"] else None,
             gwp_by_stage={k: float(p[k]) for k, _ in STAGES},
         )
@@ -193,6 +194,8 @@ def hotspots(
             epd_product=epd,
             mass_kg=float(p["mass"]),
             share_of_mass=float(p["mass"] / total_mass),
+            gwp=float(p["gwp"]),
+            share=float(p["gwp"] / whole_life),
         )
         for (material, epd), p in by_mass
         if round(p["mass"]) != 0
