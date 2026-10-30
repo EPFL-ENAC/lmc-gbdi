@@ -5,6 +5,7 @@ requires-python = ">=3.14,<3.15"
 dependencies = [
     "alembic>=1.20.0",
     "fastapi[standard-no-fastapi-cloud-cli]>=0.152.0",
+    "openbdf",
     "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.16.1",
     "sqlalchemy[asyncio]>=2.1.5",
@@ -21,6 +22,9 @@ target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+[tool.uv.sources]
+openbdf = { git = "https://github.com/EPFL-ENAC/lmc-openbdf", rev = "fbbe19167d94cb5d2a432752880511709ea7ab87" }
 
 [dependency-groups]
 dev = [

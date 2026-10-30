@@ -10,6 +10,8 @@ lerna-debug.log*
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Runtime data
+# Real OpenBDF project exports (OPENBDF_DATA_DIR): not ours to publish.
+backend/data/
 pids
 *.pid
 *.seed

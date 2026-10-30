@@ -9,8 +9,9 @@ backend:
     tag: latest
     pullPolicy: IfNotPresent
   resources:
-    requests: { cpu: 100m, memory: 128Mi }
-    limits: { memory: 512Mi }
+    requests: { cpu: 100m, memory: 256Mi }
+    # Reading one COLA workbook (20-30 MB) with lmc-openbdf peaks at 1.2 GiB.
+    limits: { memory: 2Gi }
 
 frontend:
   replicaCount: 1

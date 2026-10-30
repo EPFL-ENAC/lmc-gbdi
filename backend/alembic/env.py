@@ -6,6 +6,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 
+import app.buildings.models  # noqa: F401  OpenBDF's tables and Upload
 from alembic import context
 from app.config import get_settings
 

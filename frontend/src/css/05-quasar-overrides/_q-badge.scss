@@ -9,4 +9,11 @@
   &--rounded {
     border-radius: tokens.$radius-pill;
   }
+
+  // A badge without a color prop is a GBDI chip (Green-Grey Accent), not a
+  // Primary Green fill; color="positive" etc. still add their bg-* class.
+  &:not([class*='bg-']) {
+    background-color: tokens.$badge-bg;
+    color: tokens.$badge-color;
+  }
 }

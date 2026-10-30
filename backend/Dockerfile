@@ -2,6 +2,9 @@
 # so the venv is built against the same libc (musl) it runs on.
 FROM ghcr.io/astral-sh/uv:python3.14-alpine AS builder
 
+# git fetches lmc-openbdf, a git dependency until it is on PyPI; builder only.
+RUN apk add --no-cache git
+
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
