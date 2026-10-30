@@ -44,6 +44,8 @@ class MaterialRow:
     repetition: Decimal  # floor_repetition; blank or 0 counts once, as in the workbook
     mass_kg: Decimal
     gwp: dict[str, Decimal | None]  # None = blank cell, which drives the fallbacks
+    # OpenBDF material class, "4.2 Concrete"; the CSV export has no such column.
+    material_class: str = ""
 
 
 @dataclass(frozen=True)

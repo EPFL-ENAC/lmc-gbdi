@@ -56,6 +56,10 @@ clean-db: ## Stop the stack and delete the database volume
 dev-backend: backend/.env ## API with reload on :8000
 	cd backend && uv run alembic upgrade head && uv run fastapi dev app/main.py
 
+.PHONY: load-buildings
+load-buildings: backend/.env ## Read OpenBDF workbooks into the database: make load-buildings FILES="~/Downloads/Output/*.xlsx"
+	cd backend && PYTHONPATH=. uv run python scripts/load_buildings.py $(FILES)
+
 .PHONY: dev-frontend
 dev-frontend: ## Quasar dev server on :9000, proxies /api to :8000
 	cd frontend && npm run dev

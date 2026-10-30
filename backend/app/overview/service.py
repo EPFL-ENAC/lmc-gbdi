@@ -19,6 +19,7 @@ from app.overview.schemas import (
     ElementTotal,
     Headline,
     MassHotspot,
+    MaterialClassTotal,
     MaterialHotspot,
     ModuleCheck,
     Overview,
@@ -199,6 +200,20 @@ def hotspots(
     top_mass = sum((p["mass"] for _, p in by_mass[:TOP_MATERIALS]), ZERO)
     other_share = (total_mass - top_mass) / total_mass if total_mass else ZERO
     return gwp[:TOP_MATERIALS], mass[:TOP_MATERIALS], other_share
+
+
+def class_rollup(rows: list[tuple[MaterialRow, Stages]]) -> list[MaterialClassTotal]:
+    """Whole-life GWP and mass by OpenBDF material class: the names that compare
+    across projects, where custom material names never match."""
+    classes: dict[str, Stages] = defaultdict(lambda: {"gwp": ZERO, "mass": ZERO})
+    for row, stages in rows:
+        totals = classes[row.material_class or "Not classified"]
+        totals["gwp"] += sum(stages.values(), ZERO)
+        totals["mass"] += row.mass_kg * row.repetition
+    return [
+        MaterialClassTotal(label=label, gwp=float(t["gwp"]), mass_kg=float(t["mass"]))
+        for label, t in sorted(classes.items())
+    ]
 
 
 def data_type_key(declared: str) -> str:
@@ -387,6 +402,7 @@ def build_overview(data: ProjectData) -> Overview:
         mass_hotspots=mass_hotspots,
         total_mass_kg=float(sum((p["mass"] for p in pairs.values()), ZERO)),
         mass_other_share=float(mass_other_share),
+        material_classes=class_rollup(rows),
         use_per_year=per(totals["b1_b8"], period),
         benchmarks=benchmarks(summary),
         data_type_weighting=weighting,

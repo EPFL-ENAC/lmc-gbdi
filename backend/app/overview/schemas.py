@@ -67,6 +67,12 @@ class MassHotspot(BaseModel):
     share_of_mass: float
 
 
+class MaterialClassTotal(BaseModel):
+    label: str  # OpenBDF material class, "4.2 Concrete"; "Not classified" when blank
+    gwp: float
+    mass_kg: float
+
+
 class DataTypeShare(BaseModel):
     key: str
     label: str
@@ -121,6 +127,7 @@ class Overview(BaseModel):
     mass_hotspots: list[MassHotspot]  # top 10 by mass
     total_mass_kg: float  # every bill of materials row, floor repetition included
     mass_other_share: float  # of the mass, outside the top 10
+    material_classes: list[MaterialClassTotal]  # every class present, in code order
     use_per_year: float | None  # B1–B8 spread evenly over the study period
     benchmarks: list[Benchmark]
     data_type_weighting: str  # gwp_fossil_a1_a3 | mass | not_computed
