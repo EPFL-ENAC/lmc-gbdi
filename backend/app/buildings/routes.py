@@ -42,8 +42,16 @@ async def upload_building(file: UploadFile, session: Session) -> BuildingSummary
         )
         return JSONResponse(body.model_dump(), status_code=422)
     project_id = await store(session, project, file.filename or "", findings)
+    try:
+        # Compute before committing: a project the overview cannot read is refused,
+        # never stored to break the list for everyone.
+        summary = await service.building_summary(session, project_id)
+    except ValueError as unreadable:
+        await session.rollback()
+        service.forget(project_id)
+        raise HTTPException(422, f"{file.filename}: {unreadable}") from None
     await session.commit()
-    return await service.building_summary(session, project_id)
+    return summary
 
 
 @router.get("/compare")
