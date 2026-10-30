@@ -62,6 +62,12 @@ export interface MassHotspot {
   share_of_mass: number;
 }
 
+export interface MaterialClassTotal {
+  label: string; // OpenBDF material class, "4.2 Concrete"
+  gwp: number;
+  mass_kg: number;
+}
+
 export interface DataTypeShare {
   key: string;
   label: string;
@@ -116,10 +122,13 @@ export interface Overview {
   mass_hotspots: MassHotspot[];
   total_mass_kg: number;
   mass_other_share: number;
+  material_classes: MaterialClassTotal[];
   use_per_year: number | null;
   benchmarks: Benchmark[];
   data_type_weighting: 'gwp_fossil_a1_a3' | 'mass' | 'not_computed';
   data_types: DataTypeShare[];
 }
 
-export const fetchOverview = () => getJson<Overview>('/overview');
+// No id: the AT reference workbook of the design demo, from its CSV export.
+export const fetchOverview = (id?: number) =>
+  getJson<Overview>(id === undefined ? '/overview' : `/buildings/${id}/overview`);

@@ -10,6 +10,17 @@ export default defineRouter(() =>
         component: () => import('@/layouts/MainLayout.vue'),
         children: [
           { path: '', component: () => import('@/pages/IndexPage.vue') },
+          { path: 'buildings', component: () => import('@/pages/BuildingsPage.vue') },
+          { path: 'buildings/compare', component: () => import('@/pages/ComparePage.vue') },
+          // A stored building in the two layouts the team is choosing between.
+          {
+            path: 'buildings/:id(\\d+)',
+            component: () => import('@/layouts/BuildingLayout.vue'),
+            children: [
+              { path: '', component: () => import('@/pages/ProjectPage.vue') },
+              { path: 'spread', component: () => import('@/pages/ProjectSpreadPage.vue') },
+            ],
+          },
           { path: 'demo', component: () => import('@/pages/DemoPage.vue') },
           { path: 'demo/project', component: () => import('@/pages/ProjectPage.vue') },
           // Three alternative layouts of the same overview, to compare.

@@ -11,7 +11,7 @@
         </h1>
         <p class="text-lead">{{ projectLine }}</p>
         <div class="project-actions">
-          <q-btn unelevated no-caps class="btn-secondary" label="Back to the demo" to="/demo" />
+          <q-btn v-if="!route.params.id" unelevated no-caps class="btn-secondary" label="Back to the demo" to="/demo" />
         </div>
       </section>
 
@@ -138,7 +138,7 @@
           <li>
             Project {{ overview.project.project_id }}, {{ overview.project.lcia_methodology }},
             {{ overview.project.lca_database }}, {{ overview.project.system_boundary }}. Computed from the
-            OpenBDF export, {{ kg.format(overview.rows_read) }} bill of materials rows.
+            OpenBDF workbook, {{ kg.format(overview.rows_read) }} bill of materials rows.
           </li>
         </ol>
       </footer>
@@ -161,10 +161,12 @@ import type {
   MaterialHotspot,
   StageTotal,
 } from '@/api/overview';
+import { useRoute } from 'vue-router';
 import { useOverview } from '@/composables/useOverview';
 import { figure, kg, materialName, one, percent, three, two, WEIGHTING } from '@/format';
 
 const { overview, error } = useOverview();
+const route = useRoute();
 const pairKey = (row: { material: string; epd_product: string }) => `${row.material}|${row.epd_product}`;
 
 const projectLine = computed(() => {

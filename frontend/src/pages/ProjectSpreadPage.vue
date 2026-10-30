@@ -17,7 +17,10 @@
         <div class="spread__aside">
           <h2 class="spread__title">Whole life</h2>
           <p>
-            Modules A to C over a {{ figure(overview.project.reference_study_period_years, kg) }}-year study period.
+            <template v-if="overview.project.reference_study_period_years !== null">
+              Modules A to C over a {{ kg.format(overview.project.reference_study_period_years) }}-year study period.
+            </template>
+            <template v-else>Modules A to C; the study period is not declared.</template>
             Module D, the benefits beyond the building's life, is reported beside the total, never in it.
           </p>
         </div>
@@ -27,8 +30,15 @@
             <p class="gbdi-hero-card__text">kg CO₂e over the whole life cycle.</p>
           </div>
           <div class="gbdi-hero-card gbdi-hero-card--blue">
-            <p class="gbdi-hero-card__number">{{ figure(overview.headline.per_m2_useful, one) }}</p>
-            <p class="gbdi-hero-card__text">kg CO₂e per m² of useful floor area.</p>
+            <!-- Useful floor area when declared, as the workbook; else gross, and the text says so. -->
+            <template v-if="overview.headline.per_m2_useful !== null || overview.headline.per_m2_gross === null">
+              <p class="gbdi-hero-card__number">{{ figure(overview.headline.per_m2_useful, one) }}</p>
+              <p class="gbdi-hero-card__text">kg CO₂e per m² of useful floor area.</p>
+            </template>
+            <template v-else>
+              <p class="gbdi-hero-card__number">{{ one.format(overview.headline.per_m2_gross) }}</p>
+              <p class="gbdi-hero-card__text">kg CO₂e per m² of gross floor area; no useful floor area is declared.</p>
+            </template>
           </div>
           <div class="gbdi-hero-card gbdi-hero-card--purple">
             <p class="gbdi-hero-card__number">{{ kg.format(overview.headline.upfront) }}</p>

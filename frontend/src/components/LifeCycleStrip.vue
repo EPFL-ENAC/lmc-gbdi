@@ -23,20 +23,34 @@
         <span class="life-strip__value">{{ kg.format(moduleD) }} kg</span>
       </li>
     </ol>
+    <p v-if="negative.length > 0" class="life-strip__note">
+      {{ negative.join(', ') }} below zero, so without length on this strip: read the figure in the legend.
+    </p>
   </figure>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { STAGE_COLORS } from '@/dataviz';
 import type { StageTotal } from '@/api/overview';
 import { kg, percent } from '@/format';
 
-defineProps<{ stages: StageTotal[]; wholeLife: number; moduleD: number }>();
+const props = defineProps<{ stages: StageTotal[]; wholeLife: number; moduleD: number }>();
+
+// Shares of a whole only draw positive parts; a negative stage (biogenic carbon
+// stored at A1–A3) is named instead of silently missing.
+const negative = computed(() => props.stages.filter((s) => s.gwp < 0).map((s) => s.label));
 
 </script>
 
 <style scoped lang="scss">
 @use '@/css/02-tokens' as tokens;
+
+.life-strip__note {
+  margin: 0;
+  font-size: tokens.$text-size-xs;
+  color: tokens.$color-text-muted;
+}
 
 .life-strip {
   margin: 0;

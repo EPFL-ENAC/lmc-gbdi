@@ -8,6 +8,7 @@
       </p>
     </article>
     <ul>
+      <li><router-link class="link" to="/buildings">Buildings, from the database</router-link></li>
       <li><router-link class="link" to="/demo">Design demo</router-link></li>
       <li><router-link class="link" to="/demo/project">Project overview</router-link></li>
       <li><router-link class="link" to="/demo/project_1">Layout 1, spread</router-link></li>
