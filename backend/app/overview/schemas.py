@@ -71,9 +71,27 @@ class DataTypeShare(BaseModel):
     share: float
 
 
+class ProjectField(BaseModel):
+    code: str  # OpenBDF field code in General Information
+    label: str
+    group: str  # Project | Building | Life cycle assessment
+    value: str | None  # as declared; None when General Information leaves it blank
+
+
+class ModuleCheck(BaseModel):
+    module: str  # A1–A3, A1 … C4, in life-cycle order
+    declared: bool  # the module's scope flag in General Information
+    has_result: bool  # the Wide results hold a non-zero sum for it
+    status: str  # ok | declared_no_result | result_not_declared
+
+
 class Overview(BaseModel):
     project: ProjectInfo
+    project_fields: list[ProjectField]  # the sheet's Project table, in its order
     rows_read: int
+    module_checks: list[ModuleCheck]
+    modules_declared_without_result: int
+    modules_with_undeclared_result: int
     headline: Headline
     stages: list[StageTotal]
     elements: list[ElementTotal]  # the first 8 classified elements, in OpenBDF order

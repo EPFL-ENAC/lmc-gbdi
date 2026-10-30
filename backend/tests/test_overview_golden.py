@@ -103,3 +103,10 @@ def test_material_pairs_match_the_workbook(project, overview):
         assert float(pairs[pair]["gwp"]) == pytest.approx(gwp, rel=1e-9)
         assert float(pairs[pair]["mass"]) == pytest.approx(mass, rel=1e-9)
     assert overview.material_hotspots[0].share == pytest.approx(0.2803, abs=1e-4)
+
+
+def test_module_checks_match_the_workbook(overview):
+    # Cells F27 and F28: A1 is declared but only A1–A3 carries results.
+    assert overview.modules_declared_without_result == 1
+    assert overview.modules_with_undeclared_result == 0
+    assert [c.module for c in overview.module_checks if c.status != "ok"] == ["A1"]

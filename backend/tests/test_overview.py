@@ -173,3 +173,27 @@ def test_endpoint_says_when_no_project_is_configured():
     finally:
         app.dependency_overrides.clear()
     assert response.status_code == 503
+
+
+def test_module_checks_compare_flags_with_results(tmp_path):
+    flags = {"lca_a1_3": "TRUE", "lca_a4": "1", "lca_c1": "TRUE", "lca_b6": "FALSE"}
+    write_project(tmp_path)
+    general = tmp_path / "general_information.csv"
+    rows = [*GENERAL.items(), *flags.items()]
+    write_csv(general, ["field_code", "value"], rows)
+    status = {
+        c.module: c.status for c in build_overview(read_project(tmp_path)).module_checks
+    }
+    assert status["A1–A3"] == "ok"  # declared, M1 has a result
+    assert status["A4"] == "ok"
+    assert status["C1"] == "declared_no_result"
+    assert status["B6"] == "result_not_declared"  # M2 has B6, flag says FALSE
+    assert status["A2"] == "result_not_declared"  # M2 has A2, no flag at all
+    assert status["A5.2"] == "ok"  # neither declared nor present
+
+
+def test_project_fields_keep_blanks_as_not_declared(overview):
+    fields = {f.code: f.value for f in overview.project_fields}
+    assert len(fields) == 22
+    assert fields["project_id"] == "TEST-1"
+    assert fields["project_country"] is None

@@ -19,7 +19,9 @@ from app.overview.schemas import (
     Headline,
     MassHotspot,
     MaterialHotspot,
+    ModuleCheck,
     Overview,
+    ProjectField,
     ProjectInfo,
     StageTotal,
 )
@@ -42,6 +44,43 @@ DATA_TYPES = (
     ("product_group_average", "Average data for a product group"),
     ("generic", "Generic data"),
     ("default_value", "Default values"),
+)
+
+# The Project table of the sheet: (group, field code, label), in the sheet's order.
+PROJECT_FIELDS = (
+    ("Project", "project_id", "Project ID"),
+    ("Project", "project_name", "Project name"),
+    ("Project", "project_country", "Country"),
+    ("Project", "project_no_of_buildings", "No. of buildings"),
+    ("Project", "project_assessment_type", "Assessment type"),
+    ("Project", "project_phase_common", "Project phase, common definition"),
+    ("Building", "building_use_type", "Building typology"),
+    ("Building", "building_structure_type", "Building structure type"),
+    ("Building", "building_gross_floor_area", "Gross floor area (m²)"),
+    ("Building", "building_useful_floor_area", "Useful floor area (m²)"),
+    ("Building", "building_gross_floor_area_standard", "GFA standard"),
+    ("Building", "building_element_classification_code_name", "Element classification"),
+    ("Building", "lca_material_source", "Material quantities source"),
+    ("Life cycle assessment", "lca_cycle_system_boundary", "System boundary"),
+    ("Life cycle assessment", "lca_reference_study_period", "Study period (years)"),
+    ("Life cycle assessment", "lcia_methodology", "LCIA methodology"),
+    ("Life cycle assessment", "lca_database_name", "LCA database"),
+    ("Life cycle assessment", "lca_database_version", "LCA database version"),
+    ("Life cycle assessment", "lca_biogenic_method", "Biogenic carbon accounting"),
+    ("Life cycle assessment", "lca_temporal_approach", "Temporal approach"),
+    ("Life cycle assessment", "lca_lci_modeling_approach", "LCI modelling approach"),
+    ("Life cycle assessment", "lca_third_party_verified", "Third-party verified"),
+)
+# Module scope flags of General Information and their Wide result column.
+MODULES = (
+    ("A1–A3", "lca_a1_3", "gwp_total_a1_a3"),
+    *(
+        (m.upper(), f"lca_{m}", f"gwp_total_{m}")
+        for m in ("a1", "a2", "a3", "a4", "a5")
+    ),
+    *((f"A5.{i}", f"lca_a5_{i}", f"gwp_total_a5_{i}") for i in range(1, 5)),
+    *((f"B{i}", f"lca_b{i}", f"gwp_total_b{i}") for i in range(1, 9)),
+    *((f"C{i}", f"lca_c{i}", f"gwp_total_c{i}") for i in range(1, 5)),
 )
 
 with (Path(__file__).parent / "bec_tier2.csv").open(encoding="utf-8") as f:
@@ -244,6 +283,42 @@ def headline(data: ProjectData, totals: Stages) -> Headline:
     )
 
 
+def project_fields(general: dict[str, str]) -> list[ProjectField]:
+    return [
+        ProjectField(code=code, label=label, group=group, value=text(general, code))
+        for group, code, label in PROJECT_FIELDS
+    ]
+
+
+def declared(general: dict[str, str], flag: str) -> bool:
+    """The workbook's N(x)=1 or UPPER(x)="TRUE"."""
+    value = (text(general, flag) or "").upper()
+    return value in ("TRUE", "1")
+
+
+def module_checks(data: ProjectData) -> list[ModuleCheck]:
+    """Declared modules against the results present: a plain sum of the Wide column."""
+    checks = []
+    for module_name, flag, field in MODULES:
+        total = sum((row.gwp[field] or ZERO for row in data.rows), ZERO)
+        has_result = round(total, 6) != ZERO
+        is_declared = declared(data.general, flag)
+        status = "ok"
+        if is_declared and not has_result:
+            status = "declared_no_result"
+        if has_result and not is_declared:
+            status = "result_not_declared"
+        checks.append(
+            ModuleCheck(
+                module=module_name,
+                declared=is_declared,
+                has_result=has_result,
+                status=status,
+            )
+        )
+    return checks
+
+
 def bucket(name: str, gwp: Decimal, whole_life: Decimal) -> ElementTotal:
     return ElementTotal(element=name, gwp=float(gwp), share=float(gwp / whole_life))
 
@@ -262,9 +337,18 @@ def build_overview(data: ProjectData) -> Overview:
     pairs = material_rollup(rows)
     material_hotspots, mass_hotspots = hotspots(pairs, whole_life)
     weighting, data_types = data_type_profile(pairs, data.data_types)
+    checks = module_checks(data)
     return Overview(
         project=project_info(data.general),
+        project_fields=project_fields(data.general),
         rows_read=len(data.rows),
+        module_checks=checks,
+        modules_declared_without_result=sum(
+            c.status == "declared_no_result" for c in checks
+        ),
+        modules_with_undeclared_result=sum(
+            c.status == "result_not_declared" for c in checks
+        ),
         headline=headline(data, totals),
         stages=[
             StageTotal(
