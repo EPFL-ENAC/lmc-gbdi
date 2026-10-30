@@ -18,9 +18,21 @@
         </p>
       </header>
 
-      <section class="passport__section">
-        <h2 class="passport__title">What it weighs</h2>
-        <MassBricks :hotspots="overview.mass_hotspots" :total-mass="overview.total_mass_kg" />
+      <!-- The same wall twice: by mass, then by carbon. Heavy is not the same as intense. -->
+      <section class="passport__section grid-2-col">
+        <div class="passport__column">
+          <h2 class="passport__title">What it weighs</h2>
+          <MaterialBricks :items="massBricks" :total="overview.total_mass_kg" unit="kg" caption="Mass by material" />
+        </div>
+        <div class="passport__column">
+          <h2 class="passport__title">What it emits</h2>
+          <MaterialBricks
+            :items="carbonBricks"
+            :total="overview.headline.whole_life"
+            unit="kg CO₂e"
+            caption="Whole-life carbon by material, modules A to C"
+          />
+        </div>
       </section>
 
       <section class="passport__section">
@@ -51,13 +63,31 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import MassBricks from '@/components/MassBricks.vue';
+import MaterialBricks, { type Brick } from '@/components/MaterialBricks.vue';
 import MaterialSheet from '@/components/MaterialSheet.vue';
 import ProjectFieldsTable from '@/components/ProjectFieldsTable.vue';
 import { useOverview } from '@/composables/useOverview';
 import { kg, percent, WEIGHTING } from '@/format';
 
 const { overview, error } = useOverview();
+
+const label = (h: { material: string; epd_product: string }) => h.material || h.epd_product;
+const massBricks = computed<Brick[]>(() =>
+  (overview.value?.mass_hotspots ?? []).map((h) => ({
+    key: `${h.material}|${h.epd_product}`,
+    label: label(h),
+    value: h.mass_kg,
+    share: h.share_of_mass,
+  })),
+);
+const carbonBricks = computed<Brick[]>(() =>
+  (overview.value?.material_hotspots ?? []).map((h) => ({
+    key: `${h.material}|${h.epd_product}`,
+    label: label(h),
+    value: h.gwp,
+    share: h.share,
+  })),
+);
 
 const dataTypeSentence = computed(() => {
   const o = overview.value;
@@ -81,6 +111,18 @@ const dataTypeSentence = computed(() => {
 
 .passport__section p {
   margin: 0;
+}
+
+.passport__section.grid-2-col {
+  display: grid;
+  align-items: start;
+  column-gap: tokens.$spacing-page;
+}
+
+.passport__column {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-lg;
 }
 
 .passport__title {

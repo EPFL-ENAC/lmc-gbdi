@@ -2,8 +2,8 @@ import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { fetchOverview, type Overview } from '@/api/overview';
 
-// The overview of the building in the route (/buildings/:id), or of the demo's
-// reference workbook; reloaded when the id changes. Pages show `error` and loading.
+// The overview of the building in the route (/buildings/:id), reloaded when the id
+// changes. Pages show `error` and the loading state themselves.
 export function useOverview() {
   const route = useRoute();
   const overview = ref<Overview | null>(null);
@@ -14,7 +14,7 @@ export function useOverview() {
       overview.value = null;
       error.value = null;
       try {
-        overview.value = await fetchOverview(typeof id === 'string' ? Number(id) : undefined);
+        overview.value = await fetchOverview(Number(id));
       } catch (e: unknown) {
         error.value = e instanceof Error ? e.message : String(e);
       }
