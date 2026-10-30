@@ -22,6 +22,7 @@ class ProjectInfo(BaseModel):
 class Headline(BaseModel):
     whole_life: float
     upfront: float  # A1–A5
+    upfront_share: float  # of the whole life, emitted before the building is used
     per_m2_useful: float | None  # None when the floor area is not declared
     per_m2_gross: float | None
     per_m2_useful_per_year: float | None
@@ -56,6 +57,7 @@ class MaterialHotspot(BaseModel):
     mass_kg: float
     share: float  # of whole-life GWP
     gwp_per_kg: float | None  # None when the mass is zero
+    gwp_by_stage: dict[str, float]  # keyed by StageTotal.key
 
 
 class MassHotspot(BaseModel):
@@ -85,6 +87,23 @@ class ModuleCheck(BaseModel):
     status: str  # ok | declared_no_result | result_not_declared
 
 
+class BenchmarkBand(BaseModel):
+    label: str
+    upper: float | None  # kg CO₂e per m²; None for the open-ended last band
+
+
+class Benchmark(BaseModel):
+    key: str
+    name: str
+    source: str
+    source_url: str
+    scope: str  # what the scale counts, and how this project differs
+    basis: str  # the Headline figure compared: per_m2_gross | per_m2_useful
+    value: float | None  # None when the project lacks that floor area
+    bands: list[BenchmarkBand]  # ascending
+    band: str | None
+
+
 class Overview(BaseModel):
     project: ProjectInfo
     project_fields: list[ProjectField]  # the sheet's Project table, in its order
@@ -100,5 +119,9 @@ class Overview(BaseModel):
     element_stages: list[ElementStages]
     material_hotspots: list[MaterialHotspot]  # top 10 by whole-life GWP
     mass_hotspots: list[MassHotspot]  # top 10 by mass
+    total_mass_kg: float  # every bill of materials row, floor repetition included
+    mass_other_share: float  # of the mass, outside the top 10
+    use_per_year: float | None  # B1–B8 spread evenly over the study period
+    benchmarks: list[Benchmark]
     data_type_weighting: str  # gwp_fossil_a1_a3 | mass | not_computed
     data_types: list[DataTypeShare]  # the seven EU 2026/52 types, then "undeclared"

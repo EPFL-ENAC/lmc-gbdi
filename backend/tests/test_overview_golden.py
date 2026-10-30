@@ -110,3 +110,12 @@ def test_module_checks_match_the_workbook(overview):
     assert overview.modules_declared_without_result == 1
     assert overview.modules_with_undeclared_result == 0
     assert [c.module for c in overview.module_checks if c.status != "ok"] == ["A1"]
+
+
+def test_benchmarks_and_use_per_year(overview):
+    # B1–B8 (cell C37) over the 50-year study period.
+    assert overview.use_per_year == pytest.approx(33010.08131827447 / 50, rel=1e-9)
+    assert {b.key: b.band for b in overview.benchmarks} == {
+        "leti": "A",  # 234.9 per m² gross floor area
+        "re2020": "Within the 2031 ceiling",  # 272.4 per m² useful floor area
+    }

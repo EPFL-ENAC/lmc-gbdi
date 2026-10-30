@@ -11,6 +11,7 @@ from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 
+from app.overview.benchmarks import benchmarks
 from app.overview.repo import MaterialPair, MaterialRow, ProjectData, read_project
 from app.overview.schemas import (
     DataTypeShare,
@@ -149,12 +150,16 @@ def material_rollup(
 ) -> dict[MaterialPair, Stages]:
     """Whole-life GWP, mass and GWP fossil A1–A3 of each material + EPD product."""
     pairs: dict[MaterialPair, Stages] = defaultdict(
-        lambda: {"gwp": ZERO, "mass": ZERO, "fossil": ZERO}
+        lambda: (
+            {"gwp": ZERO, "mass": ZERO, "fossil": ZERO} | {k: ZERO for k, _ in STAGES}
+        )
     )
     fossil_parts = ("gwp_f_a1", "gwp_f_a2", "gwp_f_a3")
     for row, stages in rows:
         pair = pairs[row.pair]
         pair["gwp"] += sum(stages.values(), ZERO)
+        for key, value in stages.items():
+            pair[key] += value
         pair["mass"] += row.mass_kg * row.repetition
         pair["fossil"] += (
             with_fallback(row, "gwp_f_a1_a3", fossil_parts) * row.repetition
@@ -164,7 +169,7 @@ def material_rollup(
 
 def hotspots(
     pairs: dict[MaterialPair, Stages], whole_life: Decimal
-) -> tuple[list[MaterialHotspot], list[MassHotspot]]:
+) -> tuple[list[MaterialHotspot], list[MassHotspot], Decimal]:
     by_gwp = sorted(pairs.items(), key=lambda item: item[1]["gwp"], reverse=True)
     by_mass = sorted(pairs.items(), key=lambda item: item[1]["mass"], reverse=True)
     total_mass = sum((p["mass"] for p in pairs.values()), ZERO)
@@ -176,6 +181,7 @@ def hotspots(
             mass_kg=float(p["mass"]),
             share=float(p["gwp"] / whole_life),
             gwp_per_kg=float(p["gwp"] / p["mass"]) if p["mass"] else None,
+            gwp_by_stage={k: float(p[k]) for k, _ in STAGES},
         )
         for (material, epd), p in by_gwp
         if round(p["gwp"]) != 0
@@ -190,7 +196,9 @@ def hotspots(
         for (material, epd), p in by_mass
         if round(p["mass"]) != 0
     ]
-    return gwp[:TOP_MATERIALS], mass[:TOP_MATERIALS]
+    top_mass = sum((p["mass"] for _, p in by_mass[:TOP_MATERIALS]), ZERO)
+    other_share = (total_mass - top_mass) / total_mass if total_mass else ZERO
+    return gwp[:TOP_MATERIALS], mass[:TOP_MATERIALS], other_share
 
 
 def data_type_key(declared: str) -> str:
@@ -275,6 +283,7 @@ def headline(data: ProjectData, totals: Stages) -> Headline:
     return Headline(
         whole_life=float(whole_life),
         upfront=float(totals["a1_a3"] + totals["a4_a5"]),
+        upfront_share=float((totals["a1_a3"] + totals["a4_a5"]) / whole_life),
         per_m2_useful=per(whole_life, useful),
         per_m2_gross=per(whole_life, gross),
         per_m2_useful_per_year=per(whole_life, useful, period),
@@ -335,7 +344,9 @@ def build_overview(data: ProjectData) -> Overview:
     shown = elements[:TOP_ELEMENTS]
     shown_total = sum((sum(s.values(), ZERO) for _, s in shown), ZERO)
     pairs = material_rollup(rows)
-    material_hotspots, mass_hotspots = hotspots(pairs, whole_life)
+    material_hotspots, mass_hotspots, mass_other_share = hotspots(pairs, whole_life)
+    period = quantity(data.general, "lca_reference_study_period")
+    summary = headline(data, totals)
     weighting, data_types = data_type_profile(pairs, data.data_types)
     checks = module_checks(data)
     return Overview(
@@ -349,7 +360,7 @@ def build_overview(data: ProjectData) -> Overview:
         modules_with_undeclared_result=sum(
             c.status == "result_not_declared" for c in checks
         ),
-        headline=headline(data, totals),
+        headline=summary,
         stages=[
             StageTotal(
                 key=k,
@@ -374,6 +385,10 @@ def build_overview(data: ProjectData) -> Overview:
         element_stages=[element_stages(name, s) for name, s in shown],
         material_hotspots=material_hotspots,
         mass_hotspots=mass_hotspots,
+        total_mass_kg=float(sum((p["mass"] for p in pairs.values()), ZERO)),
+        mass_other_share=float(mass_other_share),
+        use_per_year=per(totals["b1_b8"], period),
+        benchmarks=benchmarks(summary),
         data_type_weighting=weighting,
         data_types=data_types,
     )

@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings, get_settings
 from app.main import app
+from app.overview.benchmarks import SCALES, band_of
 from app.overview.repo import BOM_FIELDS, GWP_FIELDS, PMD_FIELDS, read_project
 from app.overview.service import build_overview, in_element
 
@@ -88,6 +89,8 @@ def test_whole_life_excludes_module_d_and_b_submodules(overview):
     assert overview.headline.whole_life == 118
     assert overview.headline.module_d1 == -15
     assert overview.headline.upfront == 91 + 11
+    assert overview.headline.upfront_share == pytest.approx(102 / 118)
+    assert overview.total_mass_kg == 350 + 20 + 5
 
 
 def test_per_m2_figures_divide_by_floor_area_then_period(overview):
@@ -197,3 +200,32 @@ def test_project_fields_keep_blanks_as_not_declared(overview):
     assert len(fields) == 22
     assert fields["project_id"] == "TEST-1"
     assert fields["project_country"] is None
+
+
+def test_material_hotspots_carry_their_stage_split(overview):
+    concrete = overview.material_hotspots[0]
+    assert concrete.gwp_by_stage == {"a1_a3": 36, "a4_a5": 11, "b1_b8": 6, "c1_c4": 12}
+    assert overview.mass_other_share == 0  # three materials, all in the top 10
+
+
+def test_use_stage_is_spread_over_the_study_period(overview):
+    assert overview.use_per_year == pytest.approx(4 / 50)
+
+
+def test_benchmarks_place_the_project_on_each_scale(overview):
+    bands = {b.key: (b.value, b.band) for b in overview.benchmarks}
+    assert bands["leti"] == (pytest.approx(0.59), "A++")  # per m² gross
+    assert bands["re2020"] == (pytest.approx(1.18), "Within the 2031 ceiling")
+
+
+@pytest.mark.parametrize(
+    ("value", "inclusive", "band"),
+    [(299.9, False, "A"), (300, False, "B"), (1200, False, "Beyond G")],
+)
+def test_leti_bands_are_upper_exclusive(value, inclusive, band):
+    assert band_of(value, SCALES[0][7], inclusive) == band
+
+
+def test_re2020_ceilings_are_inclusive():
+    assert band_of(490, SCALES[1][7], True) == "Within the 2031 ceiling"
+    assert band_of(740.1, SCALES[1][7], True) == "Above the 2022 ceiling"
