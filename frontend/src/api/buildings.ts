@@ -38,6 +38,7 @@ export interface DraftView {
   project_fields: ProjectField[];
   rows_read: number;
   rejects: Finding[];
+  findings: Finding[]; // everything openbdf reported, warnings included
   blocked: ('carbon' | 'materials')[];
   gross_floor_area_m2: number | null;
   total_mass_kg: number | null;

@@ -140,6 +140,7 @@ async def draft_view(session: AsyncSession, project_id: int) -> DraftView:
         project_fields=project_fields(data.general),
         rows_read=len(data.rows),
         rejects=[f for f in upload.findings if f["severity"] == "Reject"],
+        findings=upload.findings,
         blocked=parts,
         gross_floor_area_m2=project.gross_floor_area_m2,
         total_mass_kg=None if "materials" in parts else sum(c.mass_kg for c in classes),

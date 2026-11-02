@@ -51,6 +51,7 @@ class DraftView(BaseModel):
     project_fields: list[ProjectField]
     rows_read: int
     rejects: list[Finding]
+    findings: list[Finding]  # everything openbdf reported, warnings included
     blocked: list[str]
     gross_floor_area_m2: float | None
     total_mass_kg: float | None  # None when the rejects block the materials too
