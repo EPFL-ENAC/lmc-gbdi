@@ -7,13 +7,24 @@
         v-for="(band, i) in benchmark.bands"
         :key="band.label"
         class="rating__band"
-        :class="{ 'rating__band--here': band.label === benchmark.band }"
+        :class="{ 'rating__band--here': !marks && band.label === benchmark.band }"
       >
         <span class="rating__bar" :style="{ width: `${36 + (i * 64) / (benchmark.bands.length - 1)}%` }">
           <span class="rating__label">{{ band.label }}</span>
           <span class="rating__range">{{ range(i) }}</span>
         </span>
-        <span v-if="band.label === benchmark.band && benchmark.value !== null" class="rating__marker">
+        <template v-if="marks">
+          <template v-for="mark in marks" :key="mark.key">
+            <span
+              v-if="mark.band === band.label && mark.value !== null"
+              class="rating__marker"
+              :class="`rating__marker--${mark.key}`"
+            >
+              {{ one.format(mark.value) }}
+            </span>
+          </template>
+        </template>
+        <span v-else-if="band.label === benchmark.band && benchmark.value !== null" class="rating__marker">
           {{ one.format(benchmark.value) }} kg CO₂e/m²
         </span>
       </li>
@@ -22,10 +33,11 @@
 </template>
 
 <script setup lang="ts">
-import type { Benchmark } from '@/api/overview';
+import type { Benchmark, BenchmarkMark } from '@/api/overview';
 import { kg, one } from '@/format';
 
-const props = defineProps<{ benchmark: Benchmark }>();
+// `marks`: two buildings tagged on the scale instead of the one project's filled band.
+const props = defineProps<{ benchmark: Benchmark; marks?: BenchmarkMark[] }>();
 
 const range = (i: number) => {
   const { upper } = props.benchmark.bands[i];
@@ -102,5 +114,15 @@ const range = (i: number) => {
   clip-path: polygon(0.75rem 0, 100% 0, 100% 100%, 0.75rem 100%, 0 50%);
   font-size: tokens.$text-size-sm;
   font-variant-numeric: tabular-nums;
+}
+
+// White on the A green; dark text on the lighter B blue.
+.rating__marker--a {
+  background: var(--gbdi-dataviz-green-1);
+}
+
+.rating__marker--b {
+  background: var(--gbdi-dataviz-blue-2);
+  color: tokens.$color-text;
 }
 </style>

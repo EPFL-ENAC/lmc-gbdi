@@ -8,7 +8,8 @@
         <span class="text-display-lead">per m<sup>2</sup> of gross floor area</span>
       </h1>
       <h1 v-else>Compare two buildings</h1>
-      <div class="compare__pickers">
+      <!-- Inside a building the building bar picks; /buildings/compare picks here. -->
+      <div v-if="!inBuilding" class="compare__pickers">
         <q-select
           v-for="side in SIDES"
           :key="side"
@@ -24,7 +25,6 @@
           class="compare__picker"
           @update:model-value="(id: number) => pick(side, id)"
         />
-        <q-btn flat no-caps label="Swap" :disable="a === null || b === null" @click="swap" />
       </div>
     </header>
 
@@ -123,6 +123,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { buildingPath } from '@/buildingLayouts';
 import { code, fetchBuildings, fetchComparison, type BuildingSummary, type Comparison } from '@/api/buildings';
 import PairedBars from '@/components/PairedBars.vue';
 import RatingLabel from '@/components/RatingLabel.vue';
@@ -137,16 +138,21 @@ const comparison = ref<Comparison | null>(null);
 const error = ref<string | null>(null);
 
 const idOf = (value: unknown) => (typeof value === 'string' && value !== '' ? Number(value) : null);
-const a = computed(() => idOf(route.query.a));
-const b = computed(() => idOf(route.query.b));
+const inBuilding = computed(() => route.params.id !== undefined);
+const a = computed(() => idOf(inBuilding.value ? route.params.id : route.query.a));
+const b = computed(() => idOf(inBuilding.value ? route.params.other : route.query.b));
 const options = computed(() =>
   buildings.value.map((x) => ({ id: x.id, label: `${code(x)}, ${x.project_name ?? 'unnamed'}` })),
 );
 const letiA = computed(() => comparison.value?.a.benchmarks.find((x) => x.key === 'leti'));
 const letiB = computed(() => comparison.value?.b.benchmarks.find((x) => x.key === 'leti'));
 
-const pick = (side: 'a' | 'b', id: number) => router.replace({ query: { ...route.query, [side]: id } });
-const swap = () => router.replace({ query: { a: b.value, b: a.value } });
+// Once both are picked, the comparison lives under the first building, in its layouts.
+const pick = (side: 'a' | 'b', id: number) => {
+  const next = { a: a.value, b: b.value, [side]: id };
+  if (next.a !== null && next.b !== null) void router.replace(buildingPath(next.a, '', next.b));
+  else void router.replace({ query: { ...route.query, [side]: id } });
+};
 
 onMounted(async () => {
   try {
