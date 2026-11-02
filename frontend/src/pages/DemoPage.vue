@@ -10,7 +10,16 @@
       </p>
       <div class="demo-actions">
         <q-btn unelevated no-caps color="primary" label="Explore the data" to="/buildings" />
-        <q-btn unelevated no-caps class="btn-secondary" label="Download the methodology" />
+        <!-- ponytail: the parser is the methodology until a written one exists. -->
+        <q-btn
+          unelevated
+          no-caps
+          class="btn-secondary"
+          label="Read the methodology"
+          href="https://github.com/EPFL-ENAC/lmc-openbdf"
+          target="_blank"
+          rel="noopener"
+        />
       </div>
     </section>
 
