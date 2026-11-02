@@ -108,6 +108,13 @@ export interface Benchmark {
   band: string | null;
 }
 
+// A building placed on a scale beside another: `a` drawn green, `b` blue.
+export interface BenchmarkMark {
+  key: 'a' | 'b';
+  value: number | null;
+  band: string | null;
+}
+
 export interface Overview {
   project: ProjectInfo;
   project_fields: ProjectField[];

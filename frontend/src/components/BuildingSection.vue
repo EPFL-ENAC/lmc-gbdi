@@ -25,8 +25,10 @@
       </template>
     </div>
     <figcaption class="section__caption">
-      Band height: the element's share of the whole-life total, in kg CO₂e. Negative stages appear in the table, not
-      the drawing.
+      <slot name="caption">
+        Band height: the element's share of the whole-life total, in kg CO₂e. Negative stages appear in the table, not
+        the drawing.
+      </slot>
     </figcaption>
   </figure>
 </template>
@@ -42,6 +44,8 @@ const props = defineProps<{
   elements: ElementTotal[];
   elementStages: ElementStages[];
   notClassified: ElementTotal;
+  // Rem per kg CO₂e, to draw two buildings on one scale; by default the building fills HEIGHT_REM.
+  remPerKg?: number;
 }>();
 
 const HEIGHT_REM = 26; // the whole building
@@ -74,7 +78,7 @@ const bands = computed(() => {
   const unclassified = { ...props.notClassified, name: props.notClassified.element, split: [], ground: false };
   return [...(props.notClassified.gwp !== 0 ? [unclassified] : []), ...rows].map((band) => ({
     ...band,
-    height: Math.max(MIN_BAND_REM, HEIGHT_REM * Math.abs(band.share)),
+    height: Math.max(MIN_BAND_REM, props.remPerKg ? props.remPerKg * Math.abs(band.gwp) : HEIGHT_REM * Math.abs(band.share)),
   }));
 });
 </script>

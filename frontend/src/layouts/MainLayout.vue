@@ -3,14 +3,13 @@
     <q-header class="bg-white text-dark" bordered>
       <q-toolbar>
         <q-toolbar-title>
-          <router-link to="/buildings">
+          <router-link to="/">
             <img src="/logo.png" alt="Global Building Data Initiative" width="145" height="32" />
           </router-link>
         </q-toolbar-title>
         <nav class="main-nav" aria-label="Main">
           <router-link class="main-nav__link" to="/buildings">Buildings</router-link>
           <router-link class="main-nav__link" to="/buildings/compare">Compare</router-link>
-          <router-link class="main-nav__link" to="/">Design demo</router-link>
         </nav>
       </q-toolbar>
     </q-header>

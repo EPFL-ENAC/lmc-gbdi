@@ -9,18 +9,30 @@
         embodied carbon emissions.
       </p>
       <div class="demo-actions">
-        <q-btn unelevated no-caps color="primary" label="Explore the data" to="/demo/project" />
+        <q-btn unelevated no-caps color="primary" label="Explore the data" to="/buildings" />
         <q-btn unelevated no-caps class="btn-secondary" label="Download the methodology" />
       </div>
     </section>
 
-    <!-- The one set of hero cards on the page; every number carries its source -->
-    <section class="grid-3-col" aria-label="Key figures">
-      <div v-for="hero in heroes" :key="hero.number" class="gbdi-hero-card" :class="`gbdi-hero-card--${hero.tone}`">
+    <!-- The one set of hero cards on the page: the buildings in the database, now. -->
+    <p v-if="error" class="gbdi-card" role="alert">The buildings could not be loaded. {{ error }}</p>
+    <p v-else-if="heroes === null" class="u-text-muted">Counting the buildings…</p>
+    <p v-else-if="heroes.length === 0" class="gbdi-card">
+      No building is loaded yet. <router-link class="link" to="/buildings">Add a COLA workbook</router-link>.
+    </p>
+    <section v-else class="grid-3-col" aria-label="Key figures">
+      <router-link
+        v-for="hero in heroes"
+        :key="hero.tone"
+        :to="hero.to"
+        class="gbdi-hero-card demo-hero"
+        :class="`gbdi-hero-card--${hero.tone}`"
+      >
         <p class="gbdi-hero-card__number">{{ hero.number }}</p>
         <p class="gbdi-hero-card__text">{{ hero.text }}<sup>1</sup></p>
-      </div>
+      </router-link>
     </section>
+    <p v-if="coverage" class="u-text-muted demo-coverage">{{ coverage }}</p>
 
     <section class="grid-3-col">
       <article class="gbdi-card">
@@ -69,22 +81,104 @@
 
     <footer class="u-text-muted">
       <ol>
-        <li>Figures as printed in the GBDI Brand Guidelines v01 (2024); cite the underlying studies in production.</li>
+        <li>
+          Live from the GBDI database: whole-life carbon, modules A to C, per m² of gross floor area, as each COLA
+          workbook declares it.
+        </li>
       </ol>
     </footer>
   </q-page>
 </template>
 
 <script setup lang="ts">
-const heroes = [
-  { tone: 'green', number: '42%', text: 'of global carbon emissions can be reduced by building better.' },
-  { tone: 'blue', number: '50–90%', text: "of a new building's whole-life carbon is embodied carbon." },
-  { tone: 'purple', number: '50–70%', text: 'less embodied carbon from materials is possible today.' },
-];
+import { computed, onMounted, ref } from 'vue';
+import { code, fetchBuildings, type BuildingSummary } from '@/api/buildings';
+import { buildingPath } from '@/buildingLayouts';
+import { kg } from '@/format';
+
+const buildings = ref<BuildingSummary[] | null>(null);
+const error = ref<string | null>(null);
+
+onMounted(async () => {
+  try {
+    buildings.value = await fetchBuildings();
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : String(e);
+  }
+});
+
+// What the figures cannot show yet: the declarations most workbooks leave blank.
+const coverage = computed(() => {
+  const all = buildings.value;
+  if (!all?.length) return '';
+  const count = (has: (b: BuildingSummary) => boolean) => `${all.filter(has).length} of ${all.length}`;
+  return (
+    `Declared so far: a gross floor area in ${count((b) => b.gross_floor_area_m2 !== null)} buildings, ` +
+    `a useful floor area in ${count((b) => b.useful_floor_area_m2 !== null)}, ` +
+    `a study period in ${count((b) => b.study_period_years !== null)}. ` +
+    'Without them a building is left out of per-m² figures, the RE2020 scale and the years of use.'
+  );
+});
+
+const median = (values: number[]) => {
+  const s = [...values].sort((x, y) => x - y);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid]! : (s[mid - 1]! + s[mid]!) / 2;
+};
+
+// Three figures from the stored buildings; null while loading, [] when there are none.
+const heroes = computed(() => {
+  const all = buildings.value;
+  if (all === null) return null;
+  if (all.length === 0) return [];
+  const countries = new Set(all.map((b) => b.country).filter(Boolean)).size;
+  const rows = all.reduce((sum, b) => sum + b.rows_read, 0);
+  const rated = all.filter((b) => b.whole_life_per_m2 !== null).sort((x, y) => x.whole_life_per_m2! - y.whole_life_per_m2!);
+  const heroes = [
+    {
+      tone: 'green',
+      number: kg.format(all.length),
+      text: `buildings from ${countries} ${countries === 1 ? 'country' : 'countries'}, ${kg.format(rows)} bill-of-materials lines read.`,
+      to: '/buildings',
+    },
+  ];
+  if (rated.length === 0) return heroes;
+  const low = rated[0]!;
+  const high = rated[rated.length - 1]!;
+  return [
+    ...heroes,
+    {
+      tone: 'blue',
+      number: kg.format(median(rated.map((b) => b.whole_life_per_m2!))),
+      text: 'kg CO₂e per m², the median building over its whole life.',
+      to: '/buildings',
+    },
+    {
+      tone: 'purple',
+      number: `${kg.format(low.whole_life_per_m2!)}–${kg.format(high.whole_life_per_m2!)}`,
+      text: `kg CO₂e per m², from ${code(low)} to ${code(high)}. Compare the two.`,
+      to: buildingPath(low.id, '', high.id),
+    },
+  ];
+});
 </script>
 
 <style scoped lang="scss">
 @use '@/css/02-tokens' as tokens;
+
+.demo-hero {
+  text-decoration: none;
+}
+
+.demo-hero:hover,
+.demo-hero:focus-visible {
+  outline: tokens.$border-width solid currentColor;
+}
+
+.demo-coverage {
+  margin: 0;
+  font-size: tokens.$text-size-sm;
+}
 
 .demo-actions {
   display: flex;

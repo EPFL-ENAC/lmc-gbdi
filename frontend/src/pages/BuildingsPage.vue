@@ -125,7 +125,7 @@
         no-caps
         color="primary"
         :label="`Compare ${codeOf(picked[0])} with ${codeOf(picked[1])}`"
-        :to="{ path: '/buildings/compare', query: { a: picked[0], b: picked[1] } }"
+        :to="`/buildings/${picked[0]}/compare/${picked[1]}`"
       />
       <q-btn flat no-caps label="Clear" @click="picked = []" />
     </div>

@@ -1,34 +1,59 @@
 <template>
   <!-- One stored building: which one, how to read it (the design demo's layouts), and
-       a way to set it beside another. -->
+       which other building, if any, sits beside it in the same layout. -->
   <div>
     <nav class="building-bar" aria-label="Building">
       <router-link class="link" to="/buildings">All buildings</router-link>
-      <p class="building-bar__code">{{ current ? code(current) : '' }}</p>
-      <q-btn-toggle
-        :model-value="layout"
-        :options="LAYOUTS.map(({ label, value }) => ({ label, value }))"
-        no-caps
-        unelevated
-        toggle-color="primary"
-        color="white"
-        text-color="dark"
-        class="building-bar__layouts"
-        @update:model-value="(value: string) => router.push(`/buildings/${id}${value}`)"
-      />
       <q-select
-        :model-value="null"
-        :options="others"
+        :model-value="id"
+        :options="options"
         option-label="label"
         option-value="id"
         emit-value
         map-options
         dense
         outlined
-        label="Compare with"
-        class="building-bar__compare"
-        @update:model-value="(other: number) => router.push({ path: '/buildings/compare', query: { a: id, b: other } })"
+        options-dense
+        label="Building"
+        class="building-bar__pick"
+        @update:model-value="(next: number) => router.push(buildingPath(next, layout, next === other ? null : other))"
       />
+      <q-btn-toggle
+        :model-value="layout"
+        :options="LAYOUTS.map(({ label, value }) => ({ label, value }))"
+        no-caps
+        unelevated
+        dense
+        toggle-color="primary"
+        color="white"
+        text-color="dark"
+        class="building-bar__layouts"
+        @update:model-value="(value: string) => router.push(buildingPath(id, value, other))"
+      />
+      <div class="building-bar__compare">
+        <q-select
+          :model-value="other"
+          :options="options.filter((o) => o.id !== id)"
+          option-label="label"
+          option-value="id"
+          emit-value
+          map-options
+          dense
+          outlined
+          options-dense
+          clearable
+          label="Compare with"
+          class="building-bar__pick"
+          @update:model-value="(next: number | null) => router.push(buildingPath(id, layout, next))"
+        />
+        <q-btn
+          v-if="other !== null"
+          flat
+          no-caps
+          label="Swap"
+          @click="router.push(buildingPath(other, layout, id))"
+        />
+      </div>
     </nav>
     <router-view />
   </div>
@@ -38,22 +63,20 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { code, fetchBuildings, type BuildingSummary } from '@/api/buildings';
-import { LAYOUTS } from '@/buildingLayouts';
+import { buildingPath, LAYOUTS } from '@/buildingLayouts';
 
 const route = useRoute();
 const router = useRouter();
 const buildings = ref<BuildingSummary[]>([]);
 const id = computed(() => Number(route.params.id));
-const layout = computed(() => LAYOUTS.find((l) => l.value && route.path.endsWith(l.value))?.value ?? '');
-const current = computed(() => buildings.value.find((b) => b.id === id.value));
-const others = computed(() =>
-  buildings.value
-    .filter((b) => b.id !== id.value)
-    .map((b) => ({ id: b.id, label: `${code(b)}, ${b.project_name ?? 'unnamed'}` })),
+const other = computed(() => (route.params.other === undefined ? null : Number(route.params.other)));
+const layout = computed(() => String(route.meta.layout ?? ''));
+const options = computed(() =>
+  buildings.value.map((b) => ({ id: b.id, label: `${code(b)}, ${b.project_name ?? 'unnamed'}` })),
 );
 
 onMounted(async () => {
-  // The bar works without the list: only the compare menu and the code need it.
+  // The bar works without the list: only the two building menus need it.
   buildings.value = await fetchBuildings().catch(() => []);
 });
 </script>
@@ -65,23 +88,28 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: tokens.$spacing-lg;
-  padding: tokens.$spacing-sm tokens.$spacing-page;
+  gap: tokens.$spacing-md;
+  padding: tokens.$spacing-sm tokens.$spacing-lg;
   border-bottom: tokens.$border-width solid tokens.$color-border;
   background: tokens.$color-surface;
 }
 
-.building-bar__code {
-  margin: 0;
-  font-weight: tokens.$text-weight-bold;
+.building-bar__pick {
+  width: 14rem;
 }
 
 .building-bar__layouts {
   border: tokens.$border-width solid tokens.$color-border;
 }
 
+.building-bar__layouts :deep(.q-btn) {
+  padding: tokens.$spacing-xs tokens.$spacing-md;
+}
+
 .building-bar__compare {
-  min-width: 18rem;
+  display: flex;
+  align-items: center;
+  gap: tokens.$spacing-sm;
   margin-left: auto;
 }
 </style>

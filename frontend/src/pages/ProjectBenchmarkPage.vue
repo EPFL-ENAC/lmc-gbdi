@@ -35,7 +35,10 @@
       <section v-if="re2020" class="bench">
         <div class="bench__aside">
           <h2 class="bench__title">{{ re2020.name }}</h2>
-          <p class="bench__verdict">{{ re2020.band }}, at {{ figure(re2020.value, one) }} kg CO₂e per m² of useful floor area.</p>
+          <p v-if="re2020.band !== null" class="bench__verdict">
+            {{ re2020.band }}, at {{ figure(re2020.value, one) }} kg CO₂e per m² of useful floor area.
+          </p>
+          <p v-else class="bench__verdict">Not placed: no useful floor area is declared.</p>
           <p class="bench__scope">{{ re2020.scope }}</p>
           <p class="bench__source">
             Source: <a class="link" :href="re2020.source_url" target="_blank" rel="noopener">{{ re2020.source }}</a>

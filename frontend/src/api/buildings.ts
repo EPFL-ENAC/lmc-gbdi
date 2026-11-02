@@ -19,6 +19,8 @@ export interface BuildingSummary {
   project_name: string | null;
   country: string | null;
   gross_floor_area_m2: number | null;
+  useful_floor_area_m2: number | null;
+  study_period_years: number | null;
   rows_read: number;
   whole_life: number;
   whole_life_per_m2: number | null;

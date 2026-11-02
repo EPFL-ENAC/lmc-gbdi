@@ -53,6 +53,8 @@ def summary(upload: Upload, o: Overview) -> BuildingSummary:
         project_name=o.project.project_name,
         country=o.project.country,
         gross_floor_area_m2=area,
+        useful_floor_area_m2=o.project.useful_floor_area_m2,
+        study_period_years=o.project.reference_study_period_years,
         rows_read=o.rows_read,
         whole_life=o.headline.whole_life,
         whole_life_per_m2=o.headline.per_m2_gross,
