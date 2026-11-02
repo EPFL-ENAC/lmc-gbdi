@@ -49,18 +49,14 @@
               <td class="num sheet__big">{{ show(row.a, row.format) }}</td>
               <td class="num sheet__big">{{ show(row.b, row.format) }}</td>
               <td class="num">{{ row.a === null || row.b === null ? '–' : signed(row.b - row.a, row.format) }}</td>
-              <td class="num">{{ row.a === null || row.b === null || row.a <= 0 ? '–' : percent.format(row.b / row.a) }}</td>
+              <td class="num">{{ !row.ratio || row.a === null || row.b === null || row.a <= 0 ? '' : percent.format(row.b / row.a) }}</td>
             </tr>
           </tbody>
         </table>
         <p class="sheet__note">
-          kg CO₂e per m² unless stated. Module D1 lies outside the whole-life total. Not declared: no gross floor area.
+          kg CO₂e per m² unless stated. Module D1 lies outside the whole-life total. B / A only for whole life and mass:
+          near zero or below it, a ratio says nothing.
         </p>
-      </section>
-
-      <section class="sheet__panel">
-        <h2 class="sheet__panel-title">Life-cycle stages</h2>
-        <PairedBars :rows="stageRows" :a-label="projectName(a)" :b-label="projectName(b)" unit="kg CO₂e per m²" caption="Below zero: carbon stored or credited." />
       </section>
 
       <div class="sheet__pair">
@@ -88,11 +84,20 @@
       <div class="sheet__pair">
         <section class="sheet__panel">
           <h2 class="sheet__panel-title">Materials by OpenBDF class</h2>
-          <PairedBars :rows="classCarbon" :a-label="projectName(a)" :b-label="projectName(b)" unit="kg CO₂e per m²" caption="Whole-life carbon of each class." />
+          <PairedBars :rows="classCarbon" :a-label="a.code" :b-label="b.code" unit="kg CO₂e per m²" caption="Whole-life carbon of each class." />
         </section>
         <section class="sheet__panel">
           <h2 class="sheet__panel-title">Data types</h2>
-          <PairedBars :rows="dataRows" :a-label="projectName(a)" :b-label="projectName(b)" unit="Share" :format="percent" :caption="`${WEIGHTING[a.data_type_weighting]} ${WEIGHTING[b.data_type_weighting]}`" />
+          <p v-if="noDataTypes(a, b)" class="sheet__note">{{ NO_DATA_TYPES_SENTENCE }}</p>
+          <PairedBars
+            v-else
+            :rows="dataRows"
+            :a-label="a.code"
+            :b-label="b.code"
+            unit="Share"
+            :format="percent"
+            :caption="`${WEIGHTING[a.data_type_weighting]} ${WEIGHTING[b.data_type_weighting]}`"
+          />
         </section>
       </div>
     </article>
@@ -106,7 +111,7 @@ import type { Overview } from '@/api/overview';
 import IntensityPlot from '@/components/IntensityPlot.vue';
 import PairedBars from '@/components/PairedBars.vue';
 import StageMatrix from '@/components/StageMatrix.vue';
-import { pairRows, perM2, projectName } from '@/compare';
+import { fieldText, NO_DATA_TYPES_SENTENCE, noDataTypes, pairRows, perM2, projectName } from '@/compare';
 import { useOverviewPair } from '@/composables/useOverview';
 import { figure, kg, one, percent, WEIGHTING } from '@/format';
 
@@ -122,11 +127,17 @@ const sides = computed(() =>
 );
 
 const titleRows: { label: string; value: (o: Overview) => string }[] = [
-  { label: 'Project', value: (o) => o.project.project_id ?? 'not declared' },
-  { label: 'Country', value: (o) => o.project.country ?? 'not declared' },
-  { label: 'Gross floor area', value: (o) => `${figure(o.project.gross_floor_area_m2, kg)} m²` },
-  { label: 'Study period', value: (o) => `${figure(o.project.reference_study_period_years, kg)} years` },
-  { label: 'Method', value: (o) => o.project.lcia_methodology ?? 'not declared' },
+  { label: 'Project ID', value: (o) => fieldText(o.project.project_id) },
+  { label: 'Country', value: (o) => fieldText(o.project.country) },
+  {
+    label: 'Gross floor area',
+    value: (o) => (o.project.gross_floor_area_m2 === null ? 'not declared' : `${kg.format(o.project.gross_floor_area_m2)} m²`),
+  },
+  {
+    label: 'Study period',
+    value: (o) => (o.project.reference_study_period_years === null ? 'not declared' : `${kg.format(o.project.reference_study_period_years)} years`),
+  },
+  { label: 'Method', value: (o) => fieldText(o.project.lcia_methodology) },
 ];
 
 const show = (value: number | null, format: Intl.NumberFormat) => figure(value, format);
@@ -135,19 +146,21 @@ const signed = (value: number, format: Intl.NumberFormat) => `${value > 0 ? '+' 
 // Rows read is a count, not per m²: it says how detailed each bill of materials is.
 const figureRows = computed(() => {
   if (!a.value || !b.value) return [];
-  const row = (label: string, value: (o: Overview) => number | null, format: Intl.NumberFormat = one) => ({
+  // B / A only where both are large and positive; near zero or below it the ratio explodes.
+  const row = (label: string, value: (o: Overview) => number | null, format: Intl.NumberFormat = one, ratio = false) => ({
     label,
     a: value(a.value!),
     b: value(b.value!),
     format,
+    ratio,
   });
   return [
-    row('Whole life (A–C)', (o) => perM2(o, o.headline.whole_life)),
+    row('Whole life (A–C)', (o) => perM2(o, o.headline.whole_life), one, true),
     row('Upfront (A1–A5)', (o) => perM2(o, o.headline.upfront)),
     row('Use (B1–B8)', (o) => perM2(o, o.stages.find((s) => s.key === 'b1_b8')?.gwp ?? 0)),
     row('End of life (C1–C4)', (o) => perM2(o, o.stages.find((s) => s.key === 'c1_c4')?.gwp ?? 0)),
     row('Module D1', (o) => perM2(o, o.headline.module_d1)),
-    row('Mass, kg per m²', (o) => perM2(o, o.total_mass_kg), kg),
+    row('Mass, kg per m²', (o) => perM2(o, o.total_mass_kg), kg, true),
     row('Bill-of-materials lines read', (o) => o.rows_read, kg),
   ];
 });
@@ -155,7 +168,6 @@ const figureRows = computed(() => {
 const pair = <T,>(pick: (o: Overview) => T[], label: (r: T) => string, value: (r: T) => number) =>
   computed<ComparedRow[]>(() => (a.value && b.value ? pairRows(a.value, b.value, pick, label, value) : []));
 
-const stageRows = pair((o) => o.stages, (s) => s.label, (s) => s.gwp);
 const classCarbon = pair((o) => o.material_classes, (m) => m.label, (m) => m.gwp);
 
 // Shares, not per m²: the data type profile is already relative.

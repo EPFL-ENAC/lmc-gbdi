@@ -18,7 +18,7 @@
         </p>
       </header>
 
-      <section v-for="scale in scales" :key="scale.key" class="bench">
+      <section v-for="scale in placedScales" :key="scale.key" class="bench">
         <div class="bench__aside">
           <h2 class="bench__title">{{ scale.name }}</h2>
           <p v-for="side in scale.sides" :key="side.key" class="bench__verdict">
@@ -28,7 +28,7 @@
               at {{ one.format(side.benchmark.value) }} kg CO₂e per m²
             </template>
           </p>
-          <p class="bench__scope">{{ scale.scope }}</p>
+          <p class="bench__scope">{{ bothScope(scale.scope) }}</p>
           <p class="bench__source">
             Source: <a class="link" :href="scale.source_url" target="_blank" rel="noopener">{{ scale.source }}</a>
           </p>
@@ -36,11 +36,14 @@
 
         <!-- The scale once, each building marked on it. -->
         <RatingLabel v-if="scale.key === 'leti'" :benchmark="scale" :marks="scale.marks" />
-        <CeilingRuler v-else-if="scale.marks.some((m) => m.value !== null)" :benchmark="scale" :marks="scale.marks" />
-        <p v-else class="u-text-muted">
-          Neither building declares a useful floor area, so RE2020 cannot place them.
-        </p>
+        <CeilingRuler v-else :benchmark="scale" :marks="scale.marks" />
       </section>
+
+      <!-- A scale that places neither building is one line, not an empty chart. -->
+      <p v-for="scale in unplacedScales" :key="scale.key" class="bench bench__none">
+        <strong>{{ scale.name }}</strong>: neither building is placed;
+        {{ scale.basis === 'per_m2_useful' ? 'neither declares a useful floor area' : 'neither declares a gross floor area' }}.
+      </p>
 
       <section class="bench">
         <div class="bench__aside">
@@ -52,8 +55,8 @@
         </div>
         <PairedBars
           :rows="elementRows"
-          :a-label="projectName(a)"
-          :b-label="projectName(b)"
+          :a-label="a.code"
+          :b-label="b.code"
           unit="kg CO₂e per m²"
           caption="OpenBDF Tier 2 elements, whole life, then what neither classifies."
         />
@@ -67,17 +70,26 @@
             is either missing or reported inside another.
           </p>
         </div>
-        <div class="grid-2-col">
-          <div v-for="side in sides" :key="side.key" class="bench__checks">
-            <p class="bench__who"><span class="bench__swatch" :class="`bench__swatch--${side.key}`" />{{ projectName(side.o) }}</p>
-            <ModuleChecks
-              :checks="side.o.module_checks"
-              :rows-read="side.o.rows_read"
-              :declared-without-result="side.o.modules_declared_without_result"
-              :result-without-declaration="side.o.modules_with_undeclared_result"
-            />
-          </div>
-        </div>
+        <!-- Only the modules where the two differ: the rest count the same on both sides. -->
+        <p v-if="moduleDiffs.length === 0">
+          Both declare the same modules with the same results, so the two ratings count the same scope.
+        </p>
+        <table v-else class="bench__diffs">
+          <thead>
+            <tr>
+              <th scope="col">Module</th>
+              <th scope="col"><span class="bench__swatch bench__swatch--a" />{{ a.code }}</th>
+              <th scope="col"><span class="bench__swatch bench__swatch--b" />{{ b.code }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in moduleDiffs" :key="row.module">
+              <th scope="row">{{ row.module }}</th>
+              <td>{{ row.a }}</td>
+              <td>{{ row.b }}</td>
+            </tr>
+          </tbody>
+        </table>
       </section>
     </template>
   </q-page>
@@ -86,12 +98,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { ComparedRow } from '@/api/buildings';
-import type { BenchmarkMark } from '@/api/overview';
+import type { BenchmarkMark, ModuleCheck } from '@/api/overview';
 import CeilingRuler from '@/components/CeilingRuler.vue';
-import ModuleChecks from '@/components/ModuleChecks.vue';
 import PairedBars from '@/components/PairedBars.vue';
 import RatingLabel from '@/components/RatingLabel.vue';
-import { pairRows, projectName } from '@/compare';
+import { bothScope, pairRows, projectName } from '@/compare';
 import { useOverviewPair } from '@/composables/useOverview';
 import { one } from '@/format';
 
@@ -125,6 +136,27 @@ const scales = computed(() =>
   }),
 );
 
+const placedScales = computed(() => scales.value.filter((s) => s.marks.some((m) => m.value !== null)));
+const unplacedScales = computed(() => scales.value.filter((s) => s.marks.every((m) => m.value === null)));
+
+
+// As ModuleChecks labels them.
+const moduleState = (c: ModuleCheck | undefined) => {
+  if (!c) return 'Not listed';
+  if (c.status === 'declared_no_result') return 'Declared, no result';
+  if (c.status === 'result_not_declared') return 'Results, not declared';
+  return c.declared ? 'Declared, has results' : 'Not in scope';
+};
+const moduleDiffs = computed(() => {
+  if (!a.value || !b.value) return [];
+  const inB = new Map(b.value.module_checks.map((c) => [c.module, c]));
+  const modules = [...new Set([...a.value.module_checks, ...b.value.module_checks].map((c) => c.module))];
+  const inA = new Map(a.value.module_checks.map((c) => [c.module, c]));
+  return modules
+    .map((module) => ({ module, a: moduleState(inA.get(module)), b: moduleState(inB.get(module)) }))
+    .filter((row) => row.a !== row.b);
+});
+
 const elementRows = computed<ComparedRow[]>(() =>
   a.value && b.value
     ? pairRows(a.value, b.value, (o) => [...o.elements, o.other_classified, o.not_classified], (e) => e.element, (e) => e.gwp)
@@ -134,7 +166,6 @@ const elementRows = computed<ComparedRow[]>(() =>
 
 <style scoped lang="scss">
 @use '@/css/02-tokens' as tokens;
-
 
 .bench {
   display: grid;
@@ -150,8 +181,7 @@ const elementRows = computed<ComparedRow[]>(() =>
   gap: tokens.$spacing-md;
 }
 
-.bench__aside p,
-.bench__who {
+.bench__aside p {
   margin: 0;
 }
 
@@ -171,14 +201,27 @@ const elementRows = computed<ComparedRow[]>(() =>
   color: tokens.$color-text-muted;
 }
 
-.bench__checks {
-  display: flex;
-  flex-direction: column;
-  gap: tokens.$spacing-md;
+.bench__none {
+  display: block;
+  margin: 0;
+  color: tokens.$color-text-muted;
 }
 
-.bench__who {
-  font-weight: tokens.$text-weight-bold;
+.bench__diffs {
+  border-collapse: collapse;
+  font-size: tokens.$text-size-sm;
+}
+
+.bench__diffs th,
+.bench__diffs td {
+  padding: tokens.$spacing-xs tokens.$spacing-lg tokens.$spacing-xs 0;
+  border-bottom: tokens.$border-width solid tokens.$color-border;
+  text-align: left;
+}
+
+.bench__diffs thead th {
+  font-weight: tokens.$text-weight-regular;
+  color: tokens.$color-text-muted;
 }
 
 .bench__swatch {

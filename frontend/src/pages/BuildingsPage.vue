@@ -66,16 +66,30 @@
         <thead>
           <tr>
             <th scope="col">Compare</th>
-            <th scope="col">Building</th>
-            <th scope="col" class="num">m² gross</th>
-            <th scope="col">kg CO₂e per m², by life-cycle stage</th>
-            <th scope="col" class="num">Whole life</th>
-            <th scope="col">LETI band</th>
+            <th
+              v-for="col in COLUMNS"
+              :key="col.label"
+              scope="col"
+              :class="{ num: col.num }"
+              :aria-sort="col.key && sort.key === col.key ? (sort.asc ? 'ascending' : 'descending') : undefined"
+            >
+              <button v-if="col.key" type="button" class="portfolio__sort" @click="sortBy(col.key)">
+                {{ col.label }}<span aria-hidden="true">{{ sort.key === col.key ? (sort.asc ? ' ↑' : ' ↓') : '' }}</span>
+              </button>
+              <template v-else>{{ col.label }}</template>
+            </th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="b in sorted" :key="b.id" :class="{ 'portfolio__row--picked': picked.includes(b.id) }">
-            <td>
+          <tr
+            v-for="b in sorted"
+            :key="b.id"
+            class="portfolio__row"
+            :class="{ 'portfolio__row--picked': picked.includes(b.id) }"
+            @click="router.push(`/buildings/${b.id}`)"
+          >
+            <!-- The row opens the building; the checkbox only picks it. -->
+            <td @click.stop>
               <q-checkbox
                 v-model="picked"
                 :val="b.id"
@@ -113,7 +127,7 @@
       </table>
       <p class="portfolio__caption">
         Bars left of zero are negative: most often biogenic carbon stored in timber at A1–A3 and released at end of
-        life. Sorted by whole-life carbon per m². Pick two buildings to compare them.
+        life. Click a column to sort, a row to open the building, or pick two to compare them.
       </p>
     </section>
 
@@ -134,6 +148,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { ApiError } from '@/api/client';
 import { code, fetchBuildings, uploadBuilding, type BuildingSummary, type Rejection } from '@/api/buildings';
 import { STAGE_COLORS } from '@/dataviz';
@@ -192,11 +207,37 @@ const rejectsFirst = computed(() => {
   return [...findings.filter((f) => f.severity === 'Reject'), ...findings.filter((f) => f.severity !== 'Reject')].slice(0, 12);
 });
 
-const sorted = computed(() =>
-  [...(buildings.value ?? [])].sort(
-    (x, y) => (x.whole_life_per_m2 ?? Infinity) - (y.whole_life_per_m2 ?? Infinity),
-  ),
-);
+const router = useRouter();
+
+// Sortable columns: a value per building; missing values always sort last.
+type SortKey = 'code' | 'area' | 'whole_life' | 'leti';
+const VALUE: Record<SortKey, (b: BuildingSummary) => string | number | null> = {
+  code: (b) => code(b),
+  area: (b) => b.gross_floor_area_m2,
+  whole_life: (b) => b.whole_life_per_m2,
+  leti: (b) => b.leti_band,
+};
+const COLUMNS: { label: string; key?: SortKey; num?: boolean }[] = [
+  { label: 'Building', key: 'code' },
+  { label: 'm² gross', key: 'area', num: true },
+  { label: 'kg CO₂e per m², by life-cycle stage' },
+  { label: 'Whole life', key: 'whole_life', num: true },
+  // ponytail: band labels sort as text (A+ before A); the bands follow whole life anyway.
+  { label: 'LETI band', key: 'leti' },
+];
+const sort = ref<{ key: SortKey; asc: boolean }>({ key: 'whole_life', asc: true });
+const sortBy = (key: SortKey) => (sort.value = { key, asc: sort.value.key === key ? !sort.value.asc : true });
+
+const sorted = computed(() => {
+  const value = VALUE[sort.value.key];
+  const dir = sort.value.asc ? 1 : -1;
+  return [...(buildings.value ?? [])].sort((x, y) => {
+    const vx = value(x);
+    const vy = value(y);
+    if (vx === null || vy === null) return (vx === null ? 1 : 0) - (vy === null ? 1 : 0);
+    return (vx < vy ? -1 : vx > vy ? 1 : 0) * dir;
+  });
+});
 const codeOf = (id: number) => {
   const b = buildings.value?.find((x) => x.id === id);
   return b ? code(b) : String(id);
@@ -233,6 +274,28 @@ function segments(stages: Record<string, number>) {
 
 <style scoped lang="scss">
 @use '@/css/02-tokens' as tokens;
+
+.portfolio__row {
+  cursor: pointer;
+}
+
+.portfolio__row:hover {
+  background: tokens.$color-surface-highlight;
+}
+
+.portfolio__sort {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.portfolio__sort:hover,
+.portfolio__sort:focus-visible {
+  text-decoration: underline;
+}
 
 .buildings__head {
   display: flex;

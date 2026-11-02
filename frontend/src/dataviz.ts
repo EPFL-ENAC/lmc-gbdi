@@ -23,3 +23,19 @@ export const MATERIAL_COLORS = [
   'var(--gbdi-dataviz-orange-3)',
 ];
 export const OTHER_COLOR = 'var(--gbdi-color-surface-highlight)';
+
+// Two buildings side by side: A is always Green Dark, B always Blue Bright, and no other
+// mark on a compare page wears either. These replace the two palettes above there;
+// nine material colours: Green Light would read as "every other class".
+export const BUILDING_COLORS = { a: 'var(--gbdi-dataviz-green-1)', b: 'var(--gbdi-dataviz-blue-2)' } as const;
+const isBuildingColor = (c: string) => c === BUILDING_COLORS.a || c === BUILDING_COLORS.b;
+export const COMPARE_STAGE_COLORS = [
+  'var(--gbdi-dataviz-purple-1)',
+  'var(--gbdi-dataviz-purple-2)',
+  'var(--gbdi-dataviz-green-3)',
+  'var(--gbdi-dataviz-orange-2)',
+];
+export const COMPARE_MATERIAL_COLORS = [
+  ...MATERIAL_COLORS.filter((c) => !isBuildingColor(c)),
+  'var(--gbdi-dataviz-orange-4)',
+];

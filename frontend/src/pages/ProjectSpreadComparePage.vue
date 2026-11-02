@@ -41,7 +41,7 @@
           <p>Where each building's carbon falls in time, from making the materials to taking it down.</p>
         </div>
         <div class="spread__main">
-          <PairedBars :rows="stageRows" :a-label="projectName(a)" :b-label="projectName(b)" unit="kg CO₂e per m²" caption="" />
+          <PairedBars :rows="stageRows" :a-label="a.code" :b-label="b.code" unit="kg CO₂e per m²" caption="" />
         </div>
         <p class="spread__caption">Below zero: carbon stored or credited, most often biogenic carbon in timber.</p>
       </section>
@@ -52,7 +52,7 @@
           <p>The parts that carry the carbon, in OpenBDF Tier 2 order, then what neither classifies.</p>
         </div>
         <div class="spread__main">
-          <PairedBars :rows="elementRows" :a-label="projectName(a)" :b-label="projectName(b)" unit="kg CO₂e per m²" caption="" />
+          <PairedBars :rows="elementRows" :a-label="a.code" :b-label="b.code" unit="kg CO₂e per m²" caption="" />
         </div>
         <p class="spread__caption">Rows without an element code stay visible as "Not classified".</p>
       </section>
@@ -66,8 +66,8 @@
           </p>
         </div>
         <div class="spread__main grid-2-col">
-          <PairedBars :rows="classCarbon" :a-label="projectName(a)" :b-label="projectName(b)" unit="kg CO₂e per m²" caption="By whole-life carbon." />
-          <PairedBars :rows="classMass" :a-label="projectName(a)" :b-label="projectName(b)" unit="kg per m²" caption="By mass." />
+          <PairedBars :rows="classCarbon" :a-label="a.code" :b-label="b.code" unit="kg CO₂e per m²" caption="By whole-life carbon." />
+          <PairedBars :rows="classMass" :a-label="a.code" :b-label="b.code" unit="kg per m²" caption="By mass." />
         </div>
         <p class="spread__caption">Every line of both bills of materials, grouped by OpenBDF class.</p>
       </section>
@@ -78,9 +78,12 @@
           <p>What kind of data each bill of materials rests on. A comparison is only as firm as its softer side.</p>
         </div>
         <div class="spread__main">
-          <PairedBars :rows="dataRows" :a-label="projectName(a)" :b-label="projectName(b)" unit="Share" :format="percent" caption="" />
+          <p v-if="noDataTypes(a, b)">{{ NO_DATA_TYPES_SENTENCE }}</p>
+          <PairedBars v-else :rows="dataRows" :a-label="a.code" :b-label="b.code" unit="Share" :format="percent" caption="" />
         </div>
-        <p class="spread__caption">{{ WEIGHTING[a.data_type_weighting] }} {{ WEIGHTING[b.data_type_weighting] }}</p>
+        <p v-if="!noDataTypes(a, b)" class="spread__caption">
+          {{ [...new Set([WEIGHTING[a.data_type_weighting], WEIGHTING[b.data_type_weighting]])].join(' ') }}
+        </p>
       </section>
 
       <section class="spread__section">
@@ -98,15 +101,27 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in fieldRows" :key="row.code" :class="{ 'spread__fields--differs': row.a !== row.b }">
+              <tr v-for="row in differing" :key="row.code">
                 <th scope="row">{{ row.label }}</th>
-                <td>{{ row.a ?? 'not declared' }}</td>
-                <td>{{ row.b ?? 'not declared' }}</td>
+                <td>{{ row.a }}</td>
+                <td>{{ row.b }}</td>
               </tr>
             </tbody>
           </table>
+          <details class="spread__more">
+            <summary>Show all {{ fieldRows.length }} fields</summary>
+            <table class="spread__fields">
+              <tbody>
+                <tr v-for="row in fieldRows" :key="row.code">
+                  <th scope="row">{{ row.label }}</th>
+                  <td>{{ row.a }}</td>
+                  <td>{{ row.b }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </details>
         </div>
-        <p class="spread__caption">Bold rows differ between the two buildings.</p>
+        <p class="spread__caption">The fields the two buildings declare differently; the rest are the same.</p>
       </section>
     </template>
   </q-page>
@@ -116,7 +131,7 @@
 import { computed } from 'vue';
 import type { ComparedRow } from '@/api/buildings';
 import PairedBars from '@/components/PairedBars.vue';
-import { pairRows, perM2, projectName } from '@/compare';
+import { fieldText, NO_DATA_TYPES_SENTENCE, noDataTypes, pairRows, perM2, projectName } from '@/compare';
 import { useOverviewPair } from '@/composables/useOverview';
 import { figure, kg, percent, WEIGHTING } from '@/format';
 
@@ -158,8 +173,14 @@ const dataRows = computed<ComparedRow[]>(() => {
 const fieldRows = computed(() => {
   if (!a.value || !b.value) return [];
   const inB = new Map(b.value.project_fields.map((f) => [f.code, f.value]));
-  return a.value.project_fields.map((f) => ({ code: f.code, label: f.label, a: f.value, b: inB.get(f.code) ?? null }));
+  return a.value.project_fields.map((f) => ({
+    code: f.code,
+    label: f.label,
+    a: fieldText(f.value),
+    b: fieldText(inB.get(f.code) ?? null),
+  }));
 });
+const differing = computed(() => fieldRows.value.filter((row) => row.a !== row.b));
 </script>
 
 <style scoped lang="scss">
@@ -234,8 +255,16 @@ const fieldRows = computed(() => {
   color: tokens.$color-text-muted;
 }
 
-.spread__fields--differs td {
-  font-weight: tokens.$text-weight-bold;
+.spread__more {
+  margin-top: tokens.$spacing-lg;
+}
+
+.spread__more summary {
+  cursor: pointer;
+  color: tokens.$color-text-link;
+  text-decoration: underline;
+  text-underline-offset: 0.125rem;
+  margin-bottom: tokens.$spacing-md;
 }
 
 .spread__swatch {

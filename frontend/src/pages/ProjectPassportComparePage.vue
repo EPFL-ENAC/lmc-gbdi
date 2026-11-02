@@ -14,13 +14,13 @@
         </h1>
         <p class="text-lead">
           Custom material names never match across projects; the OpenBDF material class does. One brick is one per
-          cent of the building's own total.
+          cent of the building's mass, or of the carbon its materials emit.
         </p>
       </header>
 
       <section class="passport__section">
         <h2 class="passport__title">What each weighs, what each emits</h2>
-        <!-- No A/B swatch here: inside the walls, colour means the material class. -->
+        <!-- Inside the walls, colour means the material class, never one of the two buildings. -->
         <div class="grid-2-col passport__walls">
           <article v-for="side in sides" :key="side.key" class="passport__side">
             <p class="passport__who">
@@ -35,7 +35,7 @@
             <figure class="passport__wall">
               <figcaption>
                 Whole-life carbon, <strong>{{ figure(perM2(side.o, side.o.headline.whole_life), kg) }}</strong> kg CO₂e
-                per m²
+                per m², net. Bricks share what is emitted; carbon stored in timber shows in the bars below.
               </figcaption>
               <BrickWall :parts="wall(side.o, 'gwp')" :label="`Whole-life carbon by material class, ${projectName(side.o)}`" />
             </figure>
@@ -53,8 +53,8 @@
         <h2 class="passport__title">Class by class, per m²</h2>
         <p class="u-text-muted">Heavy is not the same as intense: the two lists rarely rank the same.</p>
         <div class="grid-2-col">
-          <PairedBars :rows="classMass" :a-label="projectName(a)" :b-label="projectName(b)" unit="kg per m²" caption="Mass of each material class." />
-          <PairedBars :rows="classCarbon" :a-label="projectName(a)" :b-label="projectName(b)" unit="kg CO₂e per m²" caption="Whole-life carbon of each material class, modules A to C." />
+          <PairedBars :rows="classMass" :a-label="a.code" :b-label="b.code" unit="kg per m²" caption="Mass of each material class." />
+          <PairedBars :rows="classCarbon" :a-label="a.code" :b-label="b.code" unit="kg CO₂e per m²" caption="Whole-life carbon of each material class, modules A to C." />
         </div>
       </section>
 
@@ -78,7 +78,7 @@ import BrickWall, { type WallPart } from '@/components/BrickWall.vue';
 import PairedBars from '@/components/PairedBars.vue';
 import { pairRows, perM2, projectName } from '@/compare';
 import { useOverviewPair } from '@/composables/useOverview';
-import { MATERIAL_COLORS, OTHER_COLOR } from '@/dataviz';
+import { COMPARE_MATERIAL_COLORS, OTHER_COLOR } from '@/dataviz';
 import { figure, kg, percent, WEIGHTING } from '@/format';
 
 const { a, b, error } = useOverviewPair();
@@ -106,13 +106,15 @@ const classes = computed(() => {
   }
   return [...score]
     .sort((x, y) => y[1] - x[1])
-    .slice(0, MATERIAL_COLORS.length)
-    .map(([label], i) => ({ label, color: MATERIAL_COLORS[i]! }));
+    .slice(0, COMPARE_MATERIAL_COLORS.length)
+    .map(([label], i) => ({ label, color: COMPARE_MATERIAL_COLORS[i]! }));
 });
 
 // A wall in the shared class order, each class as its share of this building's total.
+// Carbon counts only what is emitted, so the bricks add up to 100 % even when timber
+// stores carbon (the net figure above would make them overflow).
 const wall = (o: Overview, measure: 'mass_kg' | 'gwp'): WallPart[] => {
-  const total = measure === 'gwp' ? o.headline.whole_life : o.material_classes.reduce((s, c) => s + c.mass_kg, 0);
+  const total = o.material_classes.reduce((s, c) => s + Math.max(c[measure], 0), 0);
   const of = new Map(o.material_classes.map((c) => [c.label, c[measure]]));
   return classes.value.map((c) => ({ color: c.color, share: total ? (of.get(c.label) ?? 0) / total : 0 }));
 };

@@ -1,13 +1,17 @@
 import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { code, fetchBuilding } from '@/api/buildings';
 import { fetchOverview, type Overview } from '@/api/overview';
+
+// The overview with the building's short name (its workbook's, "NL-23").
+export type NamedOverview = Overview & { code: string };
 
 // The overview of one building of the route, reloaded when its id changes: `id` by
 // default (/buildings/:id), `other` for the second building of a comparison. Pages
 // show `error` and the loading state themselves.
 export function useOverview(param: 'id' | 'other' = 'id') {
   const route = useRoute();
-  const overview = ref<Overview | null>(null);
+  const overview = ref<NamedOverview | null>(null);
   const error = ref<string | null>(null);
   watch(
     () => route.params[param],
@@ -16,7 +20,8 @@ export function useOverview(param: 'id' | 'other' = 'id') {
       error.value = null;
       if (id === undefined) return;
       try {
-        overview.value = await fetchOverview(Number(id));
+        const [o, summary] = await Promise.all([fetchOverview(Number(id)), fetchBuilding(Number(id))]);
+        overview.value = { ...o, code: code(summary) };
       } catch (e: unknown) {
         error.value = e instanceof Error ? e.message : String(e);
       }

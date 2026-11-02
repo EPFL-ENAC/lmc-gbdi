@@ -7,9 +7,14 @@
 
     <template v-else>
       <header>
-        <p class="time__name">{{ projectName(a) }} and {{ projectName(b) }}</p>
+        <p class="time__name">
+          <span class="time__swatch time__swatch--a" />{{ projectName(a) }} and
+          <span class="time__swatch time__swatch--b" />{{ projectName(b) }}
+        </p>
+        <!-- Each figure in its building's colour, in the order of the names above. -->
         <h1 class="time__statement">
-          {{ figure(lines[0]!.upfront, kg) }} and {{ figure(lines[1]!.upfront, kg) }} kg CO₂e per m<sup>2</sup>
+          <span class="time__figure--a">{{ figure(lines[0]!.upfront, kg) }}</span> and
+          <span class="time__figure--b">{{ figure(lines[1]!.upfront, kg) }}</span> kg CO₂e per m<sup>2</sup>
           <span class="text-display-lead">spent before anyone moves in.</span>
         </h1>
         <p class="text-lead">
@@ -38,6 +43,14 @@
                 :y2="y(line.wholeLife! + line.moduleD!)"
               />
               <circle :cx="x(line, 1)" :cy="y(line.wholeLife!)" r="4" />
+              <!-- The figures on the line itself: upfront, whole life, module D. -->
+              <g class="over-time__labels">
+                <text :x="x(line, 0) + 8" :y="y(line.upfront!) - 8">{{ kg.format(line.upfront!) }} upfront</text>
+                <text :x="x(line, 1) - 10" :y="y(line.wholeLife!) - 8" text-anchor="end">
+                  {{ kg.format(line.wholeLife!) }} whole life
+                </text>
+                <text :x="xBeyond + 10" :y="y(line.wholeLife! + line.moduleD!) + 4">{{ kg.format(line.moduleD!) }}</text>
+              </g>
             </g>
             <g class="over-time__axis">
               <text v-for="t in yTicks" :key="`yl${t}`" :x="L - 8" :y="y(t) + 4" text-anchor="end">
@@ -60,27 +73,15 @@
         </figure>
       </section>
 
-      <!-- The life cycle is a sequence, so its moments come in the order they happen. -->
-      <section class="time__section" aria-label="The moments of the life cycle">
-        <h2 class="time__title">Moment by moment</h2>
-        <PairedBars
-          :rows="momentRows"
-          :a-label="projectName(a)"
-          :b-label="projectName(b)"
-          unit="kg CO₂e per m²"
-          :caption="momentCaption"
-        />
-      </section>
-
       <section class="time__section">
         <h2 class="time__title">Which elements carry the end of life</h2>
         <p class="u-text-muted">The step at the end comes from the elements whose C1–C4 is largest, per m² for each building.</p>
         <PairedBars
           :rows="endOfLifeRows"
-          :a-label="projectName(a)"
-          :b-label="projectName(b)"
+          :a-label="a.code"
+          :b-label="b.code"
           unit="kg CO₂e per m², C1–C4"
-          caption="OpenBDF Tier 2 elements; a building without the element reads 0."
+          caption="OpenBDF Tier 2 elements, then the rest of each building's C1–C4. A building without the element reads 0."
         />
       </section>
     </template>
@@ -93,7 +94,7 @@ import type { ComparedRow } from '@/api/buildings';
 import type { Overview } from '@/api/overview';
 import PairedBars from '@/components/PairedBars.vue';
 import { pairRows, perM2, projectName } from '@/compare';
-import { useOverviewPair } from '@/composables/useOverview';
+import { useOverviewPair, type NamedOverview } from '@/composables/useOverview';
 import { figure, kg, percent } from '@/format';
 
 const { a, b, error } = useOverviewPair();
@@ -117,10 +118,12 @@ const lines = computed(() =>
 type Line = (typeof lines.value)[number];
 const drawable = computed(() => lines.value.length === 2 && lines.value.every((l) => l.wholeLife !== null));
 
-// Upfront can be below zero: timber stores more carbon than making it emits, until C3–C4.
-const shareSentence = (o: Overview) =>
-  o.headline.upfront < 0
-    ? `${projectName(o)} stores carbon upfront, released again at the end of life.`
+// Upfront near zero or below is not a low-carbon start: timber's stored (biogenic) carbon
+// offsets what making the materials emits, until it is released at C3–C4.
+// ponytail: "near zero" is A1–A3 under 5 % of the whole life; tune if real projects disagree.
+const shareSentence = (o: NamedOverview) =>
+  stage(o, 'a1_a3') < 0.05 * o.headline.whole_life
+    ? `${projectName(o)}: timber's stored carbon offsets what making its materials emits, so little shows upfront; it is released again at the end of life.`
     : `${projectName(o)} spends ${percent.format(o.headline.upfront_share)} of its whole-life carbon upfront.`;
 
 // Years when both declare a study period, one shared axis to the longer one. Otherwise
@@ -201,29 +204,15 @@ function niceCeiling(value: number) {
   return step * magnitude;
 }
 
-// The moments, per m²; a year of use only when both declare their study period.
-const momentRows = computed<ComparedRow[]>(() => {
-  const [la, lb] = lines.value;
-  if (!la || !lb) return [];
-  const perYear = (l: Line) => (l.use === null || !l.period ? null : l.use / l.period);
-  return [
-    { label: 'Opening, A1–A5', a: la.upfront, b: lb.upfront },
-    { label: 'All the years of use, B1–B8', a: la.use, b: lb.use },
-    ...(years.value === null ? [] : [{ label: 'A year of use, B1–B8', a: perYear(la), b: perYear(lb) }]),
-    { label: 'End of life, C1–C4', a: la.endOfLife, b: lb.endOfLife },
-    { label: 'Beyond, D1 (outside the total)', a: la.moduleD, b: lb.moduleD },
-  ];
-});
-const momentCaption = computed(() =>
-  years.value === null
-    ? 'A year of use is left out: a study period is not declared for both buildings.'
-    : `Study periods: ${lines.value.map((l) => `${l.name} ${l.period} years`).join(', ')}.`,
-);
-
+// The shown elements, then what they leave of C1–C4: other classified and not classified
+// elements carry no stage split, so the remainder is theirs.
+const endOfLife = (o: Overview) => {
+  const rows = o.element_stages.map((e) => ({ label: e.element, c: e.gwp_by_stage['c1_c4'] ?? 0 }));
+  const rest = stage(o, 'c1_c4') - rows.reduce((sum, r) => sum + r.c, 0);
+  return [...rows, { label: 'Other and not classified', c: rest }];
+};
 const endOfLifeRows = computed<ComparedRow[]>(() =>
-  a.value && b.value
-    ? pairRows(a.value, b.value, (o) => o.element_stages, (e) => e.element, (e) => e.gwp_by_stage['c1_c4'] ?? 0)
-    : [],
+  a.value && b.value ? pairRows(a.value, b.value, endOfLife, (r) => r.label, (r) => r.c) : [],
 );
 </script>
 
@@ -332,6 +321,19 @@ const endOfLifeRows = computed<ComparedRow[]>(() =>
 
 .time__swatch--b {
   background: var(--gbdi-dataviz-blue-2);
+}
+
+.time__figure--a {
+  color: var(--gbdi-dataviz-green-1);
+}
+
+.time__figure--b {
+  color: var(--gbdi-dataviz-blue-2);
+}
+
+.over-time__labels text {
+  stroke: none;
+  font-variant-numeric: tabular-nums;
 }
 
 .time__section {

@@ -2,9 +2,9 @@
   <!-- The building drawn by its carbon: one band per element, stacked from the
        foundations up, each band as tall as its share and split by life-cycle stage. -->
   <figure class="section" aria-label="Whole-life carbon by building element, drawn as a section">
-    <ul class="section__legend">
+    <ul v-if="!bare" class="section__legend">
       <li v-for="(stage, i) in stages" :key="stage.key">
-        <span class="section__swatch" :style="{ background: STAGE_COLORS[i] }" />{{ stage.label }}
+        <span class="section__swatch" :style="{ background: colors[i] }" />{{ stage.label }}
       </li>
     </ul>
     <div class="section__drawing" aria-hidden="true">
@@ -24,11 +24,9 @@
         </div>
       </template>
     </div>
-    <figcaption class="section__caption">
-      <slot name="caption">
-        Band height: the element's share of the whole-life total, in kg CO₂e. Negative stages appear in the table, not
-        the drawing.
-      </slot>
+    <figcaption v-if="!bare" class="section__caption">
+      Band height: the element's share of the whole-life total, in kg CO₂e. Negative stages appear in the table, not
+      the drawing.
     </figcaption>
   </figure>
 </template>
@@ -46,7 +44,12 @@ const props = defineProps<{
   notClassified: ElementTotal;
   // Rem per kg CO₂e, to draw two buildings on one scale; by default the building fills HEIGHT_REM.
   remPerKg?: number;
+  // Compare pages pass COMPARE_STAGE_COLORS, so no stage wears a building's colour.
+  stageColors?: string[];
+  // Drawing only, no legend or caption: a page with two sections gives them once.
+  bare?: boolean;
 }>();
+const colors = computed(() => props.stageColors ?? STAGE_COLORS);
 
 const HEIGHT_REM = 26; // the whole building
 const MIN_BAND_REM = 1.75; // a readable band, however small its share
@@ -61,7 +64,7 @@ const bands = computed(() => {
       .map((stage, i) => ({
         key: stage.key,
         value: Math.max(stages[stage.key] ?? 0, 0),
-        color: STAGE_COLORS[i],
+        color: colors.value[i],
         title: `${stage.label}: ${kg.format(stages[stage.key] ?? 0)} kg CO₂e`,
       }))
       .filter((part) => part.value > 0);
