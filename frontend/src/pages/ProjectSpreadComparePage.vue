@@ -23,14 +23,16 @@
           </p>
         </div>
         <div class="spread__main grid-2-col">
-          <div v-for="side in sides" :key="side.key" class="gbdi-hero-card" :class="`gbdi-hero-card--${side.tone}`">
-            <p class="spread__who">{{ projectName(side.o) }}</p>
-            <p class="gbdi-hero-card__number">{{ figure(perM2(side.o, side.o.headline.whole_life), kg) }}</p>
-            <p class="gbdi-hero-card__text">
-              kg CO₂e per m² over the whole life; {{ figure(perM2(side.o, side.o.headline.upfront), kg) }} of it upfront
-              (A1–A5).
-            </p>
-          </div>
+          <BigNumber
+            v-for="side in sides"
+            :key="side.key"
+            :label="projectName(side.o)"
+            :value="figure(perM2(side.o, side.o.headline.whole_life), kg)"
+            :tone="side.tone"
+          >
+            kg CO₂e per m² over the whole life; {{ figure(perM2(side.o, side.o.headline.upfront), kg) }} of it upfront
+            (A1–A5).
+          </BigNumber>
         </div>
         <p class="spread__caption">{{ ratioLine }}</p>
       </section>
@@ -130,6 +132,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { ComparedRow } from '@/api/buildings';
+import BigNumber from '@/components/molecules/BigNumber.vue';
 import PairedBars from '@/components/PairedBars.vue';
 import { NO_DATA_TYPES_SENTENCE, noDataTypes, pairRows, perM2, projectName } from '@/compare';
 import { useOverviewPair } from '@/composables/useOverview';
@@ -140,8 +143,8 @@ const { a, b, error } = useOverviewPair();
 const sides = computed(() =>
   a.value && b.value
     ? [
-        { key: 'a', tone: 'green', o: a.value },
-        { key: 'b', tone: 'blue', o: b.value },
+        { key: 'a', tone: 'green' as const, o: a.value },
+        { key: 'b', tone: 'blue' as const, o: b.value },
       ]
     : [],
 );
@@ -221,10 +224,6 @@ const differing = computed(() => fieldRows.value.filter((row) => row.a !== row.b
   font-size: tokens.$text-size-heading-lg;
 }
 
-.spread__who {
-  margin: 0;
-  font-weight: tokens.$text-weight-bold;
-}
 
 .spread__caption {
   grid-column: 2;

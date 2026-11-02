@@ -30,16 +30,9 @@
       No building is loaded yet. <router-link class="link" to="/buildings">Add a COLA workbook</router-link>.
     </p>
     <section v-else class="grid-3-col" aria-label="Key figures">
-      <router-link
-        v-for="hero in heroes"
-        :key="hero.tone"
-        :to="hero.to"
-        class="gbdi-hero-card demo-hero"
-        :class="`gbdi-hero-card--${hero.tone}`"
-      >
-        <p class="gbdi-hero-card__number">{{ hero.number }}</p>
-        <p class="gbdi-hero-card__text">{{ hero.text }}<sup>1</sup></p>
-      </router-link>
+      <BigNumber v-for="hero in heroes" :key="hero.tone" :value="hero.number" :tone="hero.tone" :to="hero.to">
+        {{ hero.text }}<sup>1</sup>
+      </BigNumber>
     </section>
     <p v-if="coverage" class="u-text-muted demo-coverage">{{ coverage }}</p>
 
@@ -103,14 +96,19 @@
 import { computed, onMounted, ref } from 'vue';
 import { code, fetchBuildings, type BuildingSummary } from '@/api/buildings';
 import { buildingPath } from '@/buildingLayouts';
+import BigNumber from '@/components/molecules/BigNumber.vue';
 import { kg } from '@/format';
 
 const buildings = ref<BuildingSummary[] | null>(null);
 const error = ref<string | null>(null);
+const drafts = ref(0);
 
 onMounted(async () => {
   try {
-    buildings.value = await fetchBuildings();
+    // A draft is visible in the list but never counted here.
+    const all = await fetchBuildings();
+    buildings.value = all.filter((b) => !b.draft);
+    drafts.value = all.length - buildings.value.length;
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : String(e);
   }
@@ -145,9 +143,11 @@ const heroes = computed(() => {
   const rated = all.filter((b) => b.whole_life_per_m2 !== null).sort((x, y) => x.whole_life_per_m2! - y.whole_life_per_m2!);
   const heroes = [
     {
-      tone: 'green',
+      tone: 'green' as const,
       number: kg.format(all.length),
-      text: `buildings from ${countries} ${countries === 1 ? 'country' : 'countries'}, ${kg.format(rows)} bill-of-materials lines read.`,
+      text:
+        `buildings from ${countries} ${countries === 1 ? 'country' : 'countries'}, ${kg.format(rows)} bill-of-materials lines read` +
+        (drafts.value ? `; ${drafts.value} drafts not counted.` : '.'),
       to: '/buildings',
     },
   ];
@@ -157,13 +157,13 @@ const heroes = computed(() => {
   return [
     ...heroes,
     {
-      tone: 'blue',
+      tone: 'blue' as const,
       number: kg.format(median(rated.map((b) => b.whole_life_per_m2!))),
       text: 'kg CO₂e per m², the median building over its whole life.',
       to: '/buildings',
     },
     {
-      tone: 'purple',
+      tone: 'purple' as const,
       number: `${kg.format(low.whole_life_per_m2!)}–${kg.format(high.whole_life_per_m2!)}`,
       text: `kg CO₂e per m², from ${code(low)} to ${code(high)}. Compare the two.`,
       to: buildingPath(low.id, '', high.id),
@@ -175,14 +175,6 @@ const heroes = computed(() => {
 <style scoped lang="scss">
 @use '@/css/02-tokens' as tokens;
 
-.demo-hero {
-  text-decoration: none;
-}
-
-.demo-hero:hover,
-.demo-hero:focus-visible {
-  outline: tokens.$border-width solid currentColor;
-}
 
 .demo-coverage {
   margin: 0;

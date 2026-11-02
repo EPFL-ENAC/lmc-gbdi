@@ -64,14 +64,14 @@ $card-radius-panel: dec.$radius-panel !default; // wide cards / panels (p.19)
 
 // Cards — Hero (p.17, p.25): pastel fill, big number, short line.
 // "Only use these once on a single page or application."
-$hero-card-tones: dec.$hero-tones !default;
-$hero-card-radius: dec.$radius-default !default; // 4px [measured p.17, p.26]
-$hero-card-padding: opt.$tokens-spacing-32 !default;
-$hero-card-number-font-family: dec.$text-font-family-display !default;
-$hero-card-number-font-size: dec.$text-size-display-lg !default;
-$hero-card-number-line-height: dec.$text-line-height-tight !default;
-$hero-card-text-font-size: dec.$text-size-lg !default;
-$hero-card-text-line-height: dec.$text-line-height-hero !default;
+$big-number-tones: dec.$hero-tones !default;
+$big-number-radius: dec.$radius-default !default; // 4px [measured p.17, p.26]
+$big-number-padding: opt.$tokens-spacing-32 !default;
+$big-number-value-font-family: dec.$text-font-family-display !default;
+$big-number-value-font-size: dec.$text-size-display-lg !default;
+$big-number-value-line-height: dec.$text-line-height-tight !default;
+$big-number-text-font-size: dec.$text-size-lg !default;
+$big-number-text-line-height: dec.$text-line-height-hero !default;
 
 // Form fields (sign-in screen, p.41)
 $field-radius: dec.$radius-default !default;

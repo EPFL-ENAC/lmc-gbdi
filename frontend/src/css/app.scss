@@ -41,7 +41,6 @@
 // Vue SFC <style> blocks compile unlayered and therefore beat every layer.
 @layer components {
   @import './06-components/card';
-  @import './06-components/hero-card';
   @import './06-components/illustration';
 }
 
