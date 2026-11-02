@@ -5,7 +5,7 @@
     <thead>
       <tr>
         <th scope="col">Element</th>
-        <th v-for="stage in stages" :key="stage.key" scope="col" class="num">{{ stage.label }}</th>
+        <th v-for="stage in stages" :key="stage.key" scope="col" class="num"><Term :name="stage.label" /></th>
         <th scope="col" class="num">Dominant</th>
       </tr>
     </thead>
@@ -32,6 +32,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { ElementStages, StageTotal } from '@/api/overview';
+import Term from '@/components/atoms/Term.vue';
 import { kg, percent } from '@/format';
 
 const props = defineProps<{ stages: StageTotal[]; rows: ElementStages[] }>();

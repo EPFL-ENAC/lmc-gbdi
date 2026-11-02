@@ -104,9 +104,9 @@
             </thead>
             <tbody>
               <tr v-for="row in differing" :key="row.code">
-                <th scope="row">{{ row.label }}</th>
-                <td>{{ row.a }}</td>
-                <td>{{ row.b }}</td>
+                <th scope="row"><Term :name="row.label" :field="row.code" /></th>
+                <td><Term :name="row.a" /></td>
+                <td><Term :name="row.b" /></td>
               </tr>
             </tbody>
           </table>
@@ -115,9 +115,9 @@
             <table class="spread__fields">
               <tbody>
                 <tr v-for="row in fieldRows" :key="row.code">
-                  <th scope="row">{{ row.label }}</th>
-                  <td>{{ row.a }}</td>
-                  <td>{{ row.b }}</td>
+                  <th scope="row"><Term :name="row.label" :field="row.code" /></th>
+                  <td><Term :name="row.a" /></td>
+                  <td><Term :name="row.b" /></td>
                 </tr>
               </tbody>
             </table>
@@ -132,6 +132,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { ComparedRow } from '@/api/buildings';
+import Term from '@/components/atoms/Term.vue';
 import BigNumber from '@/components/molecules/BigNumber.vue';
 import PairedBars from '@/components/PairedBars.vue';
 import { NO_DATA_TYPES_SENTENCE, noDataTypes, pairRows, perM2, projectName } from '@/compare';

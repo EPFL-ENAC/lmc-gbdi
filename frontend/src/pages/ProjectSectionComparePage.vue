@@ -42,7 +42,7 @@
         </div>
         <ul class="section-page__legend">
           <li v-for="(stage, i) in a.stages" :key="stage.key">
-            <span class="section-page__swatch" :style="{ background: COMPARE_STAGE_COLORS[i] }" />{{ stage.label }}
+            <span class="section-page__swatch" :style="{ background: COMPARE_STAGE_COLORS[i] }" /><Term :name="stage.label" />
           </li>
         </ul>
         <p class="section-page__caption">
@@ -83,6 +83,7 @@ import type { ComparedRow } from '@/api/buildings';
 import type { Overview } from '@/api/overview';
 import BuildingSection from '@/components/BuildingSection.vue';
 import PairedBars from '@/components/PairedBars.vue';
+import Term from '@/components/atoms/Term.vue';
 import { COMPARE_STAGE_COLORS } from '@/dataviz';
 import { pairRows, perM2, projectName } from '@/compare';
 import { useOverviewPair } from '@/composables/useOverview';

@@ -1,10 +1,11 @@
 <template>
   <figure class="gbdi-card bars-chart" :aria-label="caption">
     <p v-if="bars.length === 0" class="u-text-muted">{{ emptyLabel }}</p>
-    <div v-for="bar in drawn" :key="bar.key" class="bars-chart__row" aria-hidden="true">
-      <span class="bars-chart__label">{{ bar.label }}</span>
+    <div v-for="bar in drawn" :key="bar.key" class="bars-chart__row">
+      <span class="bars-chart__label"><Term :name="bar.label" /></span>
       <div class="bars-chart__track">
         <span
+          aria-hidden="true"
           class="bars-chart__bar"
           :class="{ 'bars-chart__bar--muted': bar.muted }"
           :style="{ width: `calc((100% - 5.5rem) * ${bar.fraction})` }"
@@ -18,6 +19,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import Term from '@/components/atoms/Term.vue';
 
 export interface Bar {
   key: string;

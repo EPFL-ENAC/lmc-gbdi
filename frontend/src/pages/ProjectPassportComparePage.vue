@@ -43,7 +43,7 @@
         </div>
         <ul class="passport__legend" aria-label="Material classes">
           <li v-for="c in classes" :key="c.label">
-            <span class="passport__brick" :style="{ background: c.color }" />{{ c.label }}
+            <span class="passport__brick" :style="{ background: c.color }" /><Term :name="c.label" />
           </li>
           <li><span class="passport__brick" :style="{ background: OTHER_COLOR }" />Every other class</li>
         </ul>
@@ -77,6 +77,7 @@ import type { Overview } from '@/api/overview';
 import BrickWall, { type WallPart } from '@/components/BrickWall.vue';
 import PairedBars from '@/components/PairedBars.vue';
 import { pairRows, perM2, projectName } from '@/compare';
+import Term from '@/components/atoms/Term.vue';
 import { useOverviewPair } from '@/composables/useOverview';
 import { COMPARE_MATERIAL_COLORS, OTHER_COLOR } from '@/dataviz';
 import { figure, kg, percent, WEIGHTING } from '@/format';

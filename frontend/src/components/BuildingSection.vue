@@ -4,14 +4,14 @@
   <figure class="section" aria-label="Whole-life carbon by building element, drawn as a section">
     <ul v-if="!bare" class="section__legend">
       <li v-for="(stage, i) in stages" :key="stage.key">
-        <span class="section__swatch" :style="{ background: colors[i] }" />{{ stage.label }}
+        <span class="section__swatch" :style="{ background: colors[i] }" /><Term :name="stage.label" />
       </li>
     </ul>
     <div class="section__drawing" aria-hidden="true">
       <template v-for="band in bands" :key="band.name">
         <div v-if="band.ground" class="section__ground"><span>Ground</span></div>
         <div class="section__row" :style="{ height: `${band.height}rem` }">
-          <span class="section__label">{{ band.name }}</span>
+          <span class="section__label"><Term :name="band.name" /></span>
           <div class="section__band" :class="{ 'section__band--open': band.split.length === 0 }">
             <span
               v-for="part in band.split"
@@ -34,6 +34,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { ElementStages, ElementTotal, StageTotal } from '@/api/overview';
+import Term from '@/components/atoms/Term.vue';
 import { STAGE_COLORS } from '@/dataviz';
 import { kg, percent } from '@/format';
 

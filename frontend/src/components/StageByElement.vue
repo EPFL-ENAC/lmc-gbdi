@@ -3,7 +3,7 @@
     <figure class="gbdi-card stage-chart" aria-label="Life-cycle stage by building element, kg CO₂e">
       <ul class="stage-chart__legend">
         <li v-for="(stage, i) in stages" :key="stage.key">
-          <span class="stage-chart__swatch" :style="{ background: STAGE_COLORS[i] }" />{{ stage.label }}
+          <span class="stage-chart__swatch" :style="{ background: STAGE_COLORS[i] }" /><Term :name="stage.label" />
         </li>
       </ul>
       <p v-if="rows.length === 0" class="u-text-muted">No building elements in this project.</p>
@@ -39,6 +39,7 @@
 </template>
 
 <script setup lang="ts">
+import Term from '@/components/atoms/Term.vue';
 import { STAGE_COLORS } from '@/dataviz';
 import { computed } from 'vue';
 import type { QTableColumn } from 'quasar';

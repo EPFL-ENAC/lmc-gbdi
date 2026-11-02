@@ -14,7 +14,7 @@
     <ol class="life-strip__legend">
       <li v-for="(stage, i) in stages" :key="stage.key">
         <span class="life-strip__swatch" :style="{ background: STAGE_COLORS[i] }" />
-        <span class="life-strip__name">{{ stage.label }}</span>
+        <span class="life-strip__name"><Term :name="stage.label" /></span>
         <span class="life-strip__value">{{ kg.format(stage.gwp) }} kg, {{ percent.format(stage.share) }}</span>
       </li>
       <li class="life-strip__outside">
@@ -31,6 +31,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import Term from '@/components/atoms/Term.vue';
 import { STAGE_COLORS } from '@/dataviz';
 import type { StageTotal } from '@/api/overview';
 import { kg, percent } from '@/format';

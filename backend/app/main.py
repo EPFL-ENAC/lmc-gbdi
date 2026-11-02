@@ -10,6 +10,7 @@ from app.buildings import service as buildings_service
 from app.buildings.routes import router as buildings_router
 from app.config import get_settings
 from app.db import engine, get_session
+from app.glossary import router as glossary_router
 from app.overview.routes import router as overview_router
 from app.overview.service import project_overview
 
@@ -56,3 +57,4 @@ async def ready(
 app.include_router(router)
 app.include_router(overview_router)
 app.include_router(buildings_router)
+app.include_router(glossary_router)

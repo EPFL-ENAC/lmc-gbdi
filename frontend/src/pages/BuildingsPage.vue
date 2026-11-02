@@ -68,7 +68,7 @@
     <section v-else class="portfolio">
       <ul class="portfolio__legend">
         <li v-for="(stage, i) in STAGES" :key="stage.key">
-          <span class="portfolio__swatch" :style="{ background: STAGE_COLORS[i] }" />{{ stage.label }}
+          <span class="portfolio__swatch" :style="{ background: STAGE_COLORS[i] }" /><Term :name="stage.label" />
         </li>
         <li>
           <span class="portfolio__swatch portfolio__swatch--net" />Net whole life: emitted (right of zero) minus
@@ -167,6 +167,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ApiError } from '@/api/client';
 import { code, fetchBuildings, noCarbon, uploadBuilding, type BuildingSummary, type Rejection } from '@/api/buildings';
+import Term from '@/components/atoms/Term.vue';
 import { STAGE_COLORS } from '@/dataviz';
 import { figure, kg } from '@/format';
 

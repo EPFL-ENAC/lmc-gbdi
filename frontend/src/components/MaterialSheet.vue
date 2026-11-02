@@ -31,7 +31,7 @@
       <caption>kg CO₂e by life-cycle stage</caption>
       <tbody>
         <tr v-for="(stage, i) in stages" :key="stage.key">
-          <th scope="row">{{ stage.label }}</th>
+          <th scope="row"><Term :name="stage.label" /></th>
           <td class="sheet-card__bar-cell">
             <span
               class="sheet-card__bar"
@@ -48,6 +48,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { MaterialHotspot, StageTotal } from '@/api/overview';
+import Term from '@/components/atoms/Term.vue';
 import { STAGE_COLORS } from '@/dataviz';
 import { figure, kg, percent, three } from '@/format';
 

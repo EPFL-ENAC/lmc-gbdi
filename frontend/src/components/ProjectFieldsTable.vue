@@ -22,7 +22,7 @@
                 :disabled="field.code === REQUIRED"
                 @change="toggle([field], !shown.includes(field.code))"
               />
-              {{ field.label }}
+              <Term :name="field.label" :field="field.code" />
             </label>
           </details>
           <div class="fields__actions">
@@ -44,7 +44,15 @@
       :visible-columns="shown"
       :row-key="REQUIRED"
       :pagination="{ rowsPerPage: 0 }"
-    />
+    >
+      <!-- Each field explains itself, and so do the OpenBDF values it holds. -->
+      <template #header-cell="cell">
+        <q-th :props="cell"><Term :name="cell.col.label" :field="cell.col.name" /></q-th>
+      </template>
+      <template #body-cell="cell">
+        <q-td :props="cell"><Term :name="String(cell.value)" /></q-td>
+      </template>
+    </q-table>
   </div>
 </template>
 
@@ -52,6 +60,7 @@
 import { computed, ref } from 'vue';
 import type { QTableColumn } from 'quasar';
 import type { ProjectField } from '@/api/overview';
+import Term from '@/components/atoms/Term.vue';
 import { fieldText } from '@/format';
 
 const props = defineProps<{ fields: ProjectField[] }>();
