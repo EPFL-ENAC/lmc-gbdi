@@ -52,6 +52,7 @@
 import { computed, ref } from 'vue';
 import type { QTableColumn } from 'quasar';
 import type { ProjectField } from '@/api/overview';
+import { fieldText } from '@/format';
 
 const props = defineProps<{ fields: ProjectField[] }>();
 
@@ -61,7 +62,11 @@ const DEFAULT_COLUMNS = [
   REQUIRED,
   'project_name',
   'project_country',
+  'project_city',
+  'project_architect_engineer_name',
   'building_use_type',
+  'building_residential_units',
+  'building_construction_end_date',
   'building_gross_floor_area',
   'lca_reference_study_period',
   'lca_cycle_system_boundary',
@@ -69,7 +74,7 @@ const DEFAULT_COLUMNS = [
 const shown = ref<string[]>([...DEFAULT_COLUMNS]);
 
 const row = computed(() =>
-  Object.fromEntries(props.fields.map((field) => [field.code, field.value ?? 'not declared'])),
+  Object.fromEntries(props.fields.map((field) => [field.code, fieldText(field.value)])),
 );
 const columns = computed<QTableColumn<Record<string, string>>[]>(() =>
   props.fields.map((field) => ({

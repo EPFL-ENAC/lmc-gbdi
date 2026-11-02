@@ -60,7 +60,10 @@
         <li v-for="(stage, i) in STAGES" :key="stage.key">
           <span class="portfolio__swatch" :style="{ background: STAGE_COLORS[i] }" />{{ stage.label }}
         </li>
-        <li><span class="portfolio__swatch portfolio__swatch--net" />Whole life, the net of the stages</li>
+        <li>
+          <span class="portfolio__swatch portfolio__swatch--net" />Net whole life: emitted (right of zero) minus
+          stored (left), the Whole life column
+        </li>
       </ul>
       <table class="portfolio__table">
         <thead>
@@ -127,7 +130,7 @@
       </table>
       <p class="portfolio__caption">
         Bars left of zero are negative: most often biogenic carbon stored in timber at A1–A3 and released at end of
-        life. Click a column to sort, a row to open the building, or pick two to compare them.
+        life. The black tick is the net, so it sits short of the bar's right end, which is what is emitted. Click a column to sort, a row to open the building, or pick two to compare them.
       </p>
     </section>
 
@@ -221,7 +224,7 @@ const COLUMNS: { label: string; key?: SortKey; num?: boolean }[] = [
   { label: 'Building', key: 'code' },
   { label: 'm² gross', key: 'area', num: true },
   { label: 'kg CO₂e per m², by life-cycle stage' },
-  { label: 'Whole life', key: 'whole_life', num: true },
+  { label: 'Whole life, net', key: 'whole_life', num: true },
   // ponytail: band labels sort as text (A+ before A); the bands follow whole life anyway.
   { label: 'LETI band', key: 'leti' },
 ];

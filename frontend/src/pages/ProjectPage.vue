@@ -19,17 +19,19 @@
           <p class="gbdi-hero-card__text">kg CO₂e over the whole life cycle, modules A to C.<sup>1</sup></p>
         </div>
         <div class="gbdi-hero-card gbdi-hero-card--blue">
-          <p class="gbdi-hero-card__number">{{ figure(overview.headline.per_m2_useful, one) }}</p>
+          <p class="gbdi-hero-card__number">{{ figure(overview.headline.per_m2_gross, one) }}</p>
           <p class="gbdi-hero-card__text">
-            kg CO₂e per m² of useful floor area; {{ figure(overview.headline.per_m2_gross, one) }} per m² of
-            gross floor area.<sup>1</sup>
+            kg CO₂e per m² of gross floor area{{ usefulAside(overview.headline.per_m2_useful) }}.<sup>1</sup>
           </p>
         </div>
         <div class="gbdi-hero-card gbdi-hero-card--purple">
-          <p class="gbdi-hero-card__number">{{ figure(overview.headline.per_m2_useful_per_year, two) }}</p>
-          <p class="gbdi-hero-card__text">
-            kg CO₂e per m² of useful floor area and year, over
-            {{ figure(overview.project.reference_study_period_years, kg) }} years.<sup>1</sup>
+          <p class="gbdi-hero-card__number">{{ figure(overview.headline.per_m2_gross_per_year, two) }}</p>
+          <p v-if="overview.project.reference_study_period_years !== null" class="gbdi-hero-card__text">
+            kg CO₂e per m² of gross floor area and year, over
+            {{ kg.format(overview.project.reference_study_period_years) }} years.<sup>1</sup>
+          </p>
+          <p v-else class="gbdi-hero-card__text">
+            kg CO₂e per m² and year: the workbook declares no study period to divide by.<sup>1</sup>
           </p>
         </div>
       </section>
@@ -133,7 +135,7 @@
       <footer class="u-text-muted">
         <ol>
           <li>
-            Project {{ overview.project.project_id }}, {{ overview.project.lcia_methodology }},
+            Project {{ overview.project.project_id ?? 'without ID' }}, {{ overview.project.lcia_methodology }},
             {{ overview.project.lca_database }}, {{ overview.project.system_boundary }}. Computed from the
             OpenBDF workbook, {{ kg.format(overview.rows_read) }} bill of materials rows.
           </li>
@@ -159,7 +161,7 @@ import type {
   StageTotal,
 } from '@/api/overview';
 import { useOverview } from '@/composables/useOverview';
-import { figure, kg, materialName, one, percent, three, two, WEIGHTING } from '@/format';
+import { figure, kg, materialName, one, percent, three, two, usefulAside, WEIGHTING } from '@/format';
 
 const { overview, error } = useOverview();
 const pairKey = (row: { material: string; epd_product: string }) => `${row.material}|${row.epd_product}`;

@@ -131,9 +131,9 @@
 import { computed } from 'vue';
 import type { ComparedRow } from '@/api/buildings';
 import PairedBars from '@/components/PairedBars.vue';
-import { fieldText, NO_DATA_TYPES_SENTENCE, noDataTypes, pairRows, perM2, projectName } from '@/compare';
+import { NO_DATA_TYPES_SENTENCE, noDataTypes, pairRows, perM2, projectName } from '@/compare';
 import { useOverviewPair } from '@/composables/useOverview';
-import { figure, kg, percent, WEIGHTING } from '@/format';
+import { fieldText, figure, kg, percent, WEIGHTING } from '@/format';
 
 const { a, b, error } = useOverviewPair();
 

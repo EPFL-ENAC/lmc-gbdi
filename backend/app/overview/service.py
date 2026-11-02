@@ -54,11 +54,18 @@ PROJECT_FIELDS = (
     ("Project", "project_id", "Project ID"),
     ("Project", "project_name", "Project name"),
     ("Project", "project_country", "Country"),
+    ("Project", "project_city", "City"),
+    ("Project", "project_address", "Address"),
+    ("Project", "project_architect_engineer_name", "Architect or engineer"),
+    ("Project", "project_construction_type", "Construction type"),
     ("Project", "project_no_of_buildings", "No. of buildings"),
     ("Project", "project_assessment_type", "Assessment type"),
     ("Project", "project_phase_common", "Project phase, common definition"),
     ("Building", "building_use_type", "Building typology"),
     ("Building", "building_structure_type", "Building structure type"),
+    ("Building", "building_residential_units", "Residential units"),
+    ("Building", "building_construction_start_date", "Construction start"),
+    ("Building", "building_construction_end_date", "Construction end"),
     ("Building", "building_gross_floor_area", "Gross floor area (m²)"),
     ("Building", "building_useful_floor_area", "Useful floor area (m²)"),
     ("Building", "building_gross_floor_area_standard", "GFA standard"),
@@ -253,8 +260,15 @@ def data_type_profile(
     ]
 
 
+# The OpenBDF converter fills a blank project ID with this placeholder.
+PLACEHOLDER_ID = re.compile(r"X+", re.IGNORECASE)
+
+
 def text(general: dict[str, str], field: str) -> str | None:
-    return general.get(field, "").strip() or None
+    value = general.get(field, "").strip() or None
+    if field == "project_id" and value and PLACEHOLDER_ID.fullmatch(value):
+        return None
+    return value
 
 
 def quantity(general: dict[str, str], field: str) -> Decimal | None:
@@ -323,6 +337,7 @@ def headline(data: ProjectData, totals: Stages) -> Headline:
         per_m2_useful=per(whole_life, useful),
         per_m2_gross=per(whole_life, gross),
         per_m2_useful_per_year=per(whole_life, useful, period),
+        per_m2_gross_per_year=per(whole_life, gross, period),
         module_d1=float(module_d["gwp_total_d1"]),
         module_d2=float(module_d["gwp_total_d2"]),
     )

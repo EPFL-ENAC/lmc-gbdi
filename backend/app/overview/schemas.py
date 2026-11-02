@@ -25,7 +25,10 @@ class Headline(BaseModel):
     upfront_share: float  # of the whole life, emitted before the building is used
     per_m2_useful: float | None  # None when the floor area is not declared
     per_m2_gross: float | None
-    per_m2_useful_per_year: float | None
+    per_m2_useful_per_year: float | None  # as the COLA sheet
+    per_m2_gross_per_year: (
+        float | None
+    )  # the basis the workbooks declare (1 m2 GFA / year)
     module_d1: float
     module_d2: float
 
