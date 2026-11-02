@@ -10,7 +10,7 @@ from app.config import Settings, get_settings
 from app.main import app
 from app.overview.benchmarks import SCALES, band_of
 from app.overview.repo import BOM_FIELDS, GWP_FIELDS, PMD_FIELDS, read_project
-from app.overview.service import build_overview, in_element
+from app.overview.service import build_overview, in_element, study_period
 
 # id, repetition, element, material, epd product, mass, GWP fields
 ROWS = [
@@ -236,3 +236,17 @@ def test_leti_bands_are_upper_exclusive(value, inclusive, band):
 def test_re2020_ceilings_are_inclusive():
     assert band_of(490, SCALES[1][7], True) == "Within the 2031 ceiling"
     assert band_of(740.1, SCALES[1][7], True) == "Above the 2022 ceiling"
+
+
+@pytest.mark.parametrize(
+    ("declared", "years"),
+    [("50", 50), ("60 years", 60), (" 60 Years ", 60), ("50 yr", 50), ("", None)],
+)
+def test_study_period_reads_a_number_of_years(declared, years):
+    """OpenBDF types the study period as text: "60 years" declares 60."""
+    assert study_period({"lca_reference_study_period": declared}) == years
+
+
+def test_a_study_period_without_a_number_is_refused():
+    with pytest.raises(ValueError, match="study period"):
+        study_period({"lca_reference_study_period": "the building's life"})
