@@ -47,8 +47,6 @@ class ComparedBuilding(BaseModel):
     project_name: str | None
     country: str | None
     gross_floor_area_m2: float | None
-    useful_floor_area_m2: float | None  # RE2020 places a building only with it
-    study_period_years: float | None  # the years of use are drawn only with it
     rows_read: int
     whole_life_per_m2: float | None
     upfront_per_m2: float | None

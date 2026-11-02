@@ -4,7 +4,7 @@
   <q-page class="page-grid">
     <header class="compare__head">
       <h1 v-if="comparison">
-        {{ code(comparison.a) }} and {{ code(comparison.b) }}<br />
+        {{ named(comparison.a) }} and {{ named(comparison.b) }}<br />
         <span class="text-display-lead">per m<sup>2</sup> of gross floor area</span>
       </h1>
       <h1 v-else>Compare two buildings</h1>
@@ -53,8 +53,8 @@
         </article>
       </section>
       <p v-if="comparison.ratio !== null" class="text-lead">
-        Per m², {{ code(comparison.b) }} emits {{ percent.format(comparison.ratio) }} of what
-        {{ code(comparison.a) }} emits over its whole life.
+        Per m², {{ named(comparison.b) }} emits {{ percent.format(comparison.ratio) }} of what
+        {{ named(comparison.a) }} emits over its whole life.
       </p>
 
       <section class="compare__section">
@@ -105,16 +105,15 @@
 
       <section v-if="letiA && letiB" class="compare__section">
         <h2 class="compare__title">{{ letiA.name }}</h2>
-        <p class="u-text-muted">{{ letiA.scope }}</p>
-        <div class="grid-2-col">
-          <div v-for="[side, leti] in [['a', letiA], ['b', letiB]] as const" :key="side">
-            <p class="duel__code">
-              <span class="duel__swatch" :class="`duel__swatch--${side}`" />{{ code(comparison[side]) }}, band
-              {{ leti.band ?? 'not placed' }}
-            </p>
-            <RatingLabel :benchmark="leti" />
-          </div>
-        </div>
+        <p class="u-text-muted">{{ bothScope(letiA.scope) }}</p>
+        <!-- One scale, both buildings tagged on it, as on the Benchmark comparison. -->
+        <RatingLabel
+          :benchmark="letiA"
+          :marks="[
+            { key: 'a', value: letiA.value, band: letiA.band },
+            { key: 'b', value: letiB.value, band: letiB.band },
+          ]"
+        />
       </section>
     </template>
   </q-page>
@@ -124,12 +123,15 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { buildingPath } from '@/buildingLayouts';
-import { code, fetchBuildings, fetchComparison, type BuildingSummary, type Comparison } from '@/api/buildings';
+import { bothScope } from '@/compare';
+import { code, fetchBuildings, fetchComparison, type BuildingSummary, type ComparedBuilding, type Comparison } from '@/api/buildings';
 import PairedBars from '@/components/PairedBars.vue';
 import RatingLabel from '@/components/RatingLabel.vue';
 import { figure, kg, percent } from '@/format';
 
 const SIDES = ['a', 'b'] as const;
+// As every compare page: "Iewan (NL-23)" in words, the code alone in legends.
+const named = (x: ComparedBuilding) => `${x.project_name ?? 'Unnamed project'} (${code(x)})`;
 
 const route = useRoute();
 const router = useRouter();
