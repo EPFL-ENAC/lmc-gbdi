@@ -8,23 +8,46 @@ checked against the workbook: this module only divides by floor area and aligns.
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.buildings import repo
+from app.buildings.ingest import blocked_parts
 from app.buildings.models import Upload
 from app.buildings.schemas import (
     BuildingSummary,
     ComparedBuilding,
     ComparedRow,
     Comparison,
+    DraftView,
+    MaterialMass,
 )
 from app.overview.schemas import Overview
-from app.overview.service import BEC_TIER2, build_overview
+from app.overview.service import (
+    BEC_TIER2,
+    build_overview,
+    class_rollup,
+    project_fields,
+    project_info,
+)
 
 # ponytail: per-process cache; ids are never reused, so a replica that missed a
 # delete still answers 404 from the database first. Bounded by the projects stored.
 _overviews: dict[int, Overview] = {}
 
 
+class DraftBlocked(Exception):
+    """The draft's rejects block carbon: no overview, comparison or figure."""
+
+
+def blocked(upload: Upload) -> list[str]:
+    return blocked_parts(upload.findings) if upload.draft else []
+
+
+def rejects(upload: Upload) -> list[str]:
+    return [f["message"] for f in upload.findings if f["severity"] == "Reject"]
+
+
 async def overview(session: AsyncSession, project_id: int) -> Overview:
     if project_id not in _overviews:
+        if "carbon" in blocked(await repo.get_upload(session, project_id)):
+            raise DraftBlocked(project_id)
         data = await repo.read_project(session, project_id)
         _overviews[project_id] = build_overview(data)
     return _overviews[project_id]
@@ -60,19 +83,70 @@ def summary(upload: Upload, o: Overview) -> BuildingSummary:
         whole_life_per_m2=o.headline.per_m2_gross,
         stages_per_m2={s.key: s.gwp / area for s in o.stages} if area else None,
         leti_band=leti_band(o),
+        draft=upload.draft,
+        rejects=rejects(upload) if upload.draft else [],
     )
 
 
+def draft_summary(
+    upload: Upload, general: dict[str, str], rows_read: int = 0
+) -> BuildingSummary:
+    """A draft whose rejects block carbon: who it is, why it is a draft, no figure."""
+    project = project_info(general)
+    return BuildingSummary(
+        id=upload.project_record_id,
+        file_name=upload.file_name,
+        uploaded_at=upload.uploaded_at,
+        findings=len(upload.findings),
+        project_name=project.project_name,
+        country=project.country,
+        gross_floor_area_m2=project.gross_floor_area_m2,
+        useful_floor_area_m2=project.useful_floor_area_m2,
+        study_period_years=project.reference_study_period_years,
+        rows_read=rows_read,
+        whole_life=None,
+        whole_life_per_m2=None,
+        stages_per_m2=None,
+        leti_band=None,
+        draft=True,
+        blocked=blocked(upload),
+        rejects=rejects(upload),
+    )
+
+
+async def summary_of(session: AsyncSession, upload: Upload) -> BuildingSummary:
+    if "carbon" in blocked(upload):
+        data = await repo.read_project(session, upload.project_record_id, results=False)
+        return draft_summary(upload, data.general, len(data.rows))
+    return summary(upload, await overview(session, upload.project_record_id))
+
+
 async def summaries(session: AsyncSession) -> list[BuildingSummary]:
-    return [
-        summary(upload, await overview(session, upload.project_record_id))
-        for upload in await repo.list_uploads(session)
-    ]
+    return [await summary_of(session, u) for u in await repo.list_uploads(session)]
 
 
 async def building_summary(session: AsyncSession, project_id: int) -> BuildingSummary:
+    return await summary_of(session, await repo.get_upload(session, project_id))
+
+
+async def draft_view(session: AsyncSession, project_id: int) -> DraftView:
+    """Project details and, unless blocked too, the materials by mass."""
     upload = await repo.get_upload(session, project_id)
-    return summary(upload, await overview(session, project_id))
+    data = await repo.read_project(session, project_id, results=False)
+    parts = blocked(upload)
+    classes = [] if "materials" in parts else class_rollup([(r, {}) for r in data.rows])
+    project = project_info(data.general)
+    return DraftView(
+        project_fields=project_fields(data.general),
+        rows_read=len(data.rows),
+        rejects=[f for f in upload.findings if f["severity"] == "Reject"],
+        blocked=parts,
+        gross_floor_area_m2=project.gross_floor_area_m2,
+        total_mass_kg=None if "materials" in parts else sum(c.mass_kg for c in classes),
+        material_classes=[
+            MaterialMass(label=c.label, mass_kg=c.mass_kg) for c in classes
+        ],
+    )
 
 
 def compared(upload: Upload, o: Overview) -> ComparedBuilding:

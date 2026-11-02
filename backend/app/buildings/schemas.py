@@ -8,7 +8,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.overview.schemas import Benchmark
+from app.overview.schemas import Benchmark, ProjectField
 
 
 class Finding(BaseModel):
@@ -30,10 +30,31 @@ class BuildingSummary(BaseModel):
     useful_floor_area_m2: float | None  # RE2020 places a building only with it
     study_period_years: float | None  # the years of use are drawn only with it
     rows_read: int
-    whole_life: float
+    # None for a draft whose rejects block carbon: no figure, never a wrong one.
+    whole_life: float | None
     whole_life_per_m2: float | None  # None when the gross floor area is not declared
     stages_per_m2: dict[str, float] | None  # keyed by StageTotal.key
     leti_band: str | None
+    draft: bool = False  # stored despite reject findings
+    blocked: list[str] = []  # the parts its rejects block: "carbon", "materials"
+    rejects: list[str] = []  # what the rejects say, for the list and the page
+
+
+class MaterialMass(BaseModel):
+    label: str  # OpenBDF material class
+    mass_kg: float
+
+
+class DraftView(BaseModel):
+    """What a draft whose rejects block carbon can still show."""
+
+    project_fields: list[ProjectField]
+    rows_read: int
+    rejects: list[Finding]
+    blocked: list[str]
+    gross_floor_area_m2: float | None
+    total_mass_kg: float | None  # None when the rejects block the materials too
+    material_classes: list[MaterialMass]
 
 
 class Rejection(BaseModel):

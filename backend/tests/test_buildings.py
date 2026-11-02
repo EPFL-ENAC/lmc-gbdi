@@ -11,9 +11,10 @@ from openbdf.model.enums.element_classifications import (
 from openbdf.model.enums.materials import OpenBDFMaterialClassification as Material
 from openbdf.model.tables import ProjectRecord
 
+from app.buildings.ingest import blocked_parts
 from app.buildings.models import Upload
 from app.buildings.repo import as_text, general_of, material_row
-from app.buildings.service import compared, summary
+from app.buildings.service import compared, draft_summary, summary
 from app.overview.repo import GWP_FIELDS, read_project
 from app.overview.service import build_overview, declared
 from tests.test_overview import write_project
@@ -74,3 +75,46 @@ def test_summary_and_compared_build_from_an_overview(tmp_path):
     s = summary(upload, o)
     assert (s.useful_floor_area_m2, s.study_period_years) == (100, 50)
     assert compared(upload, o).gross_floor_area_m2 == 200
+
+
+def reject(code, sheet):
+    return {
+        "code": code,
+        "severity": "Reject",
+        "sheet": sheet,
+        "row": None,
+        "message": "",
+    }
+
+
+@pytest.mark.parametrize(
+    ("findings", "blocked"),
+    [
+        # Chile: results and materials of different lengths, paired by position only.
+        ([reject("E05", "LCA Result (Wide)")], ["carbon"]),
+        # OASE, TRIO: a required project field is missing; the figures still hold.
+        ([reject("E01", "General Information")], []),
+        ([reject("E01", "Bill of Materials")], ["carbon", "materials"]),
+        ([{**reject("E25", "LCA Result (Wide)"), "severity": "Warning"}], []),
+        ([reject("E99", None)], ["carbon", "materials"]),
+    ],
+)
+def test_a_draft_blocks_the_parts_its_rejects_touch(findings, blocked):
+    assert blocked_parts(findings) == blocked
+
+
+def test_a_carbon_blocked_draft_lists_without_figures():
+    upload = Upload(
+        project_record_id=3,
+        file_name="X (DRAFT).xlsx",
+        uploaded_at=datetime.now(UTC),
+        findings=[reject("E05", "LCA Result (Wide)")],
+        draft=True,
+    )
+    s = draft_summary(upload, {"project_name": "X", "project_country": "Chile"}, 115)
+    assert (s.draft, s.blocked, s.whole_life, s.whole_life_per_m2) == (
+        True,
+        ["carbon"],
+        None,
+        None,
+    )

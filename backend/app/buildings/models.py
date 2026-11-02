@@ -48,6 +48,12 @@ class Upload(SQLModel, table=True):
     uploaded_at: datetime = Field(
         sa_column=sa.Column(sa.DateTime(timezone=True), nullable=False)
     )
-    # openbdf validation findings kept with the project: warnings only, rejects
-    # never reach the database.
+    # openbdf validation findings kept with the project: warnings, and for a draft
+    # the rejects it was stored despite.
     findings: list[dict[str, Any]] = Field(sa_column=sa.Column(JSONB, nullable=False))
+    # Stored despite reject findings (`openbdf open --draft`); what they block is in
+    # ingest.blocked_parts, read from the findings above.
+    draft: bool = Field(
+        default=False,
+        sa_column=sa.Column(sa.Boolean, nullable=False, server_default=sa.false()),
+    )

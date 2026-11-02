@@ -124,7 +124,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { buildingPath } from '@/buildingLayouts';
 import { bothScope } from '@/compare';
-import { code, fetchBuildings, fetchComparison, type BuildingSummary, type ComparedBuilding, type Comparison } from '@/api/buildings';
+import { code, fetchBuildings, fetchComparison, noCarbon, type BuildingSummary, type ComparedBuilding, type Comparison } from '@/api/buildings';
 import PairedBars from '@/components/PairedBars.vue';
 import RatingLabel from '@/components/RatingLabel.vue';
 import { figure, kg, percent } from '@/format';
@@ -144,7 +144,7 @@ const inBuilding = computed(() => route.params.id !== undefined);
 const a = computed(() => idOf(inBuilding.value ? route.params.id : route.query.a));
 const b = computed(() => idOf(inBuilding.value ? route.params.other : route.query.b));
 const options = computed(() =>
-  buildings.value.map((x) => ({ id: x.id, label: `${code(x)}, ${x.project_name ?? 'unnamed'}` })),
+  buildings.value.filter((x) => !noCarbon(x)).map((x) => ({ id: x.id, label: `${code(x)}, ${x.project_name ?? 'unnamed'}` })),
 );
 const letiA = computed(() => comparison.value?.a.benchmarks.find((x) => x.key === 'leti'));
 const letiB = computed(() => comparison.value?.b.benchmarks.find((x) => x.key === 'leti'));
