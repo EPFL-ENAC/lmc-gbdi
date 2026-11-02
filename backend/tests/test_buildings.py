@@ -1,5 +1,6 @@
 """The database adapter: OpenBDF records → the overview's field-code text."""
 
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -10,9 +11,12 @@ from openbdf.model.enums.element_classifications import (
 from openbdf.model.enums.materials import OpenBDFMaterialClassification as Material
 from openbdf.model.tables import ProjectRecord
 
+from app.buildings.models import Upload
 from app.buildings.repo import as_text, general_of, material_row
-from app.overview.repo import GWP_FIELDS
-from app.overview.service import declared
+from app.buildings.service import compared, summary
+from app.overview.repo import GWP_FIELDS, read_project
+from app.overview.service import build_overview, declared
+from tests.test_overview import write_project
 
 
 def test_as_text_reads_like_the_workbook():
@@ -56,3 +60,17 @@ def test_material_row_from_a_stored_line():
 def test_a_line_without_wide_results_is_an_error():
     with pytest.raises(ValueError, match="no Wide results"):
         material_row(line(wide_id=None))
+
+
+def test_summary_and_compared_build_from_an_overview(tmp_path):
+    """Both API shapes validate: a field added to a schema but not filled is a 500."""
+    o = build_overview(read_project(write_project(tmp_path)))
+    upload = Upload(
+        project_record_id=1,
+        file_name="T.xlsx",
+        uploaded_at=datetime.now(UTC),
+        findings=[],
+    )
+    s = summary(upload, o)
+    assert (s.useful_floor_area_m2, s.study_period_years) == (100, 50)
+    assert compared(upload, o).gross_floor_area_m2 == 200
