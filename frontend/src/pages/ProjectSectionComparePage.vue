@@ -9,8 +9,8 @@
     <template v-else>
       <header>
         <p class="section-page__name">
-          <span class="section-page__swatch section-page__swatch--a" />{{ projectName(a) }} and
-          <span class="section-page__swatch section-page__swatch--b" />{{ projectName(b) }}
+          {{ projectName(a) }} and
+          {{ projectName(b) }}
         </p>
         <h1 class="section-page__statement">
           {{ figure(perM2(a, a.headline.whole_life), kg) }} against {{ figure(perM2(b, b.headline.whole_life), kg) }}
@@ -21,11 +21,12 @@
 
       <section class="section-page__block">
         <h2 class="section-page__title">Where it sits in each building</h2>
-        <!-- Both on one ground line, so their heights read against each other. -->
+        <!-- Both on one ground line, so their heights read against each other. No A/B
+             swatch here: inside the drawing, colour means the life-cycle stage. -->
         <div class="grid-2-col section-page__pair">
           <div v-for="side in sides" :key="side.key">
             <p class="section-page__who">
-              <span class="section-page__swatch" :class="`section-page__swatch--${side.key}`" />{{ projectName(side.o) }}
+              {{ projectName(side.o) }}
             </p>
             <BuildingSection
               :stages="side.o.stages"
@@ -161,18 +162,6 @@ const classMass = pair((o) => o.material_classes, (m) => m.label, (m) => m.mass_
   font-weight: tokens.$text-weight-bold;
 }
 
-.section-page__swatch {
-  display: inline-block;
-  width: 0.75rem;
-  height: 0.75rem;
-  margin-right: tokens.$spacing-xs;
-}
 
-.section-page__swatch--a {
-  background: var(--gbdi-dataviz-green-1);
-}
 
-.section-page__swatch--b {
-  background: var(--gbdi-dataviz-blue-2);
-}
 </style>

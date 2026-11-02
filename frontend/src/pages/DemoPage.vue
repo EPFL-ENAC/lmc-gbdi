@@ -32,6 +32,7 @@
         <p class="gbdi-hero-card__text">{{ hero.text }}<sup>1</sup></p>
       </router-link>
     </section>
+    <p v-if="coverage" class="u-text-muted demo-coverage">{{ coverage }}</p>
 
     <section class="grid-3-col">
       <article class="gbdi-card">
@@ -106,6 +107,19 @@ onMounted(async () => {
   }
 });
 
+// What the figures cannot show yet: the declarations most workbooks leave blank.
+const coverage = computed(() => {
+  const all = buildings.value;
+  if (!all?.length) return '';
+  const count = (has: (b: BuildingSummary) => boolean) => `${all.filter(has).length} of ${all.length}`;
+  return (
+    `Declared so far: a gross floor area in ${count((b) => b.gross_floor_area_m2 !== null)} buildings, ` +
+    `a useful floor area in ${count((b) => b.useful_floor_area_m2 !== null)}, ` +
+    `a study period in ${count((b) => b.study_period_years !== null)}. ` +
+    'Without them a building is left out of per-m² figures, the RE2020 scale and the years of use.'
+  );
+});
+
 const median = (values: number[]) => {
   const s = [...values].sort((x, y) => x - y);
   const mid = Math.floor(s.length / 2);
@@ -159,6 +173,11 @@ const heroes = computed(() => {
 .demo-hero:hover,
 .demo-hero:focus-visible {
   outline: tokens.$border-width solid currentColor;
+}
+
+.demo-coverage {
+  margin: 0;
+  font-size: tokens.$text-size-sm;
 }
 
 .demo-actions {

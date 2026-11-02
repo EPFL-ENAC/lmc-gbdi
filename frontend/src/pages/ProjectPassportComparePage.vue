@@ -20,10 +20,11 @@
 
       <section class="passport__section">
         <h2 class="passport__title">What each weighs, what each emits</h2>
+        <!-- No A/B swatch here: inside the walls, colour means the material class. -->
         <div class="grid-2-col passport__walls">
           <article v-for="side in sides" :key="side.key" class="passport__side">
             <p class="passport__who">
-              <span class="passport__swatch" :class="`passport__swatch--${side.key}`" />{{ projectName(side.o) }}
+              {{ projectName(side.o) }}
             </p>
             <figure class="passport__wall">
               <figcaption>
@@ -60,7 +61,7 @@
       <section class="passport__section">
         <h2 class="passport__title">How the data was declared</h2>
         <p v-for="side in sides" :key="side.key">
-          <span class="passport__swatch" :class="`passport__swatch--${side.key}`" />{{ projectName(side.o) }}:
+          {{ projectName(side.o) }}:
           {{ kg.format(side.o.rows_read) }} rows, data from {{ side.o.project.lca_database ?? 'an undeclared database' }}.
           {{ dataTypeSentence(side.o) }}
         </p>
@@ -177,20 +178,8 @@ const dataTypeSentence = (o: Overview) => {
   font-variant-numeric: tabular-nums;
 }
 
-.passport__swatch {
-  display: inline-block;
-  width: 0.75rem;
-  height: 0.75rem;
-  margin-right: tokens.$spacing-xs;
-}
 
-.passport__swatch--a {
-  background: var(--gbdi-dataviz-green-1);
-}
 
-.passport__swatch--b {
-  background: var(--gbdi-dataviz-blue-2);
-}
 
 .passport__legend {
   display: flex;

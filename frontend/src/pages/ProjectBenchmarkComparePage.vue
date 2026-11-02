@@ -36,7 +36,10 @@
 
         <!-- The scale once, each building marked on it. -->
         <RatingLabel v-if="scale.key === 'leti'" :benchmark="scale" :marks="scale.marks" />
-        <CeilingRuler v-else :benchmark="scale" :marks="scale.marks" />
+        <CeilingRuler v-else-if="scale.marks.some((m) => m.value !== null)" :benchmark="scale" :marks="scale.marks" />
+        <p v-else class="u-text-muted">
+          Neither building declares a useful floor area, so RE2020 cannot place them.
+        </p>
       </section>
 
       <section class="bench">
