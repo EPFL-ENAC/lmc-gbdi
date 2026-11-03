@@ -10,8 +10,9 @@ backend:
     pullPolicy: IfNotPresent
   resources:
     requests: { cpu: 100m, memory: 256Mi }
-    # Reading one COLA workbook (20-30 MB) with lmc-openbdf peaks at 1.2 GiB.
-    limits: { memory: 2Gi }
+    # lmc-openbdf peaks at 1.2 GiB on a 20-30 MB COLA workbook and 3.6 GiB on
+    # 107 MB (TRIO): 5 GiB covers the 128 MB the ingress lets through.
+    limits: { memory: 5Gi }
 
 frontend:
   replicaCount: 1
@@ -46,9 +47,9 @@ ingress:
   host: ""        # empty = any host
   tls: []         # e.g. [{ secretName: gbdi-tls, hosts: [gbdi.example.org] }]
   # Workbook uploads: a COLA workbook is 10-30 MB and takes up to a minute to
-  # read. ingress-nginx defaults to 1 MB and 60 s; other controllers ignore these.
-  # 64 MB, not more: a 100 MB workbook would need more than the backend's 2 GiB.
+  # read; TRIO (107 MB) takes over two. ingress-nginx defaults to 1 MB and 60 s;
+  # other controllers ignore these. 128 MB, not more: the backend's 5 GiB.
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "64m"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-body-size: "128m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
