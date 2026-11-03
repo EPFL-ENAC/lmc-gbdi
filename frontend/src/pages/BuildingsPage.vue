@@ -206,6 +206,9 @@ async function onPick(event: Event) {
   if (file) await send(file);
 }
 
+const isRejection = (body: unknown): body is Rejection =>
+  body !== null && typeof body === 'object' && Array.isArray((body as Rejection).findings);
+
 async function send(file: File, draft = false) {
   upload.value = { state: 'reading', name: file.name };
   try {
@@ -213,8 +216,10 @@ async function send(file: File, draft = false) {
     upload.value = { state: 'added', name: code(building), building };
     await load();
   } catch (e: unknown) {
-    if (e instanceof ApiError && e.status === 422) {
-      upload.value = { state: 'rejected', name: file.name, rejection: e.body as Rejection, file };
+    // A 422 is an openbdf rejection only when it lists findings; an overview the
+    // backend cannot compute is a 422 with a message, shown like any failure.
+    if (e instanceof ApiError && e.status === 422 && isRejection(e.body)) {
+      upload.value = { state: 'rejected', name: file.name, rejection: e.body, file };
     } else {
       upload.value = { state: 'failed', name: file.name, message: e instanceof Error ? e.message : String(e) };
     }
