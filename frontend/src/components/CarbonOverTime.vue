@@ -1,50 +1,73 @@
 <template>
-  <!-- Whole-life carbon as it accumulates: a step at year 0 (upfront), a slope through
-       the years of use, a step at the end of life; module D beyond a dashed boundary. -->
+  <!-- What each moment of the life emits, on one scale (review #81): a peak at year 0
+       (A1–A5), a flat band through the years of use (B1–B8, per year), a peak at the
+       end of life (C1–C4); beyond a dashed boundary, the D1 credit below the axis. -->
   <figure class="over-time">
+    <ul class="over-time__legend">
+      <li v-for="(stage, i) in stages" :key="stage.key">
+        <span class="over-time__swatch" :style="{ background: STAGE_COLORS[i] }" /><Term :name="stage.label" />
+      </li>
+      <li><span class="over-time__swatch over-time__swatch--credit" />D1, outside the total</li>
+    </ul>
     <svg :viewBox="`0 0 ${W} ${H}`" class="over-time__plot" role="img" :aria-label="summary">
       <g class="over-time__grid">
-        <line v-for="t in yTicks" :key="`y${t}`" :x1="L" :x2="xEnd" :y1="y(t)" :y2="y(t)" />
+        <line v-for="t in yTicks" :key="`y${t}`" :x1="L" :x2="xD + BAR" :y1="y(t)" :y2="y(t)" />
       </g>
-      <polygon class="over-time__area" :points="areaPoints" />
-      <polyline class="over-time__line" :points="linePoints" />
+      <rect
+        v-for="part in parts"
+        :key="part.key"
+        :x="part.x"
+        :y="Math.min(y(part.from), y(part.to))"
+        :width="part.width"
+        :height="Math.max(Math.abs(y(part.to) - y(part.from)), 1)"
+        :style="{ fill: part.color }"
+      >
+        <title>{{ part.title }}</title>
+      </rect>
+      <rect
+        class="over-time__credit"
+        :x="xD"
+        :y="Math.min(y(0), y(moduleD))"
+        :width="BAR"
+        :height="Math.abs(y(moduleD) - y(0))"
+      >
+        <title>D1: {{ kg.format(moduleD) }} kg CO₂e, outside the whole-life total</title>
+      </rect>
+      <line class="over-time__zero" :x1="L" :x2="xD + BAR" :y1="y(0)" :y2="y(0)" />
       <line class="over-time__boundary" :x1="xBoundary" :x2="xBoundary" :y1="T" :y2="H - B" />
-      <line class="over-time__beyond" :x1="xBeyond" :x2="xBeyond" :y1="y(wholeLife)" :y2="y(wholeLife + moduleD)" />
       <g class="over-time__axis">
-        <text v-for="t in yTicks" :key="`yl${t}`" :x="L - 8" :y="y(t) + 4" text-anchor="end">{{ compact.format(t) }}</text>
-        <text v-for="year in xTicks" :key="`x${year}`" :x="x(year)" :y="H - B + 18" text-anchor="middle">
-          {{ year === 0 ? 'Year 0' : year }}
-        </text>
-        <text :x="xBeyond" :y="H - B + 18" text-anchor="middle">D</text>
+        <text v-for="t in yTicks" :key="`yl${t}`" :x="L - 8" :y="y(t) + 4" text-anchor="end">{{ compact.format(t || 0) }}</text>
+        <text :x="L + BAR / 2" :y="H - B + 18" text-anchor="middle">Year 0</text>
+        <text :x="(xUse + xEnd) / 2" :y="H - B + 18" text-anchor="middle">Years 1 to {{ period }}</text>
+        <text :x="xEnd + BAR / 2" :y="H - B + 18" text-anchor="middle">Year {{ period }}</text>
+        <text :x="xD + BAR / 2" :y="H - B + 18" text-anchor="middle">Beyond</text>
       </g>
       <g class="over-time__note">
-        <text :x="x(0) + 10" :y="y(upfront) - 10">Upfront, A1–A5: {{ kg.format(upfront) }} kg</text>
-        <text :x="x(period / 2)" :y="y(upfront + useTotal) - 16" text-anchor="middle">
-          Use, B1–B8: about {{ kg.format(usePerYear) }} kg a year
+        <text :x="L + BAR + 8" :y="y(upfront) + 4">A1–A5: {{ kg.format(upfront) }} kg</text>
+        <text :x="(xUse + xEnd) / 2" :y="y(Math.max(usePerYear, 0)) - 10" text-anchor="middle">
+          B1–B8: about {{ kg.format(usePerYear) }} kg a year
         </text>
-        <text :x="x(period) - 10" :y="y(wholeLife) - 10" text-anchor="end">
-          End of life, C1–C4: {{ kg.format(endOfLife) }} kg
-        </text>
-        <text :x="xBeyond + 8" :y="y(wholeLife + moduleD / 2) + 4">D1 {{ kg.format(moduleD) }}</text>
+        <text :x="xEnd - 8" :y="y(endOfLife) + 4" text-anchor="end">C1–C4: {{ kg.format(endOfLife) }} kg</text>
+        <text :x="xD - 8" :y="y(moduleD) + 4" text-anchor="end">D1: {{ kg.format(moduleD) }} kg</text>
       </g>
     </svg>
     <figcaption class="over-time__caption">
-      Cumulative kg CO₂e over the {{ period }}-year study period. B1–B8 is spread evenly across the years, a
-      simplification: replacements really happen in steps. Dashed: module D, outside the whole-life total.
+      kg CO₂e each moment emits, on one scale. B1–B8 is spread evenly over the {{ period }} years, a simplification:
+      replacements really happen in steps. Below the axis, dashed: module D1, outside the whole-life total.
     </figcaption>
   </figure>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import type { StageTotal } from '@/api/overview';
+import Term from '@/components/atoms/Term.vue';
+import { STAGE_COLORS } from '@/dataviz';
 import { kg } from '@/format';
 
 const props = defineProps<{
-  upfront: number;
-  useTotal: number; // B1–B8 over the whole study period
+  stages: StageTotal[]; // A1–A3, A4–A5, B1–B8, C1–C4, in that order
   usePerYear: number;
-  endOfLife: number;
-  wholeLife: number;
   moduleD: number;
   period: number;
 }>();
@@ -52,38 +75,59 @@ const props = defineProps<{
 // Drawn at about the size it is shown, so the text keeps its size.
 const W = 1100;
 const H = 420;
-const [L, R, T, B] = [64, 110, 24, 40];
-const xEnd = W - R - 48;
-const xBoundary = xEnd + 24;
-const xBeyond = xEnd + 48;
+const [L, R, T, B] = [64, 16, 24, 40];
+const BAR = 44; // a peak's width: one moment, not a span of years
+const xD = W - R - BAR; // the D1 credit, past the boundary
+const xBoundary = xD - 140; // room for the D1 label between the boundary and its bar
+const xEnd = xBoundary - 24 - BAR; // the end-of-life bar
+const xUse = L + BAR; // the years of use run between the two peaks
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact' });
 
-// Chart geometry only: years along x, cumulative carbon along y, from the backend's totals.
-const yMax = computed(() => niceCeiling(props.wholeLife * 1.08));
-const x = (year: number) => L + (year / props.period) * (xEnd - L);
-const y = (value: number) => H - B - (value / yMax.value) * (H - B - T);
-const xTicks = computed(() => Array.from({ length: Math.floor(props.period / 10) + 1 }, (_, i) => i * 10));
+const gwp = (key: string) => props.stages.find((s) => s.key === key)?.gwp ?? 0;
+const color = (key: string) => STAGE_COLORS[props.stages.findIndex((s) => s.key === key)];
+const upfront = computed(() => gwp('a1_a3') + gwp('a4_a5'));
+const endOfLife = computed(() => gwp('c1_c4'));
+
+// One scale for every part, zero included, so a negative credit or year shows below it.
+const yMax = computed(() => niceCeiling(Math.max(upfront.value, endOfLife.value, props.usePerYear, 0) * 1.1));
+const yMin = computed(() => -niceCeiling(-Math.min(props.moduleD, props.usePerYear, upfront.value, endOfLife.value, 0) * 1.1));
+const y = (value: number) => T + ((yMax.value - value) / (yMax.value - yMin.value)) * (H - B - T);
 const yTicks = computed(() => {
-  const step = niceCeiling(yMax.value / 5);
-  return Array.from({ length: Math.floor(yMax.value / step) + 1 }, (_, i) => i * step);
+  const step = niceCeiling((yMax.value - yMin.value) / 5);
+  const ticks = [];
+  for (let t = Math.ceil(yMin.value / step) * step; t <= yMax.value; t += step) ticks.push(t);
+  return ticks;
 });
 
-const corners = computed(() => [
-  [x(0), y(0)],
-  [x(0), y(props.upfront)],
-  [x(props.period), y(props.upfront + props.useTotal)],
-  [x(props.period), y(props.wholeLife)],
-]);
-const linePoints = computed(() => corners.value.map((p) => p.join(',')).join(' '));
-const areaPoints = computed(() => [...corners.value, [x(props.period), y(0)]].map((p) => p.join(',')).join(' '));
+// Year 0 stacks A1–A3 and A4–A5; the rest are single parts from zero.
+const parts = computed(() => {
+  const a13 = gwp('a1_a3');
+  const a45 = gwp('a4_a5');
+  const stacked = Math.sign(a13) === Math.sign(a45) ? a13 : 0; // ponytail: opposite signs both start at zero
+  return [
+    { key: 'a1_a3', x: L, width: BAR, from: 0, to: a13, title: `A1–A3: ${kg.format(a13)} kg CO₂e` },
+    { key: 'a4_a5', x: L, width: BAR, from: stacked, to: stacked + a45, title: `A4–A5: ${kg.format(a45)} kg CO₂e` },
+    {
+      key: 'b1_b8',
+      x: xUse,
+      width: xEnd - xUse,
+      from: 0,
+      to: props.usePerYear,
+      title: `B1–B8: about ${kg.format(props.usePerYear)} kg CO₂e a year`,
+    },
+    { key: 'c1_c4', x: xEnd, width: BAR, from: 0, to: endOfLife.value, title: `C1–C4: ${kg.format(endOfLife.value)} kg CO₂e` },
+  ].map((part) => ({ ...part, color: color(part.key) }));
+});
 
 const summary = computed(
   () =>
-    `Carbon over ${props.period} years: ${kg.format(props.upfront)} kg upfront, ` +
-    `${kg.format(props.useTotal)} kg in use, ${kg.format(props.endOfLife)} kg at end of life.`,
+    `What each moment emits over ${props.period} years: ${kg.format(upfront.value)} kg CO₂e at year 0, ` +
+    `about ${kg.format(props.usePerYear)} kg a year in use, ${kg.format(endOfLife.value)} kg at the end of life, ` +
+    `and a credit of ${kg.format(props.moduleD)} kg beyond it.`,
 );
 
 function niceCeiling(value: number) {
+  if (value <= 0) return 0;
   const magnitude = 10 ** Math.floor(Math.log10(value));
   const step = [1, 1.5, 2, 2.5, 5, 10].find((s) => s * magnitude >= value) ?? 10;
   return step * magnitude;
@@ -95,6 +139,33 @@ function niceCeiling(value: number) {
 
 .over-time {
   margin: 0;
+}
+
+.over-time__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$spacing-lg;
+  margin: 0 0 tokens.$spacing-sm;
+  padding: 0;
+  list-style: none;
+  font-size: tokens.$text-size-xs;
+  color: tokens.$color-text-muted;
+}
+
+.over-time__legend li {
+  display: flex;
+  align-items: center;
+  gap: tokens.$spacing-xs;
+}
+
+.over-time__swatch {
+  width: tokens.$spacing-md;
+  height: tokens.$spacing-md;
+  border-radius: tokens.$radius-xs;
+}
+
+.over-time__swatch--credit {
+  border: 2px dashed tokens.$color-text-muted;
 }
 
 .over-time__plot {
@@ -109,15 +180,8 @@ function niceCeiling(value: number) {
   stroke: tokens.$dataviz-gridline;
 }
 
-.over-time__area {
-  fill: var(--gbdi-dataviz-green-4);
-}
-
-.over-time__line {
-  fill: none;
-  stroke: tokens.$color-primary-strong;
-  stroke-width: 2;
-  stroke-linejoin: round;
+.over-time__zero {
+  stroke: tokens.$dataviz-axis-text;
 }
 
 .over-time__boundary {
@@ -125,10 +189,12 @@ function niceCeiling(value: number) {
   stroke-dasharray: 4 4;
 }
 
-.over-time__beyond {
+// Outside the total: an outline, never a fill.
+.over-time__credit {
+  fill: none;
   stroke: tokens.$color-text-muted;
   stroke-width: 2;
-  stroke-dasharray: 2 3;
+  stroke-dasharray: 4 3;
 }
 
 .over-time__axis text {
