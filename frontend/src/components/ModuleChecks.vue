@@ -81,8 +81,13 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
   color: tokens.$color-text-muted;
 }
 
-.checks__module--complete {
-  background: tokens.$color-surface-muted;
+.checks__module--complete,
+.checks__module--result_not_declared {
+  background: tokens.$color-data-present;
+}
+
+.checks__module--declared_no_result {
+  background: tokens.$color-data-missing;
 }
 
 .checks__module--out {
@@ -90,11 +95,10 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
   border-color: tokens.$color-border-control;
 }
 
-// A mismatch: Orange Dark marks it; the text stays Black for contrast.
+// On a coloured card the state reads in Black, as the module name does.
+.checks__module--complete,
 .checks__module--declared_no_result,
 .checks__module--result_not_declared {
-  border-left: tokens.$spacing-xs solid tokens.$color-status-warning;
-
   .checks__state {
     color: tokens.$color-text;
   }

@@ -138,12 +138,12 @@ const sourceLine = computed(() => {
 const elementBars = computed<Bar[]>(() => {
   const o = overview.value;
   if (o === null) return [];
-  return [...o.elements, o.other_classified, o.not_classified].map((e, i) => ({
+  return [...o.elements, o.other_classified, o.not_classified].map((e) => ({
     key: e.element,
     label: e.element,
     value: e.gwp,
     display: `${kg.format(e.gwp)} kg, ${percent.format(e.share)}`,
-    muted: i >= o.elements.length,
+    missing: e === o.not_classified,
   }));
 });
 const dataTypeBars = computed<Bar[]>(() =>
@@ -152,7 +152,7 @@ const dataTypeBars = computed<Bar[]>(() =>
     label: d.label,
     value: d.share,
     display: percent.format(d.share),
-    muted: d.key === 'undeclared',
+    missing: d.key === 'undeclared',
   })),
 );
 </script>

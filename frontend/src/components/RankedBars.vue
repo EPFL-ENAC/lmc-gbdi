@@ -7,7 +7,7 @@
         <span
           aria-hidden="true"
           class="bars-chart__bar"
-          :class="{ 'bars-chart__bar--muted': bar.muted }"
+          :class="{ 'bars-chart__bar--missing': bar.missing }"
           :style="{ width: `calc((100% - 5.5rem) * ${bar.fraction})` }"
         />
         <span>{{ bar.display }}</span>
@@ -26,7 +26,7 @@ export interface Bar {
   label: string;
   value: number;
   display: string; // formatted by the page, in the reader's locale
-  muted?: boolean; // a bucket rather than a ranked item (Not classified, Undeclared)
+  missing?: boolean; // data the workbook lacks (Not classified, Undeclared): grey
 }
 
 const props = defineProps<{ bars: Bar[]; caption: string; emptyLabel: string }>();
@@ -75,8 +75,8 @@ const drawn = computed(() => {
   background: var(--gbdi-dataviz-1);
 }
 
-.bars-chart__bar--muted {
-  background: var(--gbdi-dataviz-green-3);
+.bars-chart__bar--missing {
+  background: tokens.$color-data-missing;
 }
 
 .bars-chart__caption {

@@ -50,7 +50,7 @@
         <q-th :props="cell"><Term :name="cell.col.label" :field="cell.col.name" /></q-th>
       </template>
       <template #body-cell="cell">
-        <q-td :props="cell"><Term :name="String(cell.value)" /></q-td>
+        <q-td :props="cell" :class="{ 'fields__missing': cell.value === NOT_DECLARED }"><Term :name="String(cell.value)" /></q-td>
       </template>
     </q-table>
   </div>
@@ -61,7 +61,7 @@ import { computed, ref } from 'vue';
 import type { QTableColumn } from 'quasar';
 import type { ProjectField } from '@/api/overview';
 import Term from '@/components/atoms/Term.vue';
-import { fieldText } from '@/format';
+import { fieldText, NOT_DECLARED } from '@/format';
 
 const props = defineProps<{ fields: ProjectField[] }>();
 
@@ -164,6 +164,11 @@ function toggle(fields: ProjectField[], show: boolean) {
 .fields__count {
   color: tokens.$color-text-muted;
   font-variant-numeric: tabular-nums;
+}
+
+// A blank field reads grey, as missing data does everywhere.
+.fields__missing {
+  color: tokens.$color-text-muted;
 }
 
 .fields__actions {

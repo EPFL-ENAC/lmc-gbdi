@@ -159,7 +159,7 @@ const dataTypeBars = computed<Bar[]>(() =>
     label: d.label,
     value: d.share,
     display: percent.format(d.share),
-    muted: d.key === 'undeclared',
+    missing: d.key === 'undeclared',
   })),
 );
 </script>

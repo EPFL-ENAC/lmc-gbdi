@@ -48,6 +48,11 @@ $color-status-warning: opt.$tokens-colors-orange-dark !default;
 // WARNING: not GBDI — see the box in _options.scss.
 $color-status-error: opt.$tokens-colors-suggested-red-not-gbdi !default;
 
+// Data present or missing, the same everywhere: green has it (good), grey lacks
+// it (bad). Black text reads on both.
+$color-data-present: opt.$tokens-colors-green-light !default;
+$color-data-missing: opt.$tokens-colors-grey-text !default;
+
 // ---------------------------------------------------------------------------
 // Focus
 // ---------------------------------------------------------------------------

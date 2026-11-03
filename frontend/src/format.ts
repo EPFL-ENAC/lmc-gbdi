@@ -1,4 +1,5 @@
 // Number formats in the reader's locale; the app has no i18n yet.
+export const NOT_DECLARED = 'not declared';
 export const kg = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 export const one = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
 export const two = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
@@ -6,7 +7,7 @@ export const three = new Intl.NumberFormat(undefined, { minimumFractionDigits: 3
 export const percent = new Intl.NumberFormat(undefined, { style: 'percent', maximumFractionDigits: 1 });
 
 export const figure = (value: number | null, format: Intl.NumberFormat) =>
-  value === null ? 'not declared' : format.format(value);
+  value === null ? NOT_DECLARED : format.format(value);
 
 export const materialName = (material: string) => material || 'No material name';
 
@@ -25,7 +26,7 @@ export const usefulAside = (perM2Useful: number | null) =>
 // A General Information value as a reader should see it: numbers in the reader's locale
 // ("2865.0000" reads 2,865), blanks as not declared.
 export const fieldText = (value: string | null) => {
-  if (value === null || value.trim() === '') return 'not declared';
+  if (value === null || value.trim() === '') return NOT_DECLARED;
   const n = Number(value);
   return Number.isFinite(n) ? kg.format(n) : value;
 };

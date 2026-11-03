@@ -49,7 +49,7 @@
         <h2 class="text-h3">Carbon by building element</h2>
         <p class="u-text-muted">OpenBDF element classification, Tier 2, in classification order.</p>
         <BarsWithTable
-          :bars="elementRows.map((e, i) => bar(e.element, e.element, e.gwp, e.share, i >= overview!.elements.length))"
+          :bars="elementRows.map((e) => bar(e.element, e.element, e.gwp, e.share, e === overview!.not_classified))"
           :rows="elementRows"
           :columns="elementColumns"
           row-key="element"
@@ -227,19 +227,19 @@ const elementRows = computed(() =>
     ? []
     : [...overview.value.elements, overview.value.other_classified, overview.value.not_classified],
 );
-const bar = (key: string, label: string, value: number, share?: number, muted = false): Bar => ({
+const bar = (key: string, label: string, value: number, share?: number, missing = false): Bar => ({
   key,
   label,
   value,
   display: share === undefined ? kg.format(value) : `${kg.format(value)}, ${percent.format(share)}`,
-  muted,
+  missing,
 });
-const shareBar = (key: string, label: string, share: number, muted: boolean): Bar => ({
+const shareBar = (key: string, label: string, share: number, missing: boolean): Bar => ({
   key,
   label,
   value: share,
   display: percent.format(share),
-  muted,
+  missing,
 });
 </script>
 
