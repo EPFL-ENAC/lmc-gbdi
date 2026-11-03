@@ -5,10 +5,13 @@ and kept; a delete evicts it. Every figure comes from build_overview, the formul
 checked against the workbook: this module only divides by floor area and aligns.
 """
 
+import asyncio
+
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.buildings import repo
-from app.buildings.ingest import blocked_parts
+from app.buildings.ingest import blocked_parts, parse, store
 from app.buildings.models import Upload
 from app.buildings.schemas import (
     BuildingSummary,
@@ -18,6 +21,7 @@ from app.buildings.schemas import (
     DraftView,
     MaterialMass,
 )
+from app.config import get_settings
 from app.overview.schemas import Overview
 from app.overview.service import (
     BEC_TIER2,
@@ -148,6 +152,30 @@ async def draft_view(session: AsyncSession, project_id: int) -> DraftView:
             MaterialMass(label=c.label, mass_kg=c.mass_kg) for c in classes
         ],
     )
+
+
+def ingest(workbook: bytes, file_name: str, draft: bool) -> BuildingSummary:
+    """Read, store and summarise one workbook, in the parser process.
+
+    Raises RejectedWorkbook, or ValueError when the overview cannot read it: then
+    nothing is committed, so a broken project never breaks the list for everyone.
+    """
+    return asyncio.run(_ingest(workbook, file_name, draft))
+
+
+async def _ingest(workbook: bytes, file_name: str, draft: bool) -> BuildingSummary:
+    project, findings = parse(workbook, draft)
+    has_rejects = any(f.severity == "Reject" for f in findings)
+    # Its own engine: connections never cross processes.
+    engine = create_async_engine(get_settings().DB_URL)
+    try:
+        async with AsyncSession(engine) as session:
+            project_id = await store(session, project, file_name, findings, has_rejects)
+            summary = await building_summary(session, project_id)
+            await session.commit()
+            return summary
+    finally:
+        await engine.dispose()
 
 
 def compared(upload: Upload, o: Overview) -> ComparedBuilding:

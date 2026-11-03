@@ -1,5 +1,6 @@
 """The database adapter: OpenBDF records → the overview's field-code text."""
 
+import pickle
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -11,7 +12,7 @@ from openbdf.model.enums.element_classifications import (
 from openbdf.model.enums.materials import OpenBDFMaterialClassification as Material
 from openbdf.model.tables import ProjectRecord
 
-from app.buildings.ingest import blocked_parts
+from app.buildings.ingest import Finding, RejectedWorkbook, blocked_parts
 from app.buildings.models import Upload
 from app.buildings.repo import as_text, general_of, material_row
 from app.buildings.service import compared, draft_summary, summary
@@ -118,3 +119,10 @@ def test_a_carbon_blocked_draft_lists_without_figures():
         None,
         None,
     )
+
+
+def test_rejected_workbook_crosses_processes():
+    # The parser process raises it; the API reads its findings for the 422.
+    finding = Finding("E05", "Reject", "LCA Results", 3, "misaligned")
+    back = pickle.loads(pickle.dumps(RejectedWorkbook([finding])))
+    assert back.findings == [finding]
