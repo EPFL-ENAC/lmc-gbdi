@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures import ProcessPoolExecutor
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
@@ -6,12 +7,15 @@ from fastapi.responses import JSONResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.buildings import repo, service
-from app.buildings.ingest import RejectedWorkbook, parse, store
+from app.buildings.ingest import RejectedWorkbook
 from app.buildings.schemas import BuildingSummary, Comparison, DraftView, Rejection
 from app.db import get_session
 from app.overview.schemas import Overview
 
 router = APIRouter(prefix="/api/buildings", tags=["buildings"])
+# Each upload runs in a fresh process, one at a time: its memory (3.7 GB for a
+# 107 MB workbook) is freed when it exits, and the API keeps answering probes.
+_parser = ProcessPoolExecutor(max_workers=1, max_tasks_per_child=1)
 Session = Annotated[AsyncSession, Depends(get_session)]
 
 
@@ -28,36 +32,24 @@ async def list_buildings(session: Session) -> list[BuildingSummary]:
         422: {"model": Rejection, "description": "openbdf rejected the workbook"}
     },
 )
-async def upload_building(
-    file: UploadFile, session: Session, draft: bool = False
-) -> BuildingSummary:
+async def upload_building(file: UploadFile, draft: bool = False) -> BuildingSummary:
     """Read an OpenBDF workbook with lmc-openbdf and store it. Rejects store nothing,
     unless `draft`: stored as a draft, without the parts its rejects block."""
     if not (file.filename or "").lower().endswith(".xlsx"):
         raise HTTPException(415, "Upload an OpenBDF workbook (.xlsx)")
     workbook = await file.read()
     try:
-        project, findings = await asyncio.to_thread(parse, workbook, draft)
+        return await asyncio.get_running_loop().run_in_executor(
+            _parser, service.ingest, workbook, file.filename or "", draft
+        )
     except RejectedWorkbook as rejected:
         body = Rejection(
             message=f"openbdf rejected {file.filename}: nothing was stored.",
             findings=[f.__dict__ for f in rejected.findings],
         )
         return JSONResponse(body.model_dump(), status_code=422)
-    has_rejects = any(f.severity == "Reject" for f in findings)
-    project_id = await store(
-        session, project, file.filename or "", findings, has_rejects
-    )
-    try:
-        # Compute before committing: a project the overview cannot read is refused,
-        # never stored to break the list for everyone.
-        summary = await service.building_summary(session, project_id)
     except ValueError as unreadable:
-        await session.rollback()
-        service.forget(project_id)
         raise HTTPException(422, f"{file.filename}: {unreadable}") from None
-    await session.commit()
-    return summary
 
 
 @router.get("/compare")
