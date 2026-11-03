@@ -7,6 +7,11 @@
     <p v-else-if="overview === null" class="u-text-muted">Loading the project…</p>
 
     <template v-else>
+      <p v-if="period === null" class="time__warning" role="note">
+        The workbook declares no study period, so the years of use are not drawn and the use
+        figures stand without a time scale. Declare it in General Information and add the
+        workbook again.
+      </p>
       <header>
         <p class="time__name">{{ overview.project.project_name ?? 'Unnamed project' }}</p>
         <h1 class="time__statement">
@@ -15,20 +20,16 @@
         </h1>
       </header>
 
-      <section class="time__chart">
+      <section v-if="period !== null && overview.use_per_year !== null" class="time__chart">
         <CarbonOverTime
-          v-if="overview.use_per_year !== null && overview.project.reference_study_period_years !== null"
           :upfront="overview.headline.upfront"
           :use-total="stageGwp('b1_b8')"
           :use-per-year="overview.use_per_year"
           :end-of-life="stageGwp('c1_c4')"
           :whole-life="overview.headline.whole_life"
           :module-d="overview.headline.module_d1"
-          :period="overview.project.reference_study_period_years"
+          :period="period"
         />
-        <p v-else class="u-text-muted">
-          The study period is not declared, so the years of use cannot be drawn.
-        </p>
       </section>
 
       <!-- The life cycle is a sequence, so its moments are numbered by when they happen. -->
@@ -39,12 +40,12 @@
           <p class="time__what">kg CO₂e to make the materials and build (A1–A5).</p>
         </article>
         <article class="time__moment">
-          <p class="time__when">Years 1 to {{ overview.project.reference_study_period_years }}</p>
+          <p class="time__when">{{ period === null ? 'Years of use' : `Years 1 to ${period}` }}</p>
           <p class="time__figure">{{ figure(overview.use_per_year, kg) }}</p>
           <p class="time__what">kg CO₂e a year on average to maintain, repair and replace (B1–B8).</p>
         </article>
         <article class="time__moment">
-          <p class="time__when">Year {{ overview.project.reference_study_period_years }}</p>
+          <p class="time__when">{{ period === null ? 'End of life' : `Year ${period}` }}</p>
           <p class="time__figure">{{ kg.format(stageGwp('c1_c4')) }}</p>
           <p class="time__what">kg CO₂e to take the building down and process the waste (C1–C4).</p>
         </article>
@@ -58,7 +59,7 @@
       <section class="time__section">
         <h2 class="time__title">Which elements carry the end of life</h2>
         <p class="u-text-muted">
-          The step at year {{ overview.project.reference_study_period_years }} comes from the elements whose C1–C4
+          The step at {{ period === null ? 'the end of life' : `year ${period}` }} comes from the elements whose C1–C4
           dominates. The shade marks each cell against the largest.
         </p>
         <StageMatrix :stages="overview.stages" :rows="overview.element_stages" />
@@ -68,6 +69,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import CarbonOverTime from '@/components/CarbonOverTime.vue';
 import StageMatrix from '@/components/StageMatrix.vue';
 import { useOverview } from '@/composables/useOverview';
@@ -75,6 +77,7 @@ import { figure, kg, percent } from '@/format';
 
 const { overview, error } = useOverview();
 
+const period = computed(() => overview.value?.project.reference_study_period_years ?? null);
 const stageGwp = (key: string) => overview.value?.stages.find((s) => s.key === key)?.gwp ?? 0;
 </script>
 
@@ -99,6 +102,13 @@ const stageGwp = (key: string) => overview.value?.stages.find((s) => s.key === k
   padding: tokens.$spacing-xl;
   border: tokens.$border-width solid tokens.$color-border;
   border-radius: tokens.$radius-panel;
+}
+
+.time__warning {
+  margin: 0;
+  padding: tokens.$spacing-sm tokens.$spacing-lg;
+  background: tokens.$color-surface-highlight;
+  font-size: tokens.$text-size-sm;
 }
 
 .time__moments {
