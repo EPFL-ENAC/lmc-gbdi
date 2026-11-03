@@ -1,6 +1,7 @@
-// The design demo's seven layouts of one building, each with its own way of setting a
+// The design demo's layouts of one building, each with its own way of setting a
 // second building beside it (`compare`). Overview and Spread are the two the team is
-// choosing between; `demo` is each one's old /demo/project* address.
+// choosing between; `demo` is each one's old /demo/project* address. Benchmark is
+// out until its review (globalbuildingdatainitiative/org#82): see git history.
 export const LAYOUTS = [
   {
     label: 'Overview',
@@ -29,13 +30,6 @@ export const LAYOUTS = [
     demo: 'demo/project_3',
     page: () => import('@/pages/ProjectSheetPage.vue'),
     compare: () => import('@/pages/ProjectSheetComparePage.vue'),
-  },
-  {
-    label: 'Benchmark',
-    value: '/benchmark',
-    demo: 'demo/project_4',
-    page: () => import('@/pages/ProjectBenchmarkPage.vue'),
-    compare: () => import('@/pages/ProjectBenchmarkComparePage.vue'),
   },
   {
     label: 'Time',
