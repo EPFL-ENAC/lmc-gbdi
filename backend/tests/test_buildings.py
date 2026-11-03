@@ -1,5 +1,7 @@
 """The database adapter: OpenBDF records → the overview's field-code text."""
 
+import asyncio
+import os
 import pickle
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -126,3 +128,41 @@ def test_rejected_workbook_crosses_processes():
     finding = Finding("E05", "Reject", "LCA Results", 3, "misaligned")
     back = pickle.loads(pickle.dumps(RejectedWorkbook([finding])))
     assert back.findings == [finding]
+
+
+def test_a_killed_parser_process_is_replaced():
+    """Out of memory kills the upload's process; the next upload still runs."""
+    from concurrent.futures.process import BrokenProcessPool
+
+    from app.buildings.routes import in_parser
+
+    async def run():
+        with pytest.raises(BrokenProcessPool):
+            await in_parser(os._exit, 1)
+        return await in_parser(abs, -3)
+
+    assert asyncio.run(run()) == 3
+
+
+def test_warm_up_skips_a_building_it_cannot_read(monkeypatch):
+    """One unreadable building is logged; the others are still computed."""
+    from app.buildings import repo, service
+
+    uploads = [
+        Upload(project_record_id=i, file_name="T.xlsx", uploaded_at=datetime.now(UTC))
+        for i in (1, 2)
+    ]
+    read: list[int] = []
+
+    async def list_uploads(_session):
+        return uploads
+
+    async def summary_of(_session, upload):
+        if upload.project_record_id == 1:
+            raise ValueError("unreadable")
+        read.append(upload.project_record_id)
+
+    monkeypatch.setattr(repo, "list_uploads", list_uploads)
+    monkeypatch.setattr(service, "summary_of", summary_of)
+    asyncio.run(service.warm_up())
+    assert read == [2]

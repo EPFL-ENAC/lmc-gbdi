@@ -6,6 +6,7 @@ checked against the workbook: this module only divides by floor area and aligns.
 """
 
 import asyncio
+import logging
 
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -22,6 +23,7 @@ from app.buildings.schemas import (
     MaterialMass,
 )
 from app.config import get_settings
+from app.db import engine
 from app.overview.schemas import Overview
 from app.overview.service import (
     BEC_TIER2,
@@ -34,6 +36,9 @@ from app.overview.service import (
 # ponytail: per-process cache; ids are never reused, so a replica that missed a
 # delete still answers 404 from the database first. Bounded by the projects stored.
 _overviews: dict[int, Overview] = {}
+# Drafts whose rejects block carbon have no overview; their summary is kept instead.
+_drafts: dict[int, BuildingSummary] = {}
+log = logging.getLogger(__name__)
 
 
 class DraftBlocked(Exception):
@@ -53,12 +58,40 @@ async def overview(session: AsyncSession, project_id: int) -> Overview:
         if "carbon" in blocked(await repo.get_upload(session, project_id)):
             raise DraftBlocked(project_id)
         data = await repo.read_project(session, project_id)
-        _overviews[project_id] = build_overview(data)
+        # In a thread: a large project takes seconds, and probes must still answer.
+        _overviews[project_id] = await asyncio.to_thread(build_overview, data)
     return _overviews[project_id]
 
 
 def forget(project_id: int) -> None:
     _overviews.pop(project_id, None)
+    _drafts.pop(project_id, None)
+
+
+def remember(summary: BuildingSummary, o: Overview | None) -> None:
+    """Keep what the upload process computed, so nothing is computed twice."""
+    if o is not None:
+        _overviews[summary.id] = o
+    else:
+        _drafts[summary.id] = summary
+
+
+async def delete(session: AsyncSession, project_id: int) -> None:
+    await repo.delete_project(session, project_id)
+    await session.commit()
+    forget(project_id)
+
+
+async def warm_up() -> None:
+    """Fill the caches after boot, so the list answers from memory. In the background:
+    the API answers meanwhile, and a building that cannot be read is logged for its
+    own page to report, never fatal for the others."""
+    async with AsyncSession(engine) as session:
+        for upload in await repo.list_uploads(session):
+            try:
+                await summary_of(session, upload)
+            except Exception:
+                log.exception("Building %s could not be read", upload.project_record_id)
 
 
 def per_m2(value: float, o: Overview) -> float | None:
@@ -119,10 +152,13 @@ def draft_summary(
 
 
 async def summary_of(session: AsyncSession, upload: Upload) -> BuildingSummary:
+    project_id = upload.project_record_id
     if "carbon" in blocked(upload):
-        data = await repo.read_project(session, upload.project_record_id, results=False)
-        return draft_summary(upload, data.general, len(data.rows))
-    return summary(upload, await overview(session, upload.project_record_id))
+        if project_id not in _drafts:  # uploads never change: read the lines once
+            data = await repo.read_project(session, project_id, results=False)
+            _drafts[project_id] = draft_summary(upload, data.general, len(data.rows))
+        return _drafts[project_id]
+    return summary(upload, await overview(session, project_id))
 
 
 async def summaries(session: AsyncSession) -> list[BuildingSummary]:
@@ -154,28 +190,33 @@ async def draft_view(session: AsyncSession, project_id: int) -> DraftView:
     )
 
 
-def ingest(workbook: bytes, file_name: str, draft: bool) -> BuildingSummary:
+def ingest(
+    workbook: bytes, file_name: str, draft: bool
+) -> tuple[BuildingSummary, Overview | None]:
     """Read, store and summarise one workbook, in the parser process.
 
     Raises RejectedWorkbook, or ValueError when the overview cannot read it: then
     nothing is committed, so a broken project never breaks the list for everyone.
+    Returns the overview too (None for a draft without carbon), for the API's cache.
     """
     return asyncio.run(_ingest(workbook, file_name, draft))
 
 
-async def _ingest(workbook: bytes, file_name: str, draft: bool) -> BuildingSummary:
+async def _ingest(
+    workbook: bytes, file_name: str, draft: bool
+) -> tuple[BuildingSummary, Overview | None]:
     project, findings = parse(workbook, draft)
     has_rejects = any(f.severity == "Reject" for f in findings)
     # Its own engine: connections never cross processes.
-    engine = create_async_engine(get_settings().DB_URL)
+    own = create_async_engine(get_settings().DB_URL)
     try:
-        async with AsyncSession(engine) as session:
+        async with AsyncSession(own) as session:
             project_id = await store(session, project, file_name, findings, has_rejects)
             summary = await building_summary(session, project_id)
             await session.commit()
-            return summary
+            return summary, _overviews.get(project_id)
     finally:
-        await engine.dispose()
+        await own.dispose()
 
 
 def compared(upload: Upload, o: Overview) -> ComparedBuilding:

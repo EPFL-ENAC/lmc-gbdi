@@ -19,11 +19,13 @@ export function useOverview(param: 'id' | 'other' = 'id') {
       overview.value = null;
       error.value = null;
       if (id === undefined) return;
+      // Switching fast, a slower earlier reply must not overwrite the current one.
+      const current = () => route.params[param] === id;
       try {
         const [o, summary] = await Promise.all([fetchOverview(Number(id)), fetchBuilding(Number(id))]);
-        overview.value = { ...o, code: code(summary) };
+        if (current()) overview.value = { ...o, code: code(summary) };
       } catch (e: unknown) {
-        error.value = e instanceof Error ? e.message : String(e);
+        if (current()) error.value = e instanceof Error ? e.message : String(e);
       }
     },
     { immediate: true },

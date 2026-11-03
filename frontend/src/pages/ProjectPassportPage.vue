@@ -125,15 +125,11 @@ import Term from '@/components/atoms/Term.vue';
 import { useOverview } from '@/composables/useOverview';
 import { MATERIAL_COLORS, OTHER_COLOR } from '@/dataviz';
 import { kg, percent, WEIGHTING } from '@/format';
-import { materialLabel, pairKey, remaining } from '@/materials';
+import { materialLabel, pairKey, RANKINGS, remaining, type RankBy } from '@/materials';
 
 const { overview, error } = useOverview();
 
-const RANKINGS = [
-  { label: 'Top 10 by mass', value: 'mass' },
-  { label: 'Top 10 by carbon', value: 'carbon' },
-];
-const rankBy = ref<'mass' | 'carbon'>('mass');
+const rankBy = ref<RankBy>('mass');
 
 // One row per material of the chosen ranking, both measures from the backend; the
 // colour follows the rank, so a material has the same one in both walls.
@@ -142,8 +138,8 @@ const ranked = computed(() => {
   if (o === null) return [];
   const rows = rankBy.value === 'mass' ? o.mass_hotspots : o.material_hotspots;
   return rows.map((h, i) => ({
-    key: `${h.material}|${h.epd_product}`,
-    label: h.material || h.epd_product,
+    key: pairKey(h),
+    label: materialLabel(h),
     epd_product: h.material ? h.epd_product : '',
     mass_kg: h.mass_kg,
     share_of_mass: h.share_of_mass,
