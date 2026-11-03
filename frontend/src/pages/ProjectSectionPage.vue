@@ -33,7 +33,7 @@
         />
         <details>
           <summary class="section-page__more">Show the figures by element and stage</summary>
-          <StageByElement :stages="overview.stages" :rows="overview.element_stages" />
+          <StageByElement :stages="overview.stages" :rows="overview.element_stages" :whole-life="overview.headline.whole_life" />
         </details>
       </section>
 

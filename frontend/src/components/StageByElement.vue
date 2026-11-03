@@ -47,7 +47,7 @@ import { computed } from 'vue';
 import type { QTableColumn } from 'quasar';
 import type { ElementStages, StageTotal } from '@/api/overview';
 
-const props = defineProps<{ stages: StageTotal[]; rows: ElementStages[] }>();
+const props = defineProps<{ stages: StageTotal[]; rows: ElementStages[]; wholeLife: number }>();
 
 
 // The reader's locale; no i18n in the app yet.
@@ -86,10 +86,10 @@ const domain = computed(() => {
   return { min, span: max - min };
 });
 
-// Each element's net total (negatives included) over the sum of every element's.
+// Each element's net total over the whole life, as the Elements table counts it: the
+// rows here are the largest elements only, so their own sum is not the whole.
 const net = (row: ElementStages) => Object.values(row.gwp_by_stage).reduce((a, b) => a + b, 0);
-const total = computed(() => props.rows.reduce((sum, row) => sum + net(row), 0));
-const share = (row: ElementStages) => (total.value ? net(row) / total.value : 0);
+const share = (row: ElementStages) => (props.wholeLife ? net(row) / props.wholeLife : 0);
 
 const toPercent = (value: number) => ((value - domain.value.min) / domain.value.span) * 100;
 const zero = computed(() => toPercent(0));

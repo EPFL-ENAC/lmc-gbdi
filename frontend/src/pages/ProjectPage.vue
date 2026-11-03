@@ -61,7 +61,7 @@
       <section class="project-section">
         <h2 class="text-h3">Life-cycle stage by building element</h2>
         <p class="u-text-muted">OpenBDF element classification, each split across its life cycle, in kg CO₂e.</p>
-        <StageByElement :stages="overview.stages" :rows="overview.element_stages" />
+        <StageByElement :stages="overview.stages" :rows="overview.element_stages" :whole-life="overview.headline.whole_life" />
       </section>
 
       <section class="project-section">

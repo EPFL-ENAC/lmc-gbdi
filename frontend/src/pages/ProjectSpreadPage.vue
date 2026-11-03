@@ -62,7 +62,7 @@
           <RankedBars :bars="elementBars" caption="kg CO₂e and share of the whole-life total." empty-label="No classified elements." />
           <details class="spread__details">
             <summary>Show each element by life-cycle stage</summary>
-            <StageByElement :stages="overview.stages" :rows="overview.element_stages" />
+            <StageByElement :stages="overview.stages" :rows="overview.element_stages" :whole-life="overview.headline.whole_life" />
           </details>
         </div>
         <p class="spread__caption">Rows without an element code stay visible as "Not classified".</p>
