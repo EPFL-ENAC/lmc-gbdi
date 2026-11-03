@@ -1,0 +1,65 @@
+{{- if .Values.backend.migrations.enabled }}
+# Migrations run once per release, before the new backend rolls out (as
+# co2-calculator does): post-install, so the in-chart postgres exists first;
+# pre-upgrade, so the schema is ready before the new image serves. Argo CD
+# maps these to PostSync and PreSync.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-migration-{{ .Release.Revision | default "1" }}
+  labels:
+    {{- include "gbdi.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+  annotations:
+    "helm.sh/hook": post-install,pre-upgrade
+    "helm.sh/hook-weight": "-1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        {{- include "gbdi.labels" . | nindent 8 }}
+        app.kubernetes.io/component: migration
+    spec:
+      restartPolicy: Never
+      securityContext:
+        {{- include "gbdi.podSecurityContext" . | nindent 8 }}
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ .Values.postgres.image }}
+          # libpq reads postgresql://, not SQLAlchemy's postgresql+psycopg://.
+          command: ["sh", "-c"]
+          args:
+            - |
+              until pg_isready -d "$(echo "$DB_URL" | sed 's/+psycopg//')"; do
+                echo "Waiting for PostgreSQL to be ready..."
+                sleep 2
+              done
+          env:
+            {{- include "gbdi.dbUrlEnv" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.backend.migrations.waitForPostgres.resources | nindent 12 }}
+          securityContext:
+            {{- include "gbdi.containerSecurityContext" . | nindent 12 }}
+            runAsUser: 70  # the image's postgres user; root is refused
+      containers:
+        - name: migration
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          command: ["alembic", "upgrade", "head"]
+          env:
+            {{- include "gbdi.dbUrlEnv" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.backend.migrations.resources | nindent 12 }}
+          securityContext:
+            {{- include "gbdi.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

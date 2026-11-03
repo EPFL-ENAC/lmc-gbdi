@@ -13,6 +13,17 @@ backend:
     # lmc-openbdf peaks at 1.2 GiB on a 20-30 MB COLA workbook and 3.6 GiB on
     # 107 MB (TRIO): 5 GiB covers the 128 MB the ingress lets through.
     limits: { memory: 5Gi }
+  # A hook Job runs `alembic upgrade head` once per release (templates/migration-job.yaml).
+  # Disable to run migrations by hand.
+  migrations:
+    enabled: true
+    resources:
+      requests: { cpu: 50m, memory: 128Mi }
+      limits: { memory: 512Mi }
+    waitForPostgres:
+      resources:
+        requests: { cpu: 10m, memory: 16Mi }
+        limits: { memory: 64Mi }
 
 frontend:
   replicaCount: 1
