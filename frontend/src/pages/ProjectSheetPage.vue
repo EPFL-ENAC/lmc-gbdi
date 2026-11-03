@@ -57,12 +57,13 @@
             flat
             dense
             hide-bottom
-            :rows="overview.material_hotspots"
+            :rows="open ? [...overview.material_hotspots, ...rest] : overview.material_hotspots"
             :columns="hotspotColumns"
             :row-key="(m: MaterialHotspot) => `${m.material}|${m.epd_product}`"
             :pagination="{ rowsPerPage: 0 }"
             no-data-label="No materials in this project."
           />
+          <ShowMore v-model="open" :count="rest.length" />
         </section>
         <section class="sheet__panel">
           <h2 class="sheet__panel-title">Data</h2>
@@ -85,9 +86,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { QTableColumn } from 'quasar';
 import type { MaterialHotspot } from '@/api/overview';
+import ShowMore from '@/components/atoms/ShowMore.vue';
 import IntensityPlot from '@/components/IntensityPlot.vue';
 import LifeCycleStrip from '@/components/LifeCycleStrip.vue';
 import ModuleChecks from '@/components/ModuleChecks.vue';
@@ -96,8 +98,16 @@ import RankedBars, { type Bar } from '@/components/RankedBars.vue';
 import StageMatrix from '@/components/StageMatrix.vue';
 import { useOverview } from '@/composables/useOverview';
 import { figure, kg, one, percent, three, two, WEIGHTING } from '@/format';
+import { remaining } from '@/materials';
 
 const { overview, error } = useOverview();
+
+// The table opens onto every material; the plot keeps the top 10.
+const open = ref(false);
+const rest = computed(() => {
+  const o = overview.value;
+  return o === null ? [] : remaining(o.materials, o.material_hotspots, 'carbon');
+});
 
 const titleBlock = computed(() => {
   const p = overview.value?.project;

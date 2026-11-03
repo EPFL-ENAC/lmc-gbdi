@@ -74,6 +74,7 @@
           :rows="overview.material_hotspots"
           :columns="hotspotColumns"
           :row-key="pairKey"
+          :rest="remaining(overview.materials, overview.material_hotspots, 'carbon')"
           caption="kg CO₂e over the whole life cycle, same values as the table."
           empty-label="No materials in this project."
         />
@@ -103,6 +104,7 @@
           :rows="overview.mass_hotspots"
           :columns="massColumns"
           :row-key="pairKey"
+          :rest="massRest"
           caption="kg, same values as the table."
           empty-label="No materials in this project."
         />
@@ -155,10 +157,10 @@ import type {
   StageTotal,
 } from '@/api/overview';
 import { useOverview } from '@/composables/useOverview';
+import { pairKey, remaining } from '@/materials';
 import { figure, kg, materialName, one, percent, three, two, usefulAside, WEIGHTING } from '@/format';
 
 const { overview, error } = useOverview();
-const pairKey = (row: { material: string; epd_product: string }) => `${row.material}|${row.epd_product}`;
 
 const projectLine = computed(() => {
   const project = overview.value?.project;
@@ -210,6 +212,14 @@ const dataTypeColumns: QTableColumn<DataTypeShare>[] = [
   { name: 'share', ...shareColumn },
 ];
 
+
+// The mass table's rest, as mass rows. ponytail: share_of_mass is null only with no
+// mass at all, and then the mass ranking is empty anyway.
+const massRest = computed<MassHotspot[]>(() => {
+  const o = overview.value;
+  if (o === null) return [];
+  return remaining(o.materials, o.mass_hotspots, 'mass').map((m) => ({ ...m, share_of_mass: m.share_of_mass ?? 0 }));
+});
 
 // Charts and tables read the same backend rows, in the backend's order.
 const elementRows = computed(() =>

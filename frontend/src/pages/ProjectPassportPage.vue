@@ -71,8 +71,20 @@
             </tr>
             <tr>
               <th scope="row"><span class="passport__swatch" :style="{ background: OTHER_COLOR }" />Every other material</th>
-              <td colspan="4" />
+              <td colspan="4" class="num"><ShowMore v-model="open" :count="rest.length" /></td>
             </tr>
+            <template v-if="open">
+              <tr v-for="row in rest" :key="row.key" class="passport__rest">
+                <th scope="row">
+                  <span class="passport__swatch" :style="{ background: OTHER_COLOR }" /><Term :name="row.label" />
+                  <span class="passport__product">{{ row.epd_product }}</span>
+                </th>
+                <td class="num">{{ kg.format(row.mass_kg) }}</td>
+                <td class="num">{{ row.share_of_mass === null ? 'no mass declared' : percent.format(row.share_of_mass) }}</td>
+                <td class="num">{{ kg.format(row.gwp) }}</td>
+                <td class="num">{{ percent.format(row.share) }}</td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </section>
@@ -108,10 +120,12 @@ import { computed, ref } from 'vue';
 import BrickWall from '@/components/BrickWall.vue';
 import MaterialSheet from '@/components/MaterialSheet.vue';
 import ProjectFieldsTable from '@/components/ProjectFieldsTable.vue';
+import ShowMore from '@/components/atoms/ShowMore.vue';
 import Term from '@/components/atoms/Term.vue';
 import { useOverview } from '@/composables/useOverview';
 import { MATERIAL_COLORS, OTHER_COLOR } from '@/dataviz';
 import { kg, percent, WEIGHTING } from '@/format';
+import { materialLabel, pairKey, remaining } from '@/materials';
 
 const { overview, error } = useOverview();
 
@@ -136,6 +150,23 @@ const ranked = computed(() => {
     gwp: h.gwp,
     share: h.share,
     color: MATERIAL_COLORS[i],
+  }));
+});
+
+// The materials the wall paints as "every other", in the same ranking.
+const open = ref(false);
+const rest = computed(() => {
+  const o = overview.value;
+  if (o === null) return [];
+  const top = rankBy.value === 'mass' ? o.mass_hotspots : o.material_hotspots;
+  return remaining(o.materials, top, rankBy.value).map((m) => ({
+    key: pairKey(m),
+    label: materialLabel(m),
+    epd_product: m.material ? m.epd_product : '',
+    mass_kg: m.mass_kg,
+    share_of_mass: m.share_of_mass,
+    gwp: m.gwp,
+    share: m.share,
   }));
 });
 
