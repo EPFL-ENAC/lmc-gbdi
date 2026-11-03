@@ -3,7 +3,6 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.buildings import repo, service
@@ -46,20 +45,9 @@ async def upload_building(
         )
         return JSONResponse(body.model_dump(), status_code=422)
     has_rejects = any(f.severity == "Reject" for f in findings)
-    try:
-        project_id = await store(
-            session, project, file.filename or "", findings, has_rejects
-        )
-    except IntegrityError as error:
-        # A draft can leave blank what the database requires (project_country):
-        # openbdf's draft mode relaxes its validation, not the schema.
-        await session.rollback()
-        column = getattr(getattr(error.orig, "diag", None), "column_name", None)
-        raise HTTPException(
-            422,
-            f"{file.filename}: the database requires {column or 'a field'}, which "
-            "this workbook leaves blank. Fill it in the workbook and add it again.",
-        ) from None
+    project_id = await store(
+        session, project, file.filename or "", findings, has_rejects
+    )
     try:
         # Compute before committing: a project the overview cannot read is refused,
         # never stored to break the list for everyone.

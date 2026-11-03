@@ -247,7 +247,7 @@ dev = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.20.0" },
     { name = "fastapi", extras = ["standard-no-fastapi-cloud-cli"], specifier = ">=0.152.0" },
-    { name = "openbdf", git = "https://github.com/EPFL-ENAC/lmc-openbdf?rev=fbbe19167d94cb5d2a432752880511709ea7ab87" },
+    { name = "openbdf", git = "https://github.com/EPFL-ENAC/lmc-openbdf?tag=v0.1.3" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6" },
     { name = "pydantic-settings", specifier = ">=2.16.1" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.1.5" },
@@ -589,8 +589,8 @@ wheels = [
 
 [[package]]
 name = "openbdf"
-version = "0.1.3.dev1+gfbbe19167"
-source = { git = "https://github.com/EPFL-ENAC/lmc-openbdf?rev=fbbe19167d94cb5d2a432752880511709ea7ab87#fbbe19167d94cb5d2a432752880511709ea7ab87" }
+version = "0.1.3"
+source = { git = "https://github.com/EPFL-ENAC/lmc-openbdf?tag=v0.1.3#0ed446e33d1d80f3d737ede00e00f96c4da0e04c" }
 dependencies = [
     { name = "lxml" },
     { name = "openpyxl" },
