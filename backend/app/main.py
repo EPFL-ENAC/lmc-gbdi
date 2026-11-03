@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated
@@ -9,7 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.buildings import service as buildings_service
 from app.buildings.routes import router as buildings_router
 from app.config import get_settings
-from app.db import engine, get_session
+from app.db import get_session
 from app.glossary import router as glossary_router
 from app.overview.routes import router as overview_router
 from app.overview.service import project_overview
@@ -21,10 +22,11 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     data_dir = get_settings().OPENBDF_DATA_DIR
     if data_dir is not None:
         project_overview(data_dir)
-    # Compute every stored building once, so the list answers from memory.
-    async with AsyncSession(engine) as session:
-        await buildings_service.summaries(session)
+    # Fill the building caches in the background: boot waits for neither the
+    # migrations (a hook Job, after a first install) nor a slow or broken building.
+    warm = asyncio.create_task(buildings_service.warm_up())
     yield
+    warm.cancel()
 
 
 # Everything lives under /api, so Traefik (compose) and the k8s Ingress route
