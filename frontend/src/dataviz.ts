@@ -1,10 +1,10 @@
-// Life-cycle stage colours, A1–A3 → C1–C4: the brand's "Green Bright + Light + Orange
-// Bright" set (p.16), led by Green Dark. A pastel stage would vanish on a grey panel.
+// Life-cycle stage colours, A1–A3 → C1–C4: all greens, so orange is free for
+// highlights (review #81). A pastel stage would vanish on a grey panel.
 export const STAGE_COLORS = [
   'var(--gbdi-dataviz-green-1)',
   'var(--gbdi-dataviz-green-2)',
   'var(--gbdi-dataviz-green-3)',
-  'var(--gbdi-dataviz-orange-2)',
+  'var(--gbdi-dataviz-end-of-life)',
 ];
 
 // Ten materials, one colour each, the same in every chart of a page: the four hues
@@ -33,7 +33,7 @@ export const COMPARE_STAGE_COLORS = [
   'var(--gbdi-dataviz-purple-1)',
   'var(--gbdi-dataviz-purple-2)',
   'var(--gbdi-dataviz-green-3)',
-  'var(--gbdi-dataviz-orange-2)',
+  'var(--gbdi-dataviz-end-of-life)',
 ];
 export const COMPARE_MATERIAL_COLORS = [
   ...MATERIAL_COLORS.filter((c) => !isBuildingColor(c)),

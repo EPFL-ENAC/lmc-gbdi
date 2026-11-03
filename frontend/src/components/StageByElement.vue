@@ -19,9 +19,11 @@
             :title="segment.title"
           />
         </div>
+        <span class="stage-chart__share">{{ percent.format(bar.share) }}</span>
       </div>
       <figcaption class="stage-chart__caption">
-        kg CO₂e, same values as the table. Negative values extend left of zero.
+        kg CO₂e, same values as the table. Negative values extend left of zero; the share is
+        each element's net total over the whole life.
       </figcaption>
     </figure>
 
@@ -62,6 +64,13 @@ const columns = computed<QTableColumn<ElementStages>[]>(() => [
     align: 'right' as const,
   })),
   {
+    name: 'share',
+    label: 'Share',
+    field: (row) => share(row),
+    format: (value: number) => percent.format(value),
+    align: 'right',
+  },
+  {
     name: 'dominant',
     label: 'Dominant stage',
     field: (row) => `${row.dominant_stage} ${percent.format(row.dominant_share)}`,
@@ -76,6 +85,11 @@ const domain = computed(() => {
   const max = Math.max(0, ...values.map((v) => v.filter((x) => x > 0).reduce((a, b) => a + b, 0)));
   return { min, span: max - min };
 });
+
+// Each element's net total (negatives included) over the sum of every element's.
+const net = (row: ElementStages) => Object.values(row.gwp_by_stage).reduce((a, b) => a + b, 0);
+const total = computed(() => props.rows.reduce((sum, row) => sum + net(row), 0));
+const share = (row: ElementStages) => (total.value ? net(row) / total.value : 0);
 
 const toPercent = (value: number) => ((value - domain.value.min) / domain.value.span) * 100;
 const zero = computed(() => toPercent(0));
@@ -97,7 +111,7 @@ const bars = computed(() =>
         title: `${stage.label}: ${kg.format(value)} kg CO₂e`,
       };
     });
-    return { element: row.element, segments };
+    return { element: row.element, segments, share: share(row) };
   }),
 );
 </script>
@@ -142,7 +156,7 @@ const bars = computed(() =>
 
 .stage-chart__row {
   display: grid;
-  grid-template-columns: minmax(0, 12rem) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 12rem) minmax(0, 1fr) 3rem;
   align-items: center;
   gap: tokens.$spacing-md;
   font-size: tokens.$text-size-xs;
@@ -150,6 +164,11 @@ const bars = computed(() =>
 }
 
 .stage-chart__label {
+  text-align: right;
+}
+
+.stage-chart__share {
+  font-variant-numeric: tabular-nums;
   text-align: right;
 }
 

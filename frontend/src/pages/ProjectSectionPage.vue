@@ -48,10 +48,10 @@
 
       <section class="section-page__block">
         <h2 class="section-page__title">What it is made of</h2>
-        <div class="grid-2-col">
-          <RankedBars :bars="carbonBars" caption="Heaviest in carbon, kg CO₂e over the whole life." empty-label="No materials." />
-          <RankedBars :bars="massBars" caption="Heaviest in mass, kg." empty-label="No materials." />
-        </div>
+        <MaterialRanking
+          :materials="overview.materials"
+          caption="Solid: the measure that sets the order. Each measure on its own scale."
+        />
       </section>
 
       <section class="section-page__block">
@@ -77,24 +77,15 @@
 import { computed } from 'vue';
 import BuildingSection from '@/components/BuildingSection.vue';
 import LifeCycleStrip from '@/components/LifeCycleStrip.vue';
+import MaterialRanking from '@/components/MaterialRanking.vue';
 import ModuleChecks from '@/components/ModuleChecks.vue';
 import ProjectFieldsTable from '@/components/ProjectFieldsTable.vue';
-import RankedBars, { type Bar } from '@/components/RankedBars.vue';
 import StageByElement from '@/components/StageByElement.vue';
 import { useOverview } from '@/composables/useOverview';
 import { kg, one, percent, WEIGHTING } from '@/format';
 
 const { overview, error } = useOverview();
 
-const materialBars = <T extends { material: string; epd_product: string }>(rows: T[], value: (row: T) => number) =>
-  rows.map((m) => ({
-    key: `${m.material}|${m.epd_product}`,
-    label: m.material || m.epd_product,
-    value: value(m),
-    display: kg.format(value(m)),
-  }));
-const carbonBars = computed<Bar[]>(() => materialBars(overview.value?.material_hotspots ?? [], (m) => m.gwp));
-const massBars = computed<Bar[]>(() => materialBars(overview.value?.mass_hotspots ?? [], (m) => m.mass_kg));
 
 // One sentence instead of a chart when every material says the same thing.
 const dataTypeSentence = computed(() => {

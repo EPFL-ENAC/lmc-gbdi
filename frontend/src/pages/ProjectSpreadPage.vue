@@ -71,13 +71,18 @@
       <section class="spread__section">
         <div class="spread__aside">
           <h2 class="spread__title">Materials</h2>
-          <p>The materials that weigh most in carbon, then in mass. The two lists rarely agree.</p>
+          <p>
+            The materials that weigh most in carbon or in mass, with the other measure beside each: heavy is not the
+            same as intense.
+          </p>
         </div>
-        <div class="spread__main grid-2-col">
-          <RankedBars :bars="carbonBars" caption="By whole-life carbon, kg CO₂e." empty-label="No materials." />
-          <RankedBars :bars="massBars" caption="By mass, kg." empty-label="No materials." />
+        <div class="spread__main">
+          <MaterialRanking
+            :materials="overview.materials"
+            caption="Solid: the measure that sets the order. Each measure on its own scale."
+          />
         </div>
-        <p class="spread__caption">Every material and EPD product of the bill of materials, top 10 of each.</p>
+        <p class="spread__caption">Every material and EPD product of the bill of materials.</p>
       </section>
 
       <section class="spread__section">
@@ -115,6 +120,7 @@
 import { computed } from 'vue';
 import BigNumber from '@/components/molecules/BigNumber.vue';
 import LifeCycleStrip from '@/components/LifeCycleStrip.vue';
+import MaterialRanking from '@/components/MaterialRanking.vue';
 import ModuleChecks from '@/components/ModuleChecks.vue';
 import ProjectFieldsTable from '@/components/ProjectFieldsTable.vue';
 import RankedBars, { type Bar } from '@/components/RankedBars.vue';
@@ -140,22 +146,6 @@ const elementBars = computed<Bar[]>(() => {
     muted: i >= o.elements.length,
   }));
 });
-const carbonBars = computed<Bar[]>(() =>
-  (overview.value?.material_hotspots ?? []).map((m) => ({
-    key: `${m.material}|${m.epd_product}`,
-    label: m.material || m.epd_product,
-    value: m.gwp,
-    display: kg.format(m.gwp),
-  })),
-);
-const massBars = computed<Bar[]>(() =>
-  (overview.value?.mass_hotspots ?? []).map((m) => ({
-    key: `${m.material}|${m.epd_product}`,
-    label: m.material || m.epd_product,
-    value: m.mass_kg,
-    display: kg.format(m.mass_kg),
-  })),
-);
 const dataTypeBars = computed<Bar[]>(() =>
   (overview.value?.data_types ?? []).map((d) => ({
     key: d.key,

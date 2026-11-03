@@ -6,17 +6,20 @@
       flat
       bordered
       hide-bottom
-      :rows="rows"
+      :rows="open ? [...rows, ...(rest ?? [])] : rows"
       :columns="columns"
       :row-key="rowKey"
       :pagination="{ rowsPerPage: 0 }"
       :no-data-label="emptyLabel"
     />
+    <ShowMore v-if="rest" v-model="open" :count="rest.length" />
   </div>
 </template>
 
 <script setup lang="ts" generic="Row extends object">
+import { ref } from 'vue';
 import type { QTableColumn } from 'quasar';
+import ShowMore from '@/components/atoms/ShowMore.vue';
 import RankedBars, { type Bar } from './RankedBars.vue';
 
 defineProps<{
@@ -26,7 +29,9 @@ defineProps<{
   rowKey: string | ((row: Row) => string);
   caption: string;
   emptyLabel: string;
+  rest?: Row[]; // rows the chart leaves out, listed in the table on request
 }>();
+const open = ref(false);
 
 </script>
 
