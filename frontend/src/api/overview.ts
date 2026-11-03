@@ -131,6 +131,7 @@ export interface Overview {
   element_stages: ElementStages[];
   material_hotspots: MaterialHotspot[];
   mass_hotspots: MassHotspot[];
+  materials: MaterialHotspot[]; // every material, by whole-life carbon
   total_mass_kg: number;
   mass_other_share: number;
   material_classes: MaterialClassTotal[];

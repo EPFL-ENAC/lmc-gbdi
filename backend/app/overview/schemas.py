@@ -131,6 +131,8 @@ class Overview(BaseModel):
     element_stages: list[ElementStages]
     material_hotspots: list[MaterialHotspot]  # top 10 by whole-life GWP
     mass_hotspots: list[MassHotspot]  # top 10 by mass
+    # Every material, by whole-life GWP: what the top 10s leave out, on request.
+    materials: list[MaterialHotspot]
     total_mass_kg: float  # every bill of materials row, floor repetition included
     mass_other_share: float  # of the mass, outside the top 10
     material_classes: list[MaterialClassTotal]  # every class present, in code order

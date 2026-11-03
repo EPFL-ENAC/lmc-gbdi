@@ -178,11 +178,11 @@ def material_rollup(
 
 def hotspots(
     pairs: dict[MaterialPair, Stages], whole_life: Decimal
-) -> tuple[list[MaterialHotspot], list[MassHotspot], Decimal]:
+) -> tuple[list[MaterialHotspot], list[MassHotspot], Decimal, list[MaterialHotspot]]:
     by_gwp = sorted(pairs.items(), key=lambda item: item[1]["gwp"], reverse=True)
     by_mass = sorted(pairs.items(), key=lambda item: item[1]["mass"], reverse=True)
     total_mass = sum((p["mass"] for p in pairs.values()), ZERO)
-    gwp = [
+    every = [
         MaterialHotspot(
             material=material,
             epd_product=epd,
@@ -194,7 +194,7 @@ def hotspots(
             gwp_by_stage={k: float(p[k]) for k, _ in STAGES},
         )
         for (material, epd), p in by_gwp
-        if round(p["gwp"]) != 0
+        if round(p["gwp"]) != 0 or round(p["mass"]) != 0
     ]
     mass = [
         MassHotspot(
@@ -210,7 +210,9 @@ def hotspots(
     ]
     top_mass = sum((p["mass"] for _, p in by_mass[:TOP_MATERIALS]), ZERO)
     other_share = (total_mass - top_mass) / total_mass if total_mass else ZERO
-    return gwp[:TOP_MATERIALS], mass[:TOP_MATERIALS], other_share
+    # The carbon top 10 needs carbon; `every` keeps the mass-only materials too.
+    top_gwp = [h for h in every if round(h.gwp) != 0][:TOP_MATERIALS]
+    return top_gwp, mass[:TOP_MATERIALS], other_share, every
 
 
 def class_rollup(rows: list[tuple[MaterialRow, Stages]]) -> list[MaterialClassTotal]:
@@ -395,7 +397,9 @@ def build_overview(data: ProjectData) -> Overview:
     shown = elements[:TOP_ELEMENTS]
     shown_total = sum((sum(s.values(), ZERO) for _, s in shown), ZERO)
     pairs = material_rollup(rows)
-    material_hotspots, mass_hotspots, mass_other_share = hotspots(pairs, whole_life)
+    material_hotspots, mass_hotspots, mass_other_share, materials = hotspots(
+        pairs, whole_life
+    )
     period = study_period(data.general)
     summary = headline(data, totals)
     weighting, data_types = data_type_profile(pairs, data.data_types)
@@ -436,6 +440,7 @@ def build_overview(data: ProjectData) -> Overview:
         element_stages=[element_stages(name, s) for name, s in shown],
         material_hotspots=material_hotspots,
         mass_hotspots=mass_hotspots,
+        materials=materials,
         total_mass_kg=float(sum((p["mass"] for p in pairs.values()), ZERO)),
         mass_other_share=float(mass_other_share),
         material_classes=class_rollup(rows),

@@ -140,6 +140,14 @@ def test_each_ranking_carries_the_other_measure(overview):
     assert (by_mass.gwp, by_mass.share) == (65, pytest.approx(65 / 118))
 
 
+def test_materials_list_every_material_the_top_tens_draw_from(overview):
+    """What "show the remaining materials" expands: all of them, by carbon."""
+    every = [(m.material, m.epd_product) for m in overview.materials]
+    top = [(m.material, m.epd_product) for m in overview.material_hotspots]
+    assert every[: len(top)] == top
+    assert {(m.material, m.epd_product) for m in overview.mass_hotspots} <= set(every)
+
+
 def test_data_types_weigh_by_gwp_fossil_and_report_the_undeclared(overview):
     shares = {d.key: d.share for d in overview.data_types}
     assert overview.data_type_weighting == "gwp_fossil_a1_a3"
