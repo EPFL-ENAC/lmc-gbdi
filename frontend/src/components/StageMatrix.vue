@@ -1,7 +1,14 @@
 <template>
   <!-- Element × stage, each cell shaded by its size: the darker, the heavier. -->
   <table class="matrix">
-    <caption class="matrix__caption">kg CO₂e. Shade: the cell's size against the largest cell.</caption>
+    <caption class="matrix__caption">
+      kg CO₂e. Each cell is shaded by its size against the largest cell:
+      <ul class="matrix__legend">
+        <li v-for="item in LEGEND" :key="item.shade">
+          <span class="matrix__swatch" :class="`matrix__cell--${item.shade}`" />{{ item.label }}
+        </li>
+      </ul>
+    </caption>
     <thead>
       <tr>
         <th scope="col">Element</th>
@@ -42,14 +49,16 @@ const props = defineProps<{ stages: StageTotal[]; rows: ElementStages[] }>();
 const largest = computed(() =>
   Math.max(...props.rows.flatMap((row) => Object.values(row.gwp_by_stage).map(Math.abs))),
 );
-const shade = (value: number) => {
-  if (value < 0) return 'negative';
-  const ratio = value / largest.value;
-  if (ratio >= 0.5) return 'dark';
-  if (ratio >= 0.15) return 'light';
-  if (ratio >= 0.02) return 'pastel';
-  return 'none';
-};
+// The steps, read by both the shading and its legend.
+const STEPS = [
+  { shade: 'dark', from: 0.5, label: 'half the largest or more' },
+  { shade: 'light', from: 0.15, label: '15 to 50%' },
+  { shade: 'pastel', from: 0.02, label: '2 to 15%' },
+  { shade: 'none', from: 0, label: 'under 2%' },
+] as const;
+const LEGEND = [...STEPS, { shade: 'negative', label: 'negative, a credit' }];
+const shade = (value: number) =>
+  value < 0 ? 'negative' : (STEPS.find((step) => value / largest.value >= step.from)?.shade ?? 'none');
 </script>
 
 <style scoped lang="scss">
@@ -87,6 +96,28 @@ const shade = (value: number) => {
 
 .matrix .num {
   text-align: right;
+}
+
+.matrix__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$spacing-xs tokens.$spacing-lg;
+  margin: tokens.$spacing-xs 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.matrix__legend li {
+  display: flex;
+  align-items: center;
+  gap: tokens.$spacing-xs;
+}
+
+.matrix__swatch {
+  width: tokens.$spacing-md;
+  height: tokens.$spacing-md;
+  border: tokens.$border-width solid tokens.$color-border;
+  border-radius: tokens.$radius-xs;
 }
 
 .matrix__cell--pastel {
