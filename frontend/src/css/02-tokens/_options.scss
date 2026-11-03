@@ -30,6 +30,9 @@ $tokens-colors-green-pastel: #eafaf0 !default;
 $tokens-colors-green-light: #a6dbc9 !default;
 $tokens-colors-green-bright: #189d7e !default; // = primary green
 $tokens-colors-green-dark: #206d59 !default;
+// Not a brand colour: a yellow-green for end of life (C1–C4), so orange stays for
+// highlights (review #81). Picked to stay apart from the three greens before it.
+$tokens-colors-green-lime: #91af28 !default;
 
 $tokens-colors-blue-pastel: #e9f7fe !default;
 $tokens-colors-blue-light: #9dd2f3 !default;
