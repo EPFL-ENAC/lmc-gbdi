@@ -59,7 +59,7 @@
             hide-bottom
             :rows="open ? [...overview.material_hotspots, ...rest] : overview.material_hotspots"
             :columns="hotspotColumns"
-            :row-key="(m: MaterialHotspot) => `${m.material}|${m.epd_product}`"
+            :row-key="pairKey"
             :pagination="{ rowsPerPage: 0 }"
             no-data-label="No materials in this project."
           />
@@ -98,7 +98,7 @@ import RankedBars, { type Bar } from '@/components/RankedBars.vue';
 import StageMatrix from '@/components/StageMatrix.vue';
 import { useOverview } from '@/composables/useOverview';
 import { figure, kg, one, percent, three, two, WEIGHTING } from '@/format';
-import { remaining } from '@/materials';
+import { pairKey, remaining } from '@/materials';
 
 const { overview, error } = useOverview();
 
