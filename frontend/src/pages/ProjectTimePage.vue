@@ -22,11 +22,8 @@
 
       <section v-if="period !== null && overview.use_per_year !== null" class="time__chart">
         <CarbonOverTime
-          :upfront="overview.headline.upfront"
-          :use-total="stageGwp('b1_b8')"
+          :stages="overview.stages"
           :use-per-year="overview.use_per_year"
-          :end-of-life="stageGwp('c1_c4')"
-          :whole-life="overview.headline.whole_life"
           :module-d="overview.headline.module_d1"
           :period="period"
         />
@@ -59,8 +56,8 @@
       <section class="time__section">
         <h2 class="time__title">Which elements carry the end of life</h2>
         <p class="u-text-muted">
-          The step at {{ period === null ? 'the end of life' : `year ${period}` }} comes from the elements whose C1–C4
-          dominates. The shade marks each cell against the largest.
+          The peak at {{ period === null ? 'the end of life' : `year ${period}` }} comes from the elements whose C1–C4
+          dominates.
         </p>
         <StageMatrix :stages="overview.stages" :rows="overview.element_stages" />
       </section>
