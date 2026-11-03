@@ -15,13 +15,10 @@
           </template>
           <template v-else>over its whole life</template>
           <span class="text-display-lead">
-            <template v-if="overview.headline.per_m2_useful !== null">
-              {{ one.format(overview.headline.per_m2_useful) }} kg per m<sup>2</sup> of useful floor area
-            </template>
-            <template v-else-if="overview.headline.per_m2_gross !== null">
+            <template v-if="overview.headline.per_m2_gross !== null">
               {{ one.format(overview.headline.per_m2_gross) }} kg per m<sup>2</sup> of gross floor area
             </template>
-            <template v-else>Floor area not declared</template>
+            <template v-else>Gross floor area not declared</template>
           </span>
         </h1>
       </header>

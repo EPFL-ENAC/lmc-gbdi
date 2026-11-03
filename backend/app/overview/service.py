@@ -6,6 +6,7 @@ A5.1–A5.4. Shares divide by the whole-life total (A to C), so module D stays o
 """
 
 import csv
+import re
 from collections import defaultdict
 from decimal import Decimal
 from functools import lru_cache
@@ -53,11 +54,18 @@ PROJECT_FIELDS = (
     ("Project", "project_id", "Project ID"),
     ("Project", "project_name", "Project name"),
     ("Project", "project_country", "Country"),
+    ("Project", "project_city", "City"),
+    ("Project", "project_address", "Address"),
+    ("Project", "project_architect_engineer_name", "Architect or engineer"),
+    ("Project", "project_construction_type", "Construction type"),
     ("Project", "project_no_of_buildings", "No. of buildings"),
     ("Project", "project_assessment_type", "Assessment type"),
     ("Project", "project_phase_common", "Project phase, common definition"),
     ("Building", "building_use_type", "Building typology"),
     ("Building", "building_structure_type", "Building structure type"),
+    ("Building", "building_residential_units", "Residential units"),
+    ("Building", "building_construction_start_date", "Construction start"),
+    ("Building", "building_construction_end_date", "Construction end"),
     ("Building", "building_gross_floor_area", "Gross floor area (m²)"),
     ("Building", "building_useful_floor_area", "Useful floor area (m²)"),
     ("Building", "building_gross_floor_area_standard", "GFA standard"),
@@ -252,13 +260,35 @@ def data_type_profile(
     ]
 
 
+# The OpenBDF converter fills a blank project ID with this placeholder.
+PLACEHOLDER_ID = re.compile(r"X+", re.IGNORECASE)
+
+
 def text(general: dict[str, str], field: str) -> str | None:
-    return general.get(field, "").strip() or None
+    value = general.get(field, "").strip() or None
+    if field == "project_id" and value and PLACEHOLDER_ID.fullmatch(value):
+        return None
+    return value
 
 
 def quantity(general: dict[str, str], field: str) -> Decimal | None:
     value = text(general, field)
     return None if value is None else Decimal(value)
+
+
+# OpenBDF types the study period as text: "50", "60 years". A number of years,
+# optionally a year word; anything else is refused, never read as "not declared".
+STUDY_PERIOD = re.compile(r"(\d+(?:[.,]\d+)?)\s*(?:years?|yrs?|y)?", re.IGNORECASE)
+
+
+def study_period(general: dict[str, str]) -> Decimal | None:
+    value = text(general, "lca_reference_study_period")
+    if value is None:
+        return None
+    match = STUDY_PERIOD.fullmatch(value)
+    if match is None:
+        raise ValueError(f"the study period {value!r} is not a number of years")
+    return Decimal(match.group(1).replace(",", "."))
 
 
 def per(value: Decimal, *divisors: Decimal | None) -> float | None:
@@ -281,7 +311,9 @@ def project_info(general: dict[str, str]) -> ProjectInfo:
         country=text(general, "project_country"),
         gross_floor_area_m2=number("building_gross_floor_area"),
         useful_floor_area_m2=number("building_useful_floor_area"),
-        reference_study_period_years=number("lca_reference_study_period"),
+        reference_study_period_years=None
+        if (years := study_period(general)) is None
+        else float(years),
         lca_database=text(general, "lca_database_version")
         or text(general, "lca_database_name"),
         lcia_methodology=text(general, "lcia_methodology"),
@@ -293,7 +325,7 @@ def headline(data: ProjectData, totals: Stages) -> Headline:
     whole_life = sum(totals.values(), ZERO)
     useful = quantity(data.general, "building_useful_floor_area")
     gross = quantity(data.general, "building_gross_floor_area")
-    period = quantity(data.general, "lca_reference_study_period")
+    period = study_period(data.general)
     module_d = {
         field: sum((module(row, field) * row.repetition for row in data.rows), ZERO)
         for field in ("gwp_total_d1", "gwp_total_d2")
@@ -305,6 +337,7 @@ def headline(data: ProjectData, totals: Stages) -> Headline:
         per_m2_useful=per(whole_life, useful),
         per_m2_gross=per(whole_life, gross),
         per_m2_useful_per_year=per(whole_life, useful, period),
+        per_m2_gross_per_year=per(whole_life, gross, period),
         module_d1=float(module_d["gwp_total_d1"]),
         module_d2=float(module_d["gwp_total_d2"]),
     )
@@ -363,7 +396,7 @@ def build_overview(data: ProjectData) -> Overview:
     shown_total = sum((sum(s.values(), ZERO) for _, s in shown), ZERO)
     pairs = material_rollup(rows)
     material_hotspots, mass_hotspots, mass_other_share = hotspots(pairs, whole_life)
-    period = quantity(data.general, "lca_reference_study_period")
+    period = study_period(data.general)
     summary = headline(data, totals)
     weighting, data_types = data_type_profile(pairs, data.data_types)
     checks = module_checks(data)

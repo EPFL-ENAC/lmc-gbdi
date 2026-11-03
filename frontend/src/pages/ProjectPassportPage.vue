@@ -61,7 +61,7 @@
           <tbody>
             <tr v-for="row in ranked" :key="row.key">
               <th scope="row">
-                <span class="passport__swatch" :style="{ background: row.color }" />{{ row.label }}
+                <span class="passport__swatch" :style="{ background: row.color }" /><Term :name="row.label" />
                 <span class="passport__product">{{ row.epd_product }}</span>
               </th>
               <td class="num">{{ kg.format(row.mass_kg) }}</td>
@@ -108,6 +108,7 @@ import { computed, ref } from 'vue';
 import BrickWall from '@/components/BrickWall.vue';
 import MaterialSheet from '@/components/MaterialSheet.vue';
 import ProjectFieldsTable from '@/components/ProjectFieldsTable.vue';
+import Term from '@/components/atoms/Term.vue';
 import { useOverview } from '@/composables/useOverview';
 import { MATERIAL_COLORS, OTHER_COLOR } from '@/dataviz';
 import { kg, percent, WEIGHTING } from '@/format';

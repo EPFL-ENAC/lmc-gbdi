@@ -12,26 +12,21 @@
         <p class="text-lead">{{ projectLine }}</p>
       </section>
 
-      <!-- The page's one set of hero cards: the figure alone, its unit opens the line -->
+      <!-- The page's one set of big numbers: the figure alone, its unit opens the line -->
       <section class="grid-3-col" aria-label="Headline results">
-        <div class="gbdi-hero-card gbdi-hero-card--green">
-          <p class="gbdi-hero-card__number">{{ kg.format(overview.headline.whole_life) }}</p>
-          <p class="gbdi-hero-card__text">kg CO₂e over the whole life cycle, modules A to C.<sup>1</sup></p>
-        </div>
-        <div class="gbdi-hero-card gbdi-hero-card--blue">
-          <p class="gbdi-hero-card__number">{{ figure(overview.headline.per_m2_useful, one) }}</p>
-          <p class="gbdi-hero-card__text">
-            kg CO₂e per m² of useful floor area; {{ figure(overview.headline.per_m2_gross, one) }} per m² of
-            gross floor area.<sup>1</sup>
-          </p>
-        </div>
-        <div class="gbdi-hero-card gbdi-hero-card--purple">
-          <p class="gbdi-hero-card__number">{{ figure(overview.headline.per_m2_useful_per_year, two) }}</p>
-          <p class="gbdi-hero-card__text">
-            kg CO₂e per m² of useful floor area and year, over
-            {{ figure(overview.project.reference_study_period_years, kg) }} years.<sup>1</sup>
-          </p>
-        </div>
+        <BigNumber :value="kg.format(overview.headline.whole_life)" tone="green">
+          kg CO₂e over the whole life cycle, modules A to C.<sup>1</sup>
+        </BigNumber>
+        <BigNumber :value="figure(overview.headline.per_m2_gross, one)" tone="blue">
+          kg CO₂e per m² of gross floor area{{ usefulAside(overview.headline.per_m2_useful) }}.<sup>1</sup>
+        </BigNumber>
+        <BigNumber :value="figure(overview.headline.per_m2_gross_per_year, two)" tone="purple">
+          <template v-if="overview.project.reference_study_period_years !== null">
+            kg CO₂e per m² of gross floor area and year, over
+            {{ kg.format(overview.project.reference_study_period_years) }} years.<sup>1</sup>
+          </template>
+          <template v-else>kg CO₂e per m² and year: the workbook declares no study period to divide by.<sup>1</sup></template>
+        </BigNumber>
       </section>
 
       <section class="project-section">
@@ -133,7 +128,7 @@
       <footer class="u-text-muted">
         <ol>
           <li>
-            Project {{ overview.project.project_id }}, {{ overview.project.lcia_methodology }},
+            Project {{ overview.project.project_id ?? 'without ID' }}, {{ overview.project.lcia_methodology }},
             {{ overview.project.lca_database }}, {{ overview.project.system_boundary }}. Computed from the
             OpenBDF workbook, {{ kg.format(overview.rows_read) }} bill of materials rows.
           </li>
@@ -146,6 +141,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { QTableColumn } from 'quasar';
+import BigNumber from '@/components/molecules/BigNumber.vue';
 import BarsWithTable from '@/components/BarsWithTable.vue';
 import ModuleChecks from '@/components/ModuleChecks.vue';
 import ProjectFieldsTable from '@/components/ProjectFieldsTable.vue';
@@ -159,7 +155,7 @@ import type {
   StageTotal,
 } from '@/api/overview';
 import { useOverview } from '@/composables/useOverview';
-import { figure, kg, materialName, one, percent, three, two, WEIGHTING } from '@/format';
+import { figure, kg, materialName, one, percent, three, two, usefulAside, WEIGHTING } from '@/format';
 
 const { overview, error } = useOverview();
 const pairKey = (row: { material: string; epd_product: string }) => `${row.material}|${row.epd_product}`;

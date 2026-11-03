@@ -13,7 +13,7 @@
       </thead>
       <tbody>
         <tr v-for="row in rows" :key="row.label">
-          <th scope="row" class="paired__label">{{ row.label }}</th>
+          <th scope="row" class="paired__label"><Term :name="row.label" /></th>
           <td class="paired__plot" aria-hidden="true">
             <span class="paired__zero" :style="{ left: `${at(0)}%` }" />
             <span class="paired__bar paired__bar--a" :style="bar(row.a)" />
@@ -31,6 +31,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { ComparedRow } from '@/api/buildings';
+import Term from '@/components/atoms/Term.vue';
 import { kg } from '@/format';
 
 const props = withDefaults(

@@ -31,6 +31,16 @@
       </p>
       <template v-else-if="upload.state === 'rejected'">
         <p>{{ upload.rejection.message }} The first findings, rejects first:</p>
+        <p>
+          <q-btn
+            unelevated
+            no-caps
+            class="btn-secondary"
+            label="Store it as a draft"
+            @click="send(upload.file, true)"
+          />
+          It will be listed as a draft, never counted, with only what the rejects leave readable.
+        </p>
         <table class="upload__findings">
           <thead>
             <tr><th>Severity</th><th>Code</th><th>Sheet</th><th class="num">Row</th><th>Finding</th></tr>
@@ -58,9 +68,12 @@
     <section v-else class="portfolio">
       <ul class="portfolio__legend">
         <li v-for="(stage, i) in STAGES" :key="stage.key">
-          <span class="portfolio__swatch" :style="{ background: STAGE_COLORS[i] }" />{{ stage.label }}
+          <span class="portfolio__swatch" :style="{ background: STAGE_COLORS[i] }" /><Term :name="stage.label" />
         </li>
-        <li><span class="portfolio__swatch portfolio__swatch--net" />Whole life, the net of the stages</li>
+        <li>
+          <span class="portfolio__swatch portfolio__swatch--net" />Net whole life: emitted (right of zero) minus
+          stored (left), the Whole life column
+        </li>
       </ul>
       <table class="portfolio__table">
         <thead>
@@ -94,13 +107,16 @@
                 v-model="picked"
                 :val="b.id"
                 dense
-                :disable="picked.length >= 2 && !picked.includes(b.id)"
+                :disable="noCarbon(b) || (picked.length >= 2 && !picked.includes(b.id))"
                 :aria-label="`Compare ${code(b)}`"
               />
             </td>
             <td class="portfolio__building">
               <router-link class="portfolio__link" :to="`/buildings/${b.id}`">{{ code(b) }}</router-link>
-              <span>{{ b.project_name ?? 'Unnamed project' }}</span>
+              <span>
+                {{ b.project_name ?? 'Unnamed project' }}
+                <q-badge v-if="b.draft" outline color="warning" label="Draft" :title="b.rejects.join(' ')" />
+              </span>
               <span class="u-text-muted">{{ b.country ?? 'Country not declared' }}</span>
             </td>
             <td class="num">{{ figure(b.gross_floor_area_m2, kg) }}</td>
@@ -120,14 +136,14 @@
                 />
               </template>
             </td>
-            <td class="num portfolio__figure">{{ figure(b.whole_life_per_m2, kg) }}</td>
+            <td class="num portfolio__figure">{{ noCarbon(b) ? 'draft' : figure(b.whole_life_per_m2, kg) }}</td>
             <td>{{ b.leti_band ?? 'not placed' }}</td>
           </tr>
         </tbody>
       </table>
       <p class="portfolio__caption">
         Bars left of zero are negative: most often biogenic carbon stored in timber at A1–A3 and released at end of
-        life. Click a column to sort, a row to open the building, or pick two to compare them.
+        life. The black tick is the net, so it sits short of the bar's right end, which is what is emitted. Click a column to sort, a row to open the building, or pick two to compare them.
       </p>
     </section>
 
@@ -150,7 +166,8 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ApiError } from '@/api/client';
-import { code, fetchBuildings, uploadBuilding, type BuildingSummary, type Rejection } from '@/api/buildings';
+import { code, fetchBuildings, noCarbon, uploadBuilding, type BuildingSummary, type Rejection } from '@/api/buildings';
+import Term from '@/components/atoms/Term.vue';
 import { STAGE_COLORS } from '@/dataviz';
 import { figure, kg } from '@/format';
 
@@ -164,7 +181,7 @@ const STAGES = [
 type Upload =
   | { state: 'reading'; name: string }
   | { state: 'added'; name: string; building: BuildingSummary }
-  | { state: 'rejected'; name: string; rejection: Rejection }
+  | { state: 'rejected'; name: string; rejection: Rejection; file: File }
   | { state: 'failed'; name: string; message: string };
 
 const buildings = ref<BuildingSummary[] | null>(null);
@@ -186,15 +203,18 @@ async function onPick(event: Event) {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   input.value = '';
-  if (!file) return;
+  if (file) await send(file);
+}
+
+async function send(file: File, draft = false) {
   upload.value = { state: 'reading', name: file.name };
   try {
-    const building = await uploadBuilding(file);
+    const building = await uploadBuilding(file, draft);
     upload.value = { state: 'added', name: code(building), building };
     await load();
   } catch (e: unknown) {
     if (e instanceof ApiError && e.status === 422) {
-      upload.value = { state: 'rejected', name: file.name, rejection: e.body as Rejection };
+      upload.value = { state: 'rejected', name: file.name, rejection: e.body as Rejection, file };
     } else {
       upload.value = { state: 'failed', name: file.name, message: e instanceof Error ? e.message : String(e) };
     }
@@ -221,7 +241,7 @@ const COLUMNS: { label: string; key?: SortKey; num?: boolean }[] = [
   { label: 'Building', key: 'code' },
   { label: 'm² gross', key: 'area', num: true },
   { label: 'kg CO₂e per m², by life-cycle stage' },
-  { label: 'Whole life', key: 'whole_life', num: true },
+  { label: 'Whole life, net', key: 'whole_life', num: true },
   // ponytail: band labels sort as text (A+ before A); the bands follow whole life anyway.
   { label: 'LETI band', key: 'leti' },
 ];

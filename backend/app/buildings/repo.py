@@ -57,12 +57,13 @@ LINE_COLUMNS = (
 )
 
 
-def material_row(values: tuple) -> MaterialRow:
+def material_row(values: tuple, results: bool = True) -> MaterialRow:
+    """A stored line; `results=False` reads a draft whose results were not stored."""
     (material_id, repetition, element, custom, dataset, mass, material_class) = values[
         :7
     ]
     wide_id, *gwp = values[7:]
-    if wide_id is None:
+    if wide_id is None and results:
         raise ValueError(f"Bill of materials line {material_id!r} has no Wide results")
     return MaterialRow(
         material_id=material_id,
@@ -76,7 +77,9 @@ def material_row(values: tuple) -> MaterialRow:
     )
 
 
-async def read_project(session: AsyncSession, project_id: int) -> ProjectData:
+async def read_project(
+    session: AsyncSession, project_id: int, results: bool = True
+) -> ProjectData:
     record = await session.get(ProjectRecord, project_id)
     if record is None:
         raise ProjectNotFound(project_id)
@@ -95,7 +98,7 @@ async def read_project(session: AsyncSession, project_id: int) -> ProjectData:
     )
     return ProjectData(
         general=general_of(record),
-        rows=[material_row(tuple(r)) for r in rows],
+        rows=[material_row(tuple(r), results) for r in rows],
         data_types={
             ((custom or "").strip(), (dataset or "").strip()): as_text(data_type)
             for custom, dataset, data_type in materials

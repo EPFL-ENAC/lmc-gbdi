@@ -116,8 +116,9 @@ const figures = computed(() => {
   return [
     { label: 'kg CO₂e, whole life (A–C)', value: kg.format(h.whole_life) },
     { label: 'kg CO₂e, upfront (A1–A5)', value: kg.format(h.upfront) },
+    { label: 'kg CO₂e per m² gross floor area', value: figure(h.per_m2_gross, one) },
     { label: 'kg CO₂e per m² useful floor area', value: figure(h.per_m2_useful, one) },
-    { label: 'kg CO₂e per m² and year', value: figure(h.per_m2_useful_per_year, two) },
+    { label: 'kg CO₂e per m² gross floor area and year', value: figure(h.per_m2_gross_per_year, two) },
     { label: 'kg CO₂e, module D1, outside the total', value: kg.format(h.module_d1) },
   ];
 });

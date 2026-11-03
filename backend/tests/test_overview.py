@@ -10,7 +10,7 @@ from app.config import Settings, get_settings
 from app.main import app
 from app.overview.benchmarks import SCALES, band_of
 from app.overview.repo import BOM_FIELDS, GWP_FIELDS, PMD_FIELDS, read_project
-from app.overview.service import build_overview, in_element
+from app.overview.service import build_overview, in_element, study_period, text
 
 # id, repetition, element, material, epd product, mass, GWP fields
 ROWS = [
@@ -97,6 +97,7 @@ def test_per_m2_figures_divide_by_floor_area_then_period(overview):
     assert overview.headline.per_m2_useful == pytest.approx(1.18)
     assert overview.headline.per_m2_gross == pytest.approx(0.59)
     assert overview.headline.per_m2_useful_per_year == pytest.approx(1.18 / 50)
+    assert overview.headline.per_m2_gross_per_year == pytest.approx(0.59 / 50)
 
 
 def test_elements_follow_openbdf_order_and_keep_the_unclassified_visible(overview):
@@ -204,7 +205,7 @@ def test_module_checks_compare_flags_with_results(tmp_path):
 
 def test_project_fields_keep_blanks_as_not_declared(overview):
     fields = {f.code: f.value for f in overview.project_fields}
-    assert len(fields) == 22
+    assert len(fields) == 29
     assert fields["project_id"] == "TEST-1"
     assert fields["project_country"] is None
 
@@ -236,3 +237,22 @@ def test_leti_bands_are_upper_exclusive(value, inclusive, band):
 def test_re2020_ceilings_are_inclusive():
     assert band_of(490, SCALES[1][7], True) == "Within the 2031 ceiling"
     assert band_of(740.1, SCALES[1][7], True) == "Above the 2022 ceiling"
+
+
+def test_the_placeholder_project_id_is_not_declared():
+    assert text({"project_id": "XXXXXXX"}, "project_id") is None
+    assert text({"project_id": "AT-09"}, "project_id") == "AT-09"
+
+
+@pytest.mark.parametrize(
+    ("declared", "years"),
+    [("50", 50), ("60 years", 60), (" 60 Years ", 60), ("50 yr", 50), ("", None)],
+)
+def test_study_period_reads_a_number_of_years(declared, years):
+    """OpenBDF types the study period as text: "60 years" declares 60."""
+    assert study_period({"lca_reference_study_period": declared}) == years
+
+
+def test_a_study_period_without_a_number_is_refused():
+    with pytest.raises(ValueError, match="study period"):
+        study_period({"lca_reference_study_period": "the building's life"})

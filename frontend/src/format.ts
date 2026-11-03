@@ -16,3 +16,16 @@ export const WEIGHTING: Record<'gwp_fossil_a1_a3' | 'mass' | 'not_computed', str
   mass: 'Weighted by mass: no GWP fossil A1–A3 is declared.',
   not_computed: 'Not computed: neither GWP fossil A1–A3 nor mass is declared.',
 };
+
+// Per m², one rule on every page: gross floor area leads (the basis the workbooks
+// declare, "1 m2 GFA / year"); useful floor area follows when it is declared.
+export const usefulAside = (perM2Useful: number | null) =>
+  perM2Useful === null ? '' : `; ${one.format(perM2Useful)} per m² of useful floor area`;
+
+// A General Information value as a reader should see it: numbers in the reader's locale
+// ("2865.0000" reads 2,865), blanks as not declared.
+export const fieldText = (value: string | null) => {
+  if (value === null || value.trim() === '') return 'not declared';
+  const n = Number(value);
+  return Number.isFinite(n) ? kg.format(n) : value;
+};

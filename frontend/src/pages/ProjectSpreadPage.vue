@@ -25,25 +25,15 @@
           </p>
         </div>
         <div class="spread__main grid-3-col">
-          <div class="gbdi-hero-card gbdi-hero-card--green">
-            <p class="gbdi-hero-card__number">{{ kg.format(overview.headline.whole_life) }}</p>
-            <p class="gbdi-hero-card__text">kg CO₂e over the whole life cycle.</p>
-          </div>
-          <div class="gbdi-hero-card gbdi-hero-card--blue">
-            <!-- Useful floor area when declared, as the workbook; else gross, and the text says so. -->
-            <template v-if="overview.headline.per_m2_useful !== null || overview.headline.per_m2_gross === null">
-              <p class="gbdi-hero-card__number">{{ figure(overview.headline.per_m2_useful, one) }}</p>
-              <p class="gbdi-hero-card__text">kg CO₂e per m² of useful floor area.</p>
-            </template>
-            <template v-else>
-              <p class="gbdi-hero-card__number">{{ one.format(overview.headline.per_m2_gross) }}</p>
-              <p class="gbdi-hero-card__text">kg CO₂e per m² of gross floor area; no useful floor area is declared.</p>
-            </template>
-          </div>
-          <div class="gbdi-hero-card gbdi-hero-card--purple">
-            <p class="gbdi-hero-card__number">{{ kg.format(overview.headline.upfront) }}</p>
-            <p class="gbdi-hero-card__text">kg CO₂e upfront, before the building is used (A1–A5).</p>
-          </div>
+          <BigNumber :value="kg.format(overview.headline.whole_life)" tone="green">
+            kg CO₂e over the whole life cycle.
+          </BigNumber>
+          <BigNumber :value="figure(overview.headline.per_m2_gross, one)" tone="blue">
+            kg CO₂e per m² of gross floor area{{ usefulAside(overview.headline.per_m2_useful) }}.
+          </BigNumber>
+          <BigNumber :value="kg.format(overview.headline.upfront)" tone="purple">
+            kg CO₂e upfront, before the building is used (A1–A5).
+          </BigNumber>
         </div>
         <p class="spread__caption">{{ sourceLine }}</p>
       </section>
@@ -123,13 +113,14 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import BigNumber from '@/components/molecules/BigNumber.vue';
 import LifeCycleStrip from '@/components/LifeCycleStrip.vue';
 import ModuleChecks from '@/components/ModuleChecks.vue';
 import ProjectFieldsTable from '@/components/ProjectFieldsTable.vue';
 import RankedBars, { type Bar } from '@/components/RankedBars.vue';
 import StageByElement from '@/components/StageByElement.vue';
 import { useOverview } from '@/composables/useOverview';
-import { figure, kg, one, percent, WEIGHTING } from '@/format';
+import { figure, kg, one, percent, usefulAside, WEIGHTING } from '@/format';
 
 const { overview, error } = useOverview();
 

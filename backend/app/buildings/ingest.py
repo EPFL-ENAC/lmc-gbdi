@@ -41,12 +41,38 @@ class RejectedWorkbook(Exception):
         self.findings = findings
 
 
+# What a reject leaves unreadable, by the sheet it names. A draft keeps every other
+# part: General Information rejects (a missing country) block nothing.
+RESULT_SHEETS = ("LCA Result (Wide)", "LCA Result (Tall)")
+PROJECT_SHEETS = ("General Information", "Project Material Database")
+
+
+def blocked_parts(findings: list[dict]) -> list[str]:
+    """The parts of a stored draft that cannot be shown: "carbon", "materials".
+
+    Results paired to the wrong lines (E05) block carbon. A reject on the bill of
+    materials, or one naming no sheet, blocks both, as nothing proves the lines.
+    """
+    blocked: set[str] = set()
+    for f in findings:
+        if f["severity"] != "Reject" or f["sheet"] in PROJECT_SHEETS:
+            continue
+        blocked.add("carbon")
+        if f["sheet"] not in RESULT_SHEETS:
+            blocked.add("materials")
+    return sorted(blocked)
+
+
 def finding(f: OpenBDFValidationError) -> Finding:
     return Finding(f.code, f.severity.value, f.source, f.row, f.message)
 
 
-def parse(workbook: bytes) -> tuple[ProjectRecord, list[Finding]]:
-    """The lmc-openbdf README's ingest: translate, convert, validate."""
+def parse(workbook: bytes, draft: bool = False) -> tuple[ProjectRecord, list[Finding]]:
+    """The lmc-openbdf README's ingest: translate, convert, validate.
+
+    A draft is stored despite its rejects, as `openbdf open --draft` saves; the parts
+    they block are emptied first, so no misaligned figure is ever stored.
+    """
     translator = DocumentTranslator.default_openbdf_translator()
     findings: list[OpenBDFValidationError] = []
     with ExcelSheetSource([workbook]) as source:
@@ -63,7 +89,9 @@ def parse(workbook: bytes) -> tuple[ProjectRecord, list[Finding]]:
                 )
             ]
         )
-    project = project_package_from_tables(tables, translator, findings=findings)
+    project = project_package_from_tables(
+        tables, translator, findings=findings, draft=draft
+    )
     dropped = frozenset(
         f.row for f in findings if isinstance(f, DroppedLine) and f.row is not None
     )
@@ -71,8 +99,12 @@ def parse(workbook: bytes) -> tuple[ProjectRecord, list[Finding]]:
         project, tables, document_translator=translator, dropped_rows=dropped
     )
     found = [finding(f) for f in sort_findings(findings)]
-    if any(f.severity == Severity.REJECT.value for f in found):
+    if not draft and any(f.severity == Severity.REJECT.value for f in found):
         raise RejectedWorkbook(found)
+    if "carbon" in blocked_parts([f.__dict__ for f in found]):
+        # Draft mode pairs results to lines by position: wrong pairs look real.
+        for line in project.bill_of_materials:
+            line.lca_results_full_record = None
     # ponytail: the tall results are the wide ones unpivoted (16 rows per line,
     # 230k for OASE) and nothing reads them; store them when something does.
     for line in project.bill_of_materials:
@@ -85,6 +117,7 @@ async def store(
     project: ProjectRecord,
     file_name: str,
     findings: list[Finding],
+    draft: bool = False,
 ) -> int:
     """Add the project graph and its upload row; the caller commits."""
     session.add(project)
@@ -96,6 +129,7 @@ async def store(
             file_name=Path(file_name).name,
             uploaded_at=datetime.now(UTC),
             findings=[f.__dict__ for f in findings],
+            draft=draft,
         )
     )
     await session.flush()

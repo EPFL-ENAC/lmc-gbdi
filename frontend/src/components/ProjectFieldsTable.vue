@@ -22,7 +22,7 @@
                 :disabled="field.code === REQUIRED"
                 @change="toggle([field], !shown.includes(field.code))"
               />
-              {{ field.label }}
+              <Term :name="field.label" :field="field.code" />
             </label>
           </details>
           <div class="fields__actions">
@@ -44,7 +44,15 @@
       :visible-columns="shown"
       :row-key="REQUIRED"
       :pagination="{ rowsPerPage: 0 }"
-    />
+    >
+      <!-- Each field explains itself, and so do the OpenBDF values it holds. -->
+      <template #header-cell="cell">
+        <q-th :props="cell"><Term :name="cell.col.label" :field="cell.col.name" /></q-th>
+      </template>
+      <template #body-cell="cell">
+        <q-td :props="cell"><Term :name="String(cell.value)" /></q-td>
+      </template>
+    </q-table>
   </div>
 </template>
 
@@ -52,6 +60,8 @@
 import { computed, ref } from 'vue';
 import type { QTableColumn } from 'quasar';
 import type { ProjectField } from '@/api/overview';
+import Term from '@/components/atoms/Term.vue';
+import { fieldText } from '@/format';
 
 const props = defineProps<{ fields: ProjectField[] }>();
 
@@ -61,7 +71,11 @@ const DEFAULT_COLUMNS = [
   REQUIRED,
   'project_name',
   'project_country',
+  'project_city',
+  'project_architect_engineer_name',
   'building_use_type',
+  'building_residential_units',
+  'building_construction_end_date',
   'building_gross_floor_area',
   'lca_reference_study_period',
   'lca_cycle_system_boundary',
@@ -69,7 +83,7 @@ const DEFAULT_COLUMNS = [
 const shown = ref<string[]>([...DEFAULT_COLUMNS]);
 
 const row = computed(() =>
-  Object.fromEntries(props.fields.map((field) => [field.code, field.value ?? 'not declared'])),
+  Object.fromEntries(props.fields.map((field) => [field.code, fieldText(field.value)])),
 );
 const columns = computed<QTableColumn<Record<string, string>>[]>(() =>
   props.fields.map((field) => ({

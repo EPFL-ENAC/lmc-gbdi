@@ -1,7 +1,6 @@
 import type { ComparedRow } from '@/api/buildings';
 import type { Overview } from '@/api/overview';
 import type { NamedOverview } from '@/composables/useOverview';
-import { kg } from '@/format';
 
 // Two buildings only compare per m² of gross floor area; null when it is not declared.
 export const perM2 = (o: Overview, value: number) => {
@@ -32,13 +31,6 @@ export const projectName = (o: NamedOverview) => `${o.project.project_name ?? 'U
 export const noDataTypes = (...os: Overview[]) =>
   os.every((o) => o.data_types.every((d) => d.key === 'undeclared' || d.share === 0));
 
-// A General Information value as a reader should see it: numbers in the reader's locale,
-// placeholder IDs ("XXXXXXX") and blanks as not declared.
-export const fieldText = (value: string | null) => {
-  if (value === null || value.trim() === '' || /^X+$/i.test(value.trim())) return 'not declared';
-  const n = Number(value);
-  return Number.isFinite(n) ? kg.format(n) : value;
-};
 
 // A benchmark's scope text speaks of "this project"; on a compare page, of both.
 export const bothScope = (scope: string) => scope.replace(/This project/g, 'Each building');

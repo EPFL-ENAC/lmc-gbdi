@@ -20,7 +20,8 @@ export interface Headline {
   upfront_share: number;
   per_m2_useful: number | null;
   per_m2_gross: number | null;
-  per_m2_useful_per_year: number | null;
+  per_m2_useful_per_year: number | null; // as the COLA sheet
+  per_m2_gross_per_year: number | null; // the declared basis, 1 m² GFA / year
   module_d1: number;
   module_d2: number;
 }
