@@ -7,7 +7,8 @@
     <p v-else-if="overview === null" class="u-text-muted">Loading the project…</p>
 
     <article v-else class="sheet">
-      <!-- Every absolute figure of the page on one basis, chosen in the building bar. -->
+      <!-- Every absolute figure of the page on one basis, and every element and material
+           under one naming, both chosen in the building bar. -->
       <Teleport defer to="#basis-control">
         <q-btn-toggle
           v-model="basis"
@@ -19,6 +20,18 @@
           toggle-color="primary"
           color="white"
           text-color="dark"
+        />
+        <q-btn-toggle
+          v-model="naming"
+          :options="NAMINGS"
+          aria-label="Element and material names"
+          no-caps
+          unelevated
+          dense
+          toggle-color="primary"
+          color="white"
+          text-color="dark"
+          class="sheet__naming"
         />
       </Teleport>
 
@@ -57,19 +70,42 @@
 
       <!-- Mass -->
       <section class="sheet__panel">
-        <h2 class="sheet__panel-title">Building elements</h2>
+        <div class="sheet__panel-head">
+          <h2 class="sheet__panel-title">Building elements</h2>
+          <q-btn-toggle
+            v-model="measure"
+            :options="MEASURES"
+            aria-label="Element bars by"
+            no-caps
+            unelevated
+            toggle-color="primary"
+            color="white"
+            text-color="dark"
+            class="sheet__switch"
+          />
+        </div>
         <p class="u-text-muted">
-          {{ num.format(overview.total_mass_kg) }} {{ units.mass }} of materials. Whole-life carbon by OpenBDF element,
-          Tier 2, in classification order.
+          {{ num.format(overview.total_mass_kg) }} {{ units.mass }} of materials.
+          {{ measure === 'mass' ? 'Mass' : 'Whole-life carbon' }} by {{ ELEMENTS_BY[naming] }}.
         </p>
         <BarsWithTable
-          :bars="elementRows.map((e) => bar(e.element, e.gwp, e.share, e === overview!.not_classified))"
+          :bars="elementBars"
           :rows="elementRows"
           :columns="elementColumns"
           row-key="element"
-          :caption="`${units.carbon} and share of the whole-life total. Rows without an element code stay visible.`"
+          :caption="
+            measure === 'mass'
+              ? `${units.mass} and share of the total mass. Rows without an element stay visible.`
+              : `${units.carbon} and share of the whole-life total. Rows without an element stay visible.`
+          "
           empty-label="No classified building elements in this project."
         />
+      </section>
+
+      <section class="sheet__panel">
+        <h2 class="sheet__panel-title">Materials within the elements</h2>
+        <p class="u-text-muted">The heaviest materials of each element, by mass.</p>
+        <ElementMaterials :elements="view!.element_materials" :units="units" />
       </section>
 
       <!-- Emissions: the stages as a strip, then the same stages on a timeline. -->
@@ -91,23 +127,23 @@
         <h2 class="sheet__panel-title">Element by stage</h2>
         <StageMatrix
           :stages="overview.stages"
-          :rows="overview.element_stages.map((e) => ({ ...e, key: e.element, label: e.element }))"
+          :rows="view!.element_stages.map((e) => ({ ...e, key: e.element, label: e.element }))"
           :units="units"
           row-header="Element"
           empty-label="No classified building elements in this project."
         />
         <p class="sheet__note">
-          Not classified: {{ num.format(overview.not_classified.gwp) }} {{ units.carbon }},
-          {{ percent.format(overview.not_classified.share) }} of the total.
+          Not classified: {{ num.format(view!.not_classified.gwp) }} {{ units.carbon }},
+          {{ percent.format(view!.not_classified.share) }} of the total.
         </p>
       </section>
 
       <!-- Materials -->
-      <MaterialWalls :overview="overview" />
+      <MaterialWalls :overview="view!" />
 
       <section class="sheet__panel">
         <h2 class="sheet__panel-title">Materials, mass against carbon</h2>
-        <IntensityPlot :hotspots="overview.material_hotspots" :units="units" />
+        <IntensityPlot :hotspots="view!.material_hotspots" :units="units" />
       </section>
 
       <!-- Data quality -->
@@ -137,10 +173,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { QTableColumn } from 'quasar';
-import type { ElementTotal } from '@/api/overview';
+import type { ElementTotal, Naming } from '@/api/overview';
 import BarsWithTable from '@/components/BarsWithTable.vue';
+import ElementMaterials from '@/components/ElementMaterials.vue';
 import IntensityPlot from '@/components/IntensityPlot.vue';
 import LifeCycleStrip from '@/components/LifeCycleStrip.vue';
 import MaterialWalls from '@/components/MaterialWalls.vue';
@@ -166,23 +203,48 @@ const basisOptions = computed(() =>
   })),
 );
 
+// The backend sends every element and material figure under both namings; the toggle
+// only picks one, so it needs no new request. A view has the top-level field names.
+const NAMINGS: { label: string; value: Naming }[] = [
+  { label: 'OpenBDF classification', value: 'openbdf' },
+  { label: 'Custom names', value: 'custom' },
+];
+const ELEMENTS_BY: Record<Naming, string> = {
+  openbdf: 'OpenBDF element, Tier 2, in classification order',
+  custom: "the project's own element class, in label order",
+};
+const naming = ref<Naming>('openbdf');
+const view = computed(() => (overview.value === null ? null : { ...overview.value, ...overview.value.namings[naming.value] }));
+
 // Chart and table read the same backend rows, in the backend's order.
 const elementRows = computed(() =>
-  overview.value === null
-    ? []
-    : [...overview.value.elements, overview.value.other_classified, overview.value.not_classified],
+  view.value === null ? [] : [...view.value.elements, view.value.other_classified, view.value.not_classified],
 );
-const bar = (label: string, value: number, share: number, missing: boolean): Bar => ({
-  key: label,
-  label,
-  value,
-  display: `${num.value.format(value)}, ${percent.format(share)}`,
-  missing,
-});
+type Measure = 'carbon' | 'mass';
+const MEASURES: { label: string; value: Measure }[] = [
+  { label: 'Carbon', value: 'carbon' },
+  { label: 'Mass', value: 'mass' },
+];
+const measure = ref<Measure>('carbon');
+const elementBars = computed<Bar[]>(() =>
+  elementRows.value.map((e) => {
+    const [value, share] = measure.value === 'mass' ? [e.mass_kg, e.share_of_mass] : [e.gwp, e.share];
+    return {
+      key: e.element,
+      label: e.element,
+      value,
+      display: share === null ? num.value.format(value) : `${num.value.format(value)}, ${percent.format(share)}`,
+      missing: e === view.value!.not_classified,
+    };
+  }),
+);
+const shareText = (v: number | null) => (v === null ? 'no mass declared' : percent.format(v));
 const elementColumns = computed<QTableColumn<ElementTotal>[]>(() => [
   { name: 'element', label: 'Element', field: 'element', align: 'left' },
   { name: 'gwp', label: `GWP (${units.value.carbon})`, field: 'gwp', format: (v: number) => num.value.format(v), align: 'right' },
-  { name: 'share', label: 'Share', field: 'share', format: (v: number) => percent.format(v), align: 'right' },
+  { name: 'share', label: 'Share of the carbon', field: 'share', format: (v: number) => percent.format(v), align: 'right' },
+  { name: 'mass_kg', label: `Mass (${units.value.mass})`, field: 'mass_kg', format: (v: number) => num.value.format(v), align: 'right' },
+  { name: 'share_of_mass', label: 'Share of the mass', field: 'share_of_mass', format: shareText, align: 'right' },
 ]);
 
 const dataTypeBars = computed<Bar[]>(() =>
@@ -202,6 +264,22 @@ const dataTypeBars = computed<Bar[]>(() =>
 .sheet__name {
   margin: 0;
   font-size: tokens.$text-size-display-md;
+}
+
+.sheet__naming {
+  margin-left: tokens.$spacing-md;
+}
+
+.sheet__panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: tokens.$spacing-md;
+}
+
+.sheet__switch {
+  border: tokens.$border-width solid tokens.$color-border;
 }
 
 .sheet__subtitle {

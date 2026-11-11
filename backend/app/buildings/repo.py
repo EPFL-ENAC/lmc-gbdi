@@ -54,6 +54,7 @@ LINE_COLUMNS = (
     Line.lca_dataset_material_name,
     Line.material_weight_kg,
     Line.common_material_name,
+    Line.bec_custom,
 )
 
 
@@ -62,7 +63,7 @@ def material_row(values: tuple, results: bool = True) -> MaterialRow:
     (material_id, repetition, element, custom, dataset, mass, material_class) = values[
         :7
     ]
-    wide_id, *gwp = values[7:]
+    element_custom, wide_id, *gwp = values[7:]
     if wide_id is None and results:
         raise ValueError(f"Bill of materials line {material_id!r} has no Wide results")
     return MaterialRow(
@@ -74,6 +75,7 @@ def material_row(values: tuple, results: bool = True) -> MaterialRow:
         mass_kg=mass or Decimal(0),
         gwp=dict(zip(GWP_FIELDS, gwp, strict=True)),
         material_class=as_text(material_class),
+        element_custom=(element_custom or "").strip(),
     )
 
 
