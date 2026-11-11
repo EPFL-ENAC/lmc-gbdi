@@ -93,7 +93,7 @@
     <h2 class="sheet__panel-title">Material by material</h2>
     <p class="u-text-muted">
       The ten materials with the most whole-life carbon. Heavy is not the same as intense: compare the mass with
-      the carbon per kg.
+      the carbon per kg. The bars of every card share one scale.
     </p>
     <div class="grid-2-col">
       <MaterialSheet
@@ -103,6 +103,7 @@
         :stages="overview.stages"
         :units="overview.units"
         :rank="i + 1"
+        :largest="largestStage"
       />
     </div>
   </section>
@@ -148,6 +149,11 @@ const cover = computed(() => ({
   carbon: ranked.value.reduce((sum, r) => sum + r.share, 0),
   mass: ranked.value.reduce((sum, r) => sum + (r.share_of_mass ?? 0), 0),
 }));
+
+// Bar geometry only: the largest positive stage of the ten, one scale for every card.
+const largestStage = computed(() =>
+  Math.max(0, ...props.overview.material_hotspots.flatMap((h) => Object.values(h.gwp_by_stage))),
+);
 
 // The materials the wall paints as "every other", in the same ranking.
 const open = ref(false);
