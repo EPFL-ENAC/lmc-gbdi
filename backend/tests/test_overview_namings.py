@@ -55,10 +55,10 @@ def test_the_element_bars_add_up_to_the_carbon_and_the_mass(overview, naming):
 @pytest.mark.parametrize("naming", ["openbdf", "custom"])
 def test_the_materials_within_an_element_add_up_to_its_mass(overview, naming):
     view = overview.namings[naming]
-    assert [m.element for m in view.element_materials] == [
-        e.element for e in bars(view)
-    ]
-    for element, within in zip(bars(view), view.element_materials, strict=True):
+    # A bucket without mass has no fold: nothing would be in it.
+    folded = [e for e in bars(view) if e in view.elements or e.mass_kg]
+    assert [m.element for m in view.element_materials] == [e.element for e in folded]
+    for element, within in zip(folded, view.element_materials, strict=True):
         parts = [*within.materials, *([within.other] if within.other else [])]
         assert within.mass_kg == pytest.approx(element.mass_kg)
         assert sum(m.mass_kg for m in parts) == pytest.approx(element.mass_kg)
@@ -117,7 +117,48 @@ def test_elements_after_the_eighth_go_to_other_classified(tmp_path):
     view = build_overview(data).namings["custom"]
     assert [e.element for e in view.elements] == [f"C{n:02}" for n in range(8)]
     assert (view.other_classified.gwp, view.other_classified.mass_kg) == (2, 2)
-    assert view.element_materials[-2].element == "Other classified elements"
+    # Every row is classified, so "Not classified" has no fold.
+    assert view.element_materials[-1].element == "Other classified elements"
+
+
+def test_a_mass_only_element_does_not_take_the_bar_of_a_carbon_one(tmp_path):
+    gwp = {"gwp_total_a1_a3": "1"}
+    carbon = [(f"N{n}", "", "2.1", "Brick", "B", "1", gwp) for n in range(8)]
+    labels = {f"N{n}": (f"C{n + 1:02}", "") for n in range(8)}
+    labels["MASS"] = ("C00", "")  # first in label order, no carbon
+    rows = [*carbon, ("MASS", "", "2.1", "Gypsum", "G", "500", {})]
+    view = build_overview(
+        named(read_project(write_project(tmp_path, rows=rows)), labels)
+    ).namings["custom"]
+    assert [e.element for e in view.elements] == [f"C{n:02}" for n in range(1, 9)]
+    assert [e.element for e in view.element_stages] == [
+        e.element for e in view.elements
+    ]
+
+
+def test_an_element_named_like_a_bucket_keeps_its_own_fold(tmp_path):
+    gwp = {"gwp_total_a1_a3": "1"}
+    rows = [
+        ("N1", "", "2.1", "Brick", "B", "10", gwp),
+        ("N2", "", "2.1", "Steel", "S", "5", gwp),
+    ]
+    labels = {"N1": ("Not classified", ""), "N2": ("", "")}
+    view = build_overview(
+        named(read_project(write_project(tmp_path, rows=rows)), labels)
+    ).namings["custom"]
+    assert [(m.element, m.mass_kg) for m in view.element_materials] == [
+        ("Not classified", 10),
+        ("Not classified", 5),
+    ]
+
+
+def test_one_material_left_over_is_shown_not_folded(tmp_path):
+    gwp = {"gwp_total_a1_a3": "1"}
+    rows = [(f"N{n}", "", "2.1", f"M{n}", "", str(10 - n), gwp) for n in range(6)]
+    within = build_overview(read_project(write_project(tmp_path, rows=rows)))
+    frame = within.namings["custom"].element_materials[-1]
+    assert [m.material for m in frame.materials] == [f"M{n}" for n in range(6)]
+    assert frame.other is None
 
 
 def test_a_heavy_element_lists_five_materials_and_the_rest_as_one_row(tmp_path):
@@ -170,10 +211,10 @@ def flat(value, path=""):
     [("gfa", 200, 200), ("ufa", 100, 100), ("gfa_year", 200 * 50, 200)],
 )
 def test_a_basis_divides_every_figure_of_both_views(tmp_path, basis, carbon, mass):
-    """Walks every field, so a figure that on_basis forgets fails here. Five more
+    """Walks every field, so a figure that on_basis forgets fails here. Six more
     materials without bec_custom fill the "other materials" row of the custom
     "Not classified" bar."""
-    extra = [(f"X{n}", "", "2.1", f"Extra {n}", "", "1", {}) for n in range(5)]
+    extra = [(f"X{n}", "", "2.1", f"Extra {n}", "", "1", {}) for n in range(6)]
     data = read_project(write_project(tmp_path, rows=[*ROWS, M5, *extra]))
     overview = build_overview(named(data))
     assert overview.namings["custom"].element_materials[-1].other is not None

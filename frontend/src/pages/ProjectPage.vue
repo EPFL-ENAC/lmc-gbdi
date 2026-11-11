@@ -92,7 +92,7 @@
           :bars="elementBars"
           :rows="elementRows"
           :columns="elementColumns"
-          row-key="element"
+          :row-key="(row: ElementTotal) => String(elementRows.indexOf(row))"
           :caption="
             measure === 'mass'
               ? `${units.mass} and share of the total mass. Rows without an element stay visible.`
@@ -227,10 +227,10 @@ const MEASURES: { label: string; value: Measure }[] = [
 ];
 const measure = ref<Measure>('carbon');
 const elementBars = computed<Bar[]>(() =>
-  elementRows.value.map((e) => {
+  elementRows.value.map((e, i) => {
     const [value, share] = measure.value === 'mass' ? [e.mass_kg, e.share_of_mass] : [e.gwp, e.share];
     return {
-      key: e.element,
+      key: String(i),
       label: e.element,
       value,
       display: share === null ? num.value.format(value) : `${num.value.format(value)}, ${percent.format(share)}`,
