@@ -29,11 +29,11 @@
     <div class="grid-2-col passport__walls">
       <figure class="passport__wall">
         <figcaption>Mass, {{ num.format(overview.total_mass_kg) }} {{ overview.units.mass }}</figcaption>
-        <BrickWall :parts="ranked.map((r) => ({ color: r.color, share: r.share_of_mass ?? 0 }))" label="Mass by material" />
+        <BrickWall :parts="ranked.map((r) => ({ color: r.color, label: r.label, share: r.share_of_mass ?? 0 }))" label="Mass by material" />
       </figure>
       <figure class="passport__wall">
         <figcaption>Whole-life carbon, modules A to C, {{ num.format(overview.headline.whole_life) }} {{ overview.units.carbon }}</figcaption>
-        <BrickWall :parts="ranked.map((r) => ({ color: r.color, share: r.share }))" label="Whole-life carbon by material" />
+        <BrickWall :parts="ranked.map((r) => ({ color: r.color, label: r.label, share: r.share }))" label="Whole-life carbon by material" />
       </figure>
     </div>
     <table class="passport__legend">

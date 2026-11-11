@@ -7,19 +7,20 @@ export const STAGE_COLORS = [
   'var(--gbdi-dataviz-end-of-life)',
 ];
 
-// Ten materials, one colour each, the same in every chart of a page: the four hues
-// dark, then bright, then two light ones. Light green is left out, too close to the
-// Green-Grey that stands for every other material.
+// Ten materials, one colour each, the same in every chart of a page. Neighbours in
+// the walls differ in hue and in step, a dark one next to a bright or light one
+// (org#97): three darks in a row read as one. Light green is left out, too close to
+// the Green-Grey that stands for every other material.
 export const MATERIAL_COLORS = [
   'var(--gbdi-dataviz-green-1)',
-  'var(--gbdi-dataviz-blue-1)',
-  'var(--gbdi-dataviz-purple-1)',
-  'var(--gbdi-dataviz-orange-1)',
-  'var(--gbdi-dataviz-green-2)',
-  'var(--gbdi-dataviz-blue-2)',
-  'var(--gbdi-dataviz-purple-2)',
   'var(--gbdi-dataviz-orange-2)',
+  'var(--gbdi-dataviz-blue-1)',
+  'var(--gbdi-dataviz-purple-3)',
+  'var(--gbdi-dataviz-green-2)',
+  'var(--gbdi-dataviz-orange-1)',
   'var(--gbdi-dataviz-blue-3)',
+  'var(--gbdi-dataviz-purple-1)',
+  'var(--gbdi-dataviz-blue-2)',
   'var(--gbdi-dataviz-orange-3)',
 ];
 export const OTHER_COLOR = 'var(--gbdi-color-surface-highlight)';

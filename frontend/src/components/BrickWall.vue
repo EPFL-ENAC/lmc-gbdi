@@ -1,21 +1,31 @@
 <template>
-  <!-- 100 bricks, each one per cent of the total, laid in the order of `parts`; what
-       no part claims is Green-Grey, every other material. -->
+  <!-- 100 bricks, each one per cent of the total, laid from the bottom course up in the
+       order of `parts`; what no part claims is Green-Grey, every other material. Each
+       brick names its material on hover. -->
   <div class="wall" role="img" :aria-label="label">
-    <span v-for="(color, i) in bricks" :key="i" class="wall__brick" :style="{ background: color }" />
+    <span
+      v-for="(brick, i) in bricks"
+      :key="i"
+      class="wall__brick"
+      :title="brick.title"
+      :style="{ background: brick.color, gridRow: 10 - Math.floor(i / 10) }"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
 import { OTHER_COLOR } from '@/dataviz';
+import { percent } from '@/format';
 
 export interface WallPart {
   color: string;
+  label: string; // the material, named on hover
   share: number; // of the total, 0–1
 }
 
 const props = defineProps<{ parts: WallPart[]; label: string }>();
+type Brick = { color: string; title: string };
 
 // Drawing geometry only: whole bricks by largest remainder, so the parts add up to
 // their rounded share. A negative share (stored carbon) lays no brick, and shares
@@ -26,8 +36,10 @@ const bricks = computed(() => {
   const order = exact.map((v, i) => [v - Math.floor(v), i]).sort((a, b) => b[0] - a[0]);
   const target = Math.min(100, Math.round(exact.reduce((a, b) => a + b, 0)));
   for (let k = 0; counts.reduce((a, b) => a + b, 0) < target; k++) counts[order[k][1]] += 1;
-  const laid = counts.flatMap((n, i) => Array<string>(n).fill(props.parts[i].color)).slice(0, 100);
-  return [...laid, ...Array<string>(100 - laid.length).fill(OTHER_COLOR)];
+  const laid = props.parts
+    .flatMap((p, i) => Array<Brick>(counts[i]).fill({ color: p.color, title: `${p.label}, ${percent.format(p.share)}` }))
+    .slice(0, 100);
+  return [...laid, ...Array<Brick>(100 - laid.length).fill({ color: OTHER_COLOR, title: 'Every other material' })];
 });
 </script>
 
