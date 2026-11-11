@@ -1,22 +1,23 @@
-import { ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { computed, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { ApiError } from '@/api/client';
 import { fetchOverview, type Basis, type Overview } from '@/api/overview';
 
+const BASES: Basis[] = ['total', 'gfa', 'ufa', 'gfa_year'];
+
 // The overview of the route's building (/buildings/:id) on the chosen basis, reloaded
-// when either changes. Pages show `error` and the loading state themselves.
+// when either changes. The basis lives in the URL (?basis=, left out for the total), so
+// a reload, a shared link and the building bar keep it. Pages show `error` and the
+// loading state themselves.
 export function useOverview() {
   const route = useRoute();
-  const basis = ref<Basis>('total');
+  const router = useRouter();
+  const basis = computed<Basis>({
+    get: () => BASES.find((b) => b === route.query.basis) ?? 'total',
+    set: (b) => void router.replace({ query: { ...route.query, basis: b === 'total' ? undefined : b } }),
+  });
   const overview = ref<Overview | null>(null);
   const error = ref<string | null>(null);
-  // ponytail: a new building starts on its total, since the last basis may be one it
-  // cannot serve; keep the basis across buildings when the list says what each serves.
-  watch(
-    () => route.params.id,
-    () => {
-      basis.value = 'total';
-    },
-  );
   watch(
     [() => route.params.id, basis],
     async ([id, b], previous) => {
@@ -29,7 +30,12 @@ export function useOverview() {
         const o = await fetchOverview(Number(id), b);
         if (current()) overview.value = o;
       } catch (e: unknown) {
-        if (current()) error.value = e instanceof Error ? e.message : String(e);
+        if (!current()) return;
+        // ponytail: only the backend knows which bases a building serves (422 otherwise),
+        // so a basis carried over from another building costs one failed request, then
+        // the total. Ask first when the building list says what each one serves.
+        if (e instanceof ApiError && e.status === 422 && b !== 'total') basis.value = 'total';
+        else error.value = e instanceof Error ? e.message : String(e);
       }
     },
     { immediate: true },

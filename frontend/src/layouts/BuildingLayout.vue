@@ -17,7 +17,7 @@
           options-dense
           label="Building"
           class="building-bar__pick"
-          @update:model-value="(next: number) => router.push(buildingPath(next, next === other ? null : other))"
+          @update:model-value="(next: number) => router.push({ path: buildingPath(next, next === other ? null : other), query: route.query })"
         />
         <!-- The page's own controls, such as the Overview's basis, teleport here. -->
         <div id="basis-control" />
@@ -35,14 +35,14 @@
             clearable
             label="Compare with"
             class="building-bar__pick"
-            @update:model-value="(next: number | null) => router.push(buildingPath(id, next))"
+            @update:model-value="(next: number | null) => router.push({ path: buildingPath(id, next), query: route.query })"
           />
           <q-btn
             v-if="other !== null"
             flat
             no-caps
             label="Swap"
-            @click="router.push(buildingPath(other, id))"
+            @click="router.push({ path: buildingPath(other, id), query: route.query })"
           />
         </div>
       </nav>
