@@ -104,6 +104,7 @@ const barWidth = (value: number) => (value > 0 && largest.value > 0 ? (value / l
 .sheet-card__figures {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end; // a long unit wraps its label: the figures stay on one line
   margin: 0;
   border-top: tokens.$border-width solid tokens.$color-border;
   border-bottom: tokens.$border-width solid tokens.$color-border;
