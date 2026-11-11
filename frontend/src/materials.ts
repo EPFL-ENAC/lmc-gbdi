@@ -1,8 +1,7 @@
 import type { MaterialHotspot } from '@/api/overview';
 
-// The material lists every layout draws: a top 10, ranked by mass or by carbon, and
-// the rest of `Overview.materials` on request.
-export const TOP_MATERIALS = 10;
+// The material lists: a top 10, ranked by mass or by carbon, and the rest of
+// `Overview.materials` on request.
 export type RankBy = 'mass' | 'carbon';
 export const RANKINGS: { label: string; value: RankBy }[] = [
   { label: 'Top 10 by carbon', value: 'carbon' },
