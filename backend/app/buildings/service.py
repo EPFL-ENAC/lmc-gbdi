@@ -24,11 +24,12 @@ from app.buildings.schemas import (
 )
 from app.config import get_settings
 from app.db import engine
-from app.overview.schemas import Overview
+from app.overview.schemas import Basis, Overview
 from app.overview.service import (
     BEC_TIER2,
     build_overview,
     class_rollup,
+    on_basis,
     project_fields,
     project_info,
 )
@@ -53,14 +54,17 @@ def rejects(upload: Upload) -> list[str]:
     return [f["message"] for f in upload.findings if f["severity"] == "Reject"]
 
 
-async def overview(session: AsyncSession, project_id: int) -> Overview:
+async def overview(
+    session: AsyncSession, project_id: int, basis: Basis = "total"
+) -> Overview:
+    """The cached overview, its absolute figures divided by the basis."""
     if project_id not in _overviews:
         if "carbon" in blocked(await repo.get_upload(session, project_id)):
             raise DraftBlocked(project_id)
         data = await repo.read_project(session, project_id)
         # In a thread: a large project takes seconds, and probes must still answer.
         _overviews[project_id] = await asyncio.to_thread(build_overview, data)
-    return _overviews[project_id]
+    return on_basis(_overviews[project_id], basis)
 
 
 def forget(project_id: int) -> None:

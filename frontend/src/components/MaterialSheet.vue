@@ -11,16 +11,16 @@
     </header>
     <dl class="sheet-card__figures">
       <div>
-        <dt>kg CO₂e, whole life</dt>
-        <dd>{{ kg.format(hotspot.gwp) }}</dd>
+        <dt>{{ units.carbon }}, whole life</dt>
+        <dd>{{ num.format(hotspot.gwp) }}</dd>
       </div>
       <div>
         <dt>Share of the building</dt>
         <dd>{{ percent.format(hotspot.share) }}</dd>
       </div>
       <div>
-        <dt>Mass, kg</dt>
-        <dd>{{ kg.format(hotspot.mass_kg) }}</dd>
+        <dt>Mass, {{ units.mass }}</dt>
+        <dd>{{ num.format(hotspot.mass_kg) }}</dd>
       </div>
       <div>
         <dt>kg CO₂e per kg</dt>
@@ -28,7 +28,7 @@
       </div>
     </dl>
     <table class="sheet-card__modules">
-      <caption>kg CO₂e by life-cycle stage</caption>
+      <caption>{{ units.carbon }} by life-cycle stage</caption>
       <tbody>
         <tr v-for="(stage, i) in stages" :key="stage.key">
           <th scope="row"><Term :name="stage.label" /></th>
@@ -38,7 +38,7 @@
               :style="{ width: `${barWidth(hotspot.gwp_by_stage[stage.key])}%`, background: STAGE_COLORS[i] }"
             />
           </td>
-          <td class="num">{{ kg.format(hotspot.gwp_by_stage[stage.key]) }}</td>
+          <td class="num">{{ num.format(hotspot.gwp_by_stage[stage.key]) }}</td>
         </tr>
       </tbody>
     </table>
@@ -47,12 +47,13 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { MaterialHotspot, StageTotal } from '@/api/overview';
+import type { MaterialHotspot, StageTotal, Units } from '@/api/overview';
 import Term from '@/components/atoms/Term.vue';
 import { STAGE_COLORS } from '@/dataviz';
-import { figure, kg, percent, three } from '@/format';
+import { amount, figure, percent, three } from '@/format';
 
-const props = defineProps<{ hotspot: MaterialHotspot; stages: StageTotal[]; rank: number }>();
+const props = defineProps<{ hotspot: MaterialHotspot; stages: StageTotal[]; rank: number; units: Units }>();
+const num = computed(() => amount(props.units));
 
 // Bar geometry only: against the largest positive stage of this material; a
 // negative stage keeps its signed figure and draws no bar.
@@ -103,6 +104,7 @@ const barWidth = (value: number) => (value > 0 && largest.value > 0 ? (value / l
 .sheet-card__figures {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end; // a long unit wraps its label: the figures stay on one line
   margin: 0;
   border-top: tokens.$border-width solid tokens.$color-border;
   border-bottom: tokens.$border-width solid tokens.$color-border;

@@ -3,7 +3,7 @@
        since more is not better (org#90). -->
   <table class="matrix">
     <caption class="matrix__caption">
-      kg CO₂e. Each cell is shaded by its size against the largest cell:
+      {{ units.carbon }}. Each cell is shaded by its size against the largest cell:
       <ul class="matrix__legend">
         <li v-for="item in LEGEND" :key="item.shade">
           <span class="matrix__swatch" :class="`matrix__cell--${item.shade}`" />{{ item.label }}
@@ -26,7 +26,7 @@
           class="num"
           :class="`matrix__cell--${shade(row.gwp_by_stage[stage.key])}`"
         >
-          {{ kg.format(row.gwp_by_stage[stage.key]) }}
+          {{ num.format(row.gwp_by_stage[stage.key]) }}
         </td>
         <td class="num">{{ row.dominant_stage }} {{ percent.format(row.dominant_share) }}</td>
       </tr>
@@ -39,11 +39,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { ElementStages, StageTotal } from '@/api/overview';
+import type { ElementStages, StageTotal, Units } from '@/api/overview';
 import Term from '@/components/atoms/Term.vue';
-import { kg, percent } from '@/format';
+import { amount, percent } from '@/format';
 
-const props = defineProps<{ stages: StageTotal[]; rows: ElementStages[] }>();
+const props = defineProps<{ stages: StageTotal[]; rows: ElementStages[]; units: Units }>();
+const num = computed(() => amount(props.units));
 
 // Shading geometry only: three steps of the grey ramp, each with an AA text colour.
 const largest = computed(() =>

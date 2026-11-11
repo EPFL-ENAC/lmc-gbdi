@@ -31,7 +31,7 @@
         :width="BAR"
         :height="Math.abs(y(moduleD) - y(0))"
       >
-        <title>D1: {{ kg.format(moduleD) }} kg CO₂e, outside the whole-life total</title>
+        <title>D1: {{ num.format(moduleD) }} {{ units.time }}, outside the whole-life total</title>
       </rect>
       <line class="over-time__zero" :x1="L" :x2="xD + BAR" :y1="y(0)" :y2="y(0)" />
       <line class="over-time__boundary" :x1="xBoundary" :x2="xBoundary" :y1="T" :y2="H - B" />
@@ -43,16 +43,16 @@
         <text :x="xD + BAR / 2" :y="H - B + 18" text-anchor="middle">Beyond</text>
       </g>
       <g class="over-time__note">
-        <text :x="L + BAR + 8" :y="y(upfront) + 4">A1–A5: {{ kg.format(upfront) }} kg</text>
+        <text :x="L + BAR + 8" :y="y(upfront) + 4">A1–A5: {{ num.format(upfront) }}</text>
         <text :x="(xUse + xEnd) / 2" :y="y(Math.max(usePerYear, 0)) - 10" text-anchor="middle">
-          B1–B8: about {{ kg.format(usePerYear) }} kg a year
+          B1–B8: about {{ num.format(usePerYear) }} a year
         </text>
-        <text :x="xEnd - 8" :y="y(endOfLife) + 4" text-anchor="end">C1–C4: {{ kg.format(endOfLife) }} kg</text>
-        <text :x="xD - 8" :y="y(moduleD) + 4" text-anchor="end">D1: {{ kg.format(moduleD) }} kg</text>
+        <text :x="xEnd - 8" :y="y(endOfLife) + 4" text-anchor="end">C1–C4: {{ num.format(endOfLife) }}</text>
+        <text :x="xD - 8" :y="y(moduleD) + 4" text-anchor="end">D1: {{ num.format(moduleD) }}</text>
       </g>
     </svg>
     <figcaption class="over-time__caption">
-      kg CO₂e each moment emits, on one scale. B1–B8 is spread evenly over the {{ period }} years, a simplification:
+      {{ units.time }} each moment emits, on one scale. B1–B8 is spread evenly over the {{ period }} years, a simplification:
       replacements really happen in steps. Below the axis, dashed: module D1, outside the whole-life total.
     </figcaption>
   </figure>
@@ -60,17 +60,20 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { StageTotal } from '@/api/overview';
+import type { StageTotal, Units } from '@/api/overview';
 import Term from '@/components/atoms/Term.vue';
 import { STAGE_COLORS } from '@/dataviz';
-import { kg } from '@/format';
+import { amount } from '@/format';
 
 const props = defineProps<{
   stages: StageTotal[]; // A1–A3, A4–A5, B1–B8, C1–C4, in that order
+  upfront: number; // A1–A5
   usePerYear: number;
   moduleD: number;
   period: number;
+  units: Units;
 }>();
+const num = computed(() => amount(props.units));
 
 // Drawn at about the size it is shown, so the text keeps its size.
 const W = 1100;
@@ -85,12 +88,11 @@ const compact = new Intl.NumberFormat(undefined, { notation: 'compact' });
 
 const gwp = (key: string) => props.stages.find((s) => s.key === key)?.gwp ?? 0;
 const color = (key: string) => STAGE_COLORS[props.stages.findIndex((s) => s.key === key)];
-const upfront = computed(() => gwp('a1_a3') + gwp('a4_a5'));
 const endOfLife = computed(() => gwp('c1_c4'));
 
 // One scale for every part, zero included, so a negative credit or year shows below it.
-const yMax = computed(() => niceCeiling(Math.max(upfront.value, endOfLife.value, props.usePerYear, 0) * 1.1));
-const yMin = computed(() => -niceCeiling(-Math.min(props.moduleD, props.usePerYear, upfront.value, endOfLife.value, 0) * 1.1));
+const yMax = computed(() => niceCeiling(Math.max(props.upfront, endOfLife.value, props.usePerYear, 0) * 1.1));
+const yMin = computed(() => -niceCeiling(-Math.min(props.moduleD, props.usePerYear, props.upfront, endOfLife.value, 0) * 1.1));
 const y = (value: number) => T + ((yMax.value - value) / (yMax.value - yMin.value)) * (H - B - T);
 const yTicks = computed(() => {
   const step = niceCeiling((yMax.value - yMin.value) / 5);
@@ -105,25 +107,25 @@ const parts = computed(() => {
   const a45 = gwp('a4_a5');
   const stacked = Math.sign(a13) === Math.sign(a45) ? a13 : 0; // ponytail: opposite signs both start at zero
   return [
-    { key: 'a1_a3', x: L, width: BAR, from: 0, to: a13, title: `A1–A3: ${kg.format(a13)} kg CO₂e` },
-    { key: 'a4_a5', x: L, width: BAR, from: stacked, to: stacked + a45, title: `A4–A5: ${kg.format(a45)} kg CO₂e` },
+    { key: 'a1_a3', x: L, width: BAR, from: 0, to: a13, title: `A1–A3: ${num.value.format(a13)} ${props.units.time}` },
+    { key: 'a4_a5', x: L, width: BAR, from: stacked, to: stacked + a45, title: `A4–A5: ${num.value.format(a45)} ${props.units.time}` },
     {
       key: 'b1_b8',
       x: xUse,
       width: xEnd - xUse,
       from: 0,
       to: props.usePerYear,
-      title: `B1–B8: about ${kg.format(props.usePerYear)} kg CO₂e a year`,
+      title: `B1–B8: about ${num.value.format(props.usePerYear)} ${props.units.time} a year`,
     },
-    { key: 'c1_c4', x: xEnd, width: BAR, from: 0, to: endOfLife.value, title: `C1–C4: ${kg.format(endOfLife.value)} kg CO₂e` },
+    { key: 'c1_c4', x: xEnd, width: BAR, from: 0, to: endOfLife.value, title: `C1–C4: ${num.value.format(endOfLife.value)} ${props.units.time}` },
   ].map((part) => ({ ...part, color: color(part.key) }));
 });
 
 const summary = computed(
   () =>
-    `What each moment emits over ${props.period} years: ${kg.format(upfront.value)} kg CO₂e at year 0, ` +
-    `about ${kg.format(props.usePerYear)} kg a year in use, ${kg.format(endOfLife.value)} kg at the end of life, ` +
-    `and a credit of ${kg.format(props.moduleD)} kg beyond it.`,
+    `What each moment emits over ${props.period} years, in ${props.units.time}: ${num.value.format(props.upfront)} at year 0, ` +
+    `about ${num.value.format(props.usePerYear)} a year in use, ${num.value.format(endOfLife.value)} at the end of life, ` +
+    `and a credit of ${num.value.format(props.moduleD)} beyond it.`,
 );
 
 function niceCeiling(value: number) {

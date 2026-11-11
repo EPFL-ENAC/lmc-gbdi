@@ -4,7 +4,13 @@ GWP in kg CO₂ eq, mass in kg, shares from 0 to 1. Whole life means modules A t
 module D is reported beside it, never inside it.
 """
 
+from typing import Literal
+
 from pydantic import BaseModel
+
+# What every absolute figure is divided by: nothing, the gross or the useful floor
+# area, or the gross floor area and the study period.
+Basis = Literal["total", "gfa", "ufa", "gfa_year"]
 
 
 class ProjectInfo(BaseModel):
@@ -99,6 +105,32 @@ class ModuleCheck(BaseModel):
     status: str  # ok | declared_no_result | result_not_declared
 
 
+class BasisOption(BaseModel):
+    key: Basis
+    label: str
+    available: bool
+    reason: str | None  # why the building cannot serve it; None when it can
+
+
+class Units(BaseModel):
+    """The basis the figures are on, and the unit each kind of figure reads in."""
+
+    basis: Basis
+    carbon: str  # "kg CO₂e per m² GFA"
+    mass: str  # divided by area only: mass per year means nothing
+    time: str  # the Time section's carbon, by area only: its chart is the years
+    intensity: str  # carbon over mass on this basis, "kg CO₂e per kg"
+
+
+class TimeFigures(BaseModel):
+    """The Time section's figures, on the basis's area but never per year."""
+
+    stages: list[StageTotal]
+    upfront: float  # A1–A5
+    use_per_year: float | None  # B1–B8 spread evenly over the study period
+    module_d1: float
+
+
 class Overview(BaseModel):
     project: ProjectInfo
     project_fields: list[ProjectField]  # the sheet's Project table, in its order
@@ -120,6 +152,8 @@ class Overview(BaseModel):
     total_mass_kg: float  # every bill of materials row, floor repetition included
     mass_other_share: float  # of the mass, outside the top 10
     material_classes: list[MaterialClassTotal]  # every class present, in code order
-    use_per_year: float | None  # B1–B8 spread evenly over the study period
+    time: TimeFigures
+    units: Units
+    bases: list[BasisOption]  # every basis, with whether this building can serve it
     data_type_weighting: str  # gwp_fossil_a1_a3 | mass | not_computed
     data_types: list[DataTypeShare]  # the seven EU 2026/52 types, then "undeclared"

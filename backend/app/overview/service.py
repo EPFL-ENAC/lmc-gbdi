@@ -14,6 +14,8 @@ from pathlib import Path
 
 from app.overview.repo import MaterialPair, MaterialRow, ProjectData, read_project
 from app.overview.schemas import (
+    Basis,
+    BasisOption,
     DataTypeShare,
     ElementStages,
     ElementTotal,
@@ -26,6 +28,8 @@ from app.overview.schemas import (
     ProjectField,
     ProjectInfo,
     StageTotal,
+    TimeFigures,
+    Units,
 )
 
 ZERO = Decimal(0)
@@ -423,8 +427,18 @@ def build_overview(data: ProjectData) -> Overview:
     checks = module_checks(data)
     fields = project_fields(data.general)
     by_code = {f.code: f for f in fields}
+    project = project_info(data.general)
+    stages = [
+        StageTotal(
+            key=k,
+            label=label,
+            gwp=float(totals[k]),
+            share=float(totals[k] / whole_life),
+        )
+        for k, label in STAGES
+    ]
     return Overview(
-        project=project_info(data.general),
+        project=project,
         project_fields=fields,
         title_block=[by_code[code] for code in TITLE_BLOCK],
         rows_read=len(data.rows),
@@ -436,15 +450,7 @@ def build_overview(data: ProjectData) -> Overview:
             c.status == "result_not_declared" for c in checks
         ),
         headline=summary,
-        stages=[
-            StageTotal(
-                key=k,
-                label=label,
-                gwp=float(totals[k]),
-                share=float(totals[k] / whole_life),
-            )
-            for k, label in STAGES
-        ],
+        stages=stages,
         elements=[
             ElementTotal(
                 element=name,
@@ -464,9 +470,146 @@ def build_overview(data: ProjectData) -> Overview:
         total_mass_kg=float(sum((p["mass"] for p in pairs.values()), ZERO)),
         mass_other_share=float(mass_other_share),
         material_classes=class_rollup(rows),
-        use_per_year=per(totals["b1_b8"], period),
+        time=TimeFigures(
+            stages=stages,
+            upfront=summary.upfront,
+            use_per_year=per(totals["b1_b8"], period),
+            module_d1=summary.module_d1,
+        ),
+        units=units("total"),
+        bases=basis_options(project),
         data_type_weighting=weighting,
         data_types=data_types,
+    )
+
+
+# Each basis: its label, and what its carbon and its mass are per ("" for the total).
+BASES: dict[Basis, tuple[str, str, str]] = {
+    "total": ("Total", "", ""),
+    "gfa": ("Per m² GFA", " per m² GFA", " per m² GFA"),
+    "ufa": ("Per m² UFA", " per m² UFA", " per m² UFA"),
+    "gfa_year": ("Per m² GFA and year", " per m² GFA and year", " per m² GFA"),
+}
+
+
+class BasisUnavailable(ValueError):
+    """The building does not declare what the basis divides by."""
+
+
+def units(basis: Basis) -> Units:
+    _, carbon, area = BASES[basis]
+    return Units(
+        basis=basis,
+        carbon=f"kg CO₂e{carbon}",
+        mass=f"kg{area}",
+        time=f"kg CO₂e{area}",
+        intensity="kg CO₂e per kg and year"
+        if basis == "gfa_year"
+        else "kg CO₂e per kg",
+    )
+
+
+def missing(project: ProjectInfo, basis: Basis) -> str | None:
+    """Why the building cannot serve the basis; None when it can."""
+    needs = {
+        "total": [],
+        "gfa": [(project.gross_floor_area_m2, "gross floor area")],
+        "ufa": [(project.useful_floor_area_m2, "useful floor area")],
+        "gfa_year": [
+            (project.gross_floor_area_m2, "gross floor area"),
+            (project.reference_study_period_years, "study period"),
+        ],
+    }[basis]
+    lacking = [name for value, name in needs if not value]
+    return f"The workbook declares no {' and no '.join(lacking)}." if lacking else None
+
+
+def basis_options(project: ProjectInfo) -> list[BasisOption]:
+    return [
+        BasisOption(
+            key=key,
+            label=label,
+            available=(why := missing(project, key)) is None,
+            reason=why,
+        )
+        for key, (label, _, _) in BASES.items()
+    ]
+
+
+def on_basis(o: Overview, basis: Basis) -> Overview:
+    """The overview with every absolute figure divided by the basis; shares unchanged.
+
+    Carbon is divided by the area, and by the study period under gfa_year; mass and
+    the Time section's figures by the area only.
+    """
+    if why := missing(o.project, basis):
+        raise BasisUnavailable(why)
+    if basis == "total":
+        return o
+    p = o.project
+    area = p.useful_floor_area_m2 if basis == "ufa" else p.gross_floor_area_m2
+    years = p.reference_study_period_years if basis == "gfa_year" else 1.0
+    assert area and years  # missing() has checked both
+    # ponytail: divides the cached floats, not the workbook's Decimals, so the last
+    # digit can differ from a full rebuild; rebuild per basis if that ever shows.
+    c = area * years
+
+    def stages(d: dict[str, float], by: float = c) -> dict[str, float]:
+        return {k: v / by for k, v in d.items()}
+
+    def hotspot(h: MaterialHotspot) -> MaterialHotspot:
+        return h.model_copy(
+            update={
+                "gwp": h.gwp / c,
+                "mass_kg": h.mass_kg / area,
+                "gwp_by_stage": stages(h.gwp_by_stage),
+            }
+        )
+
+    def element(e: ElementTotal) -> ElementTotal:
+        return e.model_copy(update={"gwp": e.gwp / c})
+
+    def stage(s: StageTotal, by: float) -> StageTotal:
+        return s.model_copy(update={"gwp": s.gwp / by})
+
+    h, t = o.headline, o.time
+    return o.model_copy(
+        update={
+            "headline": h.model_copy(
+                update={
+                    "whole_life": h.whole_life / c,
+                    "upfront": h.upfront / c,
+                    "module_d1": h.module_d1 / c,
+                    "module_d2": h.module_d2 / c,
+                }
+            ),
+            "stages": [stage(s, c) for s in o.stages],
+            "elements": [element(e) for e in o.elements],
+            "other_classified": element(o.other_classified),
+            "not_classified": element(o.not_classified),
+            "element_stages": [
+                e.model_copy(update={"gwp_by_stage": stages(e.gwp_by_stage)})
+                for e in o.element_stages
+            ],
+            "material_hotspots": [hotspot(m) for m in o.material_hotspots],
+            "materials": [hotspot(m) for m in o.materials],
+            "mass_hotspots": [
+                m.model_copy(update={"gwp": m.gwp / c, "mass_kg": m.mass_kg / area})
+                for m in o.mass_hotspots
+            ],
+            "total_mass_kg": o.total_mass_kg / area,
+            "material_classes": [
+                m.model_copy(update={"gwp": m.gwp / c, "mass_kg": m.mass_kg / area})
+                for m in o.material_classes
+            ],
+            "time": TimeFigures(
+                stages=[stage(s, area) for s in t.stages],
+                upfront=t.upfront / area,
+                use_per_year=None if t.use_per_year is None else t.use_per_year / area,
+                module_d1=t.module_d1 / area,
+            ),
+            "units": units(basis),
+        }
     )
 
 
