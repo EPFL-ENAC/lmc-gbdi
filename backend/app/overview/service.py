@@ -12,7 +12,6 @@ from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 
-from app.overview.benchmarks import benchmarks
 from app.overview.repo import MaterialPair, MaterialRow, ProjectData, read_project
 from app.overview.schemas import (
     DataTypeShare,
@@ -445,7 +444,6 @@ def build_overview(data: ProjectData) -> Overview:
         mass_other_share=float(mass_other_share),
         material_classes=class_rollup(rows),
         use_per_year=per(totals["b1_b8"], period),
-        benchmarks=benchmarks(summary),
         data_type_weighting=weighting,
         data_types=data_types,
     )

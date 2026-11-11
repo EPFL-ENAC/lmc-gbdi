@@ -123,7 +123,7 @@ const coverage = computed(() => {
     `Declared so far: a gross floor area in ${count((b) => b.gross_floor_area_m2 !== null)} buildings, ` +
     `a useful floor area in ${count((b) => b.useful_floor_area_m2 !== null)}, ` +
     `a study period in ${count((b) => b.study_period_years !== null)}. ` +
-    'Without them a building is left out of per-m² figures, the RE2020 scale and the years of use.'
+    'Without them a building is left out of per-m² figures and the years of use.'
   );
 });
 

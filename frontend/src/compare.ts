@@ -31,5 +31,4 @@ export const projectName = (o: NamedOverview) => `${o.project.project_name ?? 'U
 export const noDataTypes = (...os: Overview[]) =>
   os.every((o) => o.data_types.every((d) => d.key === 'undeclared' || d.share === 0));
 
-
 export const NO_DATA_TYPES_SENTENCE = 'Neither building declares the data type of its materials yet.';

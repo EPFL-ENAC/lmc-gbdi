@@ -224,7 +224,6 @@ def compared(upload: Upload, o: Overview) -> ComparedBuilding:
         whole_life_per_m2=o.headline.per_m2_gross,
         upfront_per_m2=per_m2(o.headline.upfront, o),
         module_d1_per_m2=per_m2(o.headline.module_d1, o),
-        benchmarks=o.benchmarks,
     )
 
 

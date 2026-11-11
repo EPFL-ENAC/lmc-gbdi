@@ -1,5 +1,5 @@
 import { deleteJson, getJson, postForm } from './client';
-import type { Benchmark, ProjectField } from './overview';
+import type { ProjectField } from './overview';
 
 // Mirrors backend/app/buildings/schemas.py. Per m² means per m² of gross floor area.
 
@@ -59,7 +59,6 @@ export interface ComparedBuilding {
   whole_life_per_m2: number | null;
   upfront_per_m2: number | null;
   module_d1_per_m2: number | null;
-  benchmarks: Benchmark[];
 }
 
 export interface ComparedRow {
