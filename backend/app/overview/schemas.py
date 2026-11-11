@@ -102,6 +102,7 @@ class ModuleCheck(BaseModel):
 class Overview(BaseModel):
     project: ProjectInfo
     project_fields: list[ProjectField]  # the sheet's Project table, in its order
+    title_block: list[ProjectField]  # the 14 the Overview heads with, in #97's order
     rows_read: int
     module_checks: list[ModuleCheck]
     modules_declared_without_result: int

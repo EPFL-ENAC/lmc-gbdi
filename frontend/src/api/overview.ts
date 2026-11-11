@@ -95,6 +95,7 @@ export interface ModuleCheck {
 export interface Overview {
   project: ProjectInfo;
   project_fields: ProjectField[];
+  title_block: ProjectField[]; // the 14 the Overview heads with, in #97's order
   rows_read: number;
   module_checks: ModuleCheck[];
   modules_declared_without_result: number;

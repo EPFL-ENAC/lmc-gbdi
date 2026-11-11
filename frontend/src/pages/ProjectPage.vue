@@ -14,7 +14,7 @@
           <p class="sheet__subtitle">Building carbon overview</p>
         </div>
         <dl class="sheet__block">
-          <div v-for="field in titleBlock" :key="field.code">
+          <div v-for="field in overview.title_block" :key="field.code">
             <dt>{{ field.label }}</dt>
             <dd>{{ fieldText(field.value) }}</dd>
           </div>
@@ -134,32 +134,7 @@ import TimeSection from '@/components/TimeSection.vue';
 import { useOverview } from '@/composables/useOverview';
 import { fieldText, figure, kg, one, percent, two, usefulAside, WEIGHTING } from '@/format';
 
-// The title block, in the order of the issue: what the project is, then the five
-// attributes that decide whether two results compare (#85).
-const TITLE_FIELDS = [
-  'project_id',
-  'project_country',
-  'building_use_type',
-  'building_structure_type',
-  'building_gross_floor_area',
-  'building_gross_floor_area_standard',
-  'lca_reference_study_period',
-  'project_assessment_type',
-  'project_phase_common',
-  'lca_cycle_system_boundary',
-  'lcia_methodology',
-  'lca_biogenic_method',
-  'lca_temporal_approach',
-  'lca_lci_modeling_approach',
-];
-
 const { overview, error } = useOverview();
-
-const titleBlock = computed(() =>
-  (overview.value?.project_fields ?? [])
-    .filter((f) => TITLE_FIELDS.includes(f.code))
-    .sort((a, b) => TITLE_FIELDS.indexOf(a.code) - TITLE_FIELDS.indexOf(b.code)),
-);
 
 // Chart and table read the same backend rows, in the backend's order.
 const elementRows = computed(() =>
