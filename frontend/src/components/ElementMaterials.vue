@@ -52,7 +52,9 @@ const bars = (element: ElementMaterials): Bar[] => [
   padding-bottom: tokens.$spacing-sm;
 }
 
+// Quasar sets summary to block, which drops the disclosure triangle.
 .within__summary {
+  display: list-item;
   padding: tokens.$spacing-xs 0;
   cursor: pointer;
   font-size: tokens.$text-size-sm;
