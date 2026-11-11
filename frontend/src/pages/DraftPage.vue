@@ -1,12 +1,12 @@
 <template>
   <!-- A draft whose rejects block carbon: why, then what still reads. No figure is
        shown that the rejects make wrong; the materials by mass hold unless blocked too. -->
-  <q-page class="page-grid">
+  <q-page class="sheet-page">
     <p v-if="error" class="gbdi-card" role="alert">The draft could not be loaded. {{ error }}</p>
     <p v-else-if="draft === null" class="u-text-muted">Loading the draft…</p>
 
-    <template v-else>
-      <header>
+    <article v-else class="sheet">
+      <header class="sheet__title">
         <h1>
           {{ name }}<br />
           <span class="text-display-lead">Draft, no carbon figures</span>
@@ -17,8 +17,8 @@
         </p>
       </header>
 
-      <section class="draft__section">
-        <h2 class="draft__title">Why it is a draft</h2>
+      <section class="sheet__panel">
+        <h2 class="sheet__panel-title">Why it is a draft</h2>
         <ul class="draft__rejects">
           <li v-for="(f, i) in draft.rejects" :key="i">
             <strong>{{ f.code }}</strong>, {{ f.sheet ?? 'workbook' }}: {{ f.message }}
@@ -26,8 +26,8 @@
         </ul>
       </section>
 
-      <section v-if="!draft.blocked.includes('materials')" class="draft__section">
-        <h2 class="draft__title">What it is made of, by mass</h2>
+      <section v-if="!draft.blocked.includes('materials')" class="sheet__panel">
+        <h2 class="sheet__panel-title">What it is made of, by mass</h2>
         <p class="u-text-muted">
           {{ kg.format(draft.total_mass_kg ?? 0) }} kg in all<template v-if="draft.gross_floor_area_m2">,
             {{ kg.format((draft.total_mass_kg ?? 0) / draft.gross_floor_area_m2) }} kg per m² of gross floor area</template
@@ -37,8 +37,8 @@
         <RankedBars :bars="massBars" caption="kg, by OpenBDF material class." empty-label="No materials." />
       </section>
 
-      <section class="draft__section">
-        <h2 class="draft__title">Everything openbdf reported</h2>
+      <section class="sheet__panel">
+        <h2 class="sheet__panel-title">Everything openbdf reported</h2>
         <p class="u-text-muted">
           {{ kg.format(draft.findings.length) }} findings, grouped by code, rejects first. Warnings do not block
           anything; they are what to tidy in the workbook.
@@ -56,11 +56,11 @@
         </details>
       </section>
 
-      <section class="draft__section">
-        <h2 class="draft__title">Project</h2>
+      <section class="sheet__panel">
+        <h2 class="sheet__panel-title">Project</h2>
         <ProjectFieldsTable :fields="draft.project_fields" />
       </section>
-    </template>
+    </article>
   </q-page>
 </template>
 
@@ -114,22 +114,9 @@ const massBars = computed<Bar[]>(() =>
 <style scoped lang="scss">
 @use '@/css/02-tokens' as tokens;
 
-.draft__section {
-  display: flex;
-  flex-direction: column;
-  gap: tokens.$spacing-md;
-  padding-top: tokens.$spacing-xl;
-  border-top: tokens.$border-width solid tokens.$color-border;
-}
-
-.draft__section > p {
+.sheet__title h1,
+.sheet__title p {
   margin: 0;
-}
-
-.draft__title {
-  margin: 0;
-  font-family: tokens.$text-font-family;
-  font-size: tokens.$text-size-heading-lg;
 }
 
 .draft__group summary {

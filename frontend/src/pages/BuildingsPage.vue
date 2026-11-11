@@ -1,151 +1,154 @@
 <template>
   <!-- Every stored building on one scale: kg CO₂e per m² of gross floor area, split by
        life-cycle stage around zero, so stored biogenic carbon reads as such. -->
-  <q-page class="page-grid">
-    <header class="buildings__head">
-      <div>
-        <h1>Buildings</h1>
-        <p class="text-lead">
-          OpenBDF workbooks read by lmc-openbdf. Whole-life carbon, modules A to C, per m² of gross floor area:
-          the size of a building drops out, its design stays.
-        </p>
-      </div>
-      <div>
-        <q-btn unelevated no-caps color="primary" label="Add a workbook" :loading="upload?.state === 'reading'" @click="picker?.click()" />
-        <input ref="picker" type="file" accept=".xlsx" hidden @change="onPick" />
-      </div>
-    </header>
+  <q-page class="sheet-page">
+    <article class="sheet">
+      <header class="sheet__title buildings__head">
+        <div>
+          <h1>Buildings</h1>
+          <p class="text-lead">
+            OpenBDF workbooks read by lmc-openbdf. Whole-life carbon, modules A to C, per m² of gross floor area:
+            the size of a building drops out, its design stays.
+          </p>
+        </div>
+        <div>
+          <q-btn unelevated no-caps color="primary" label="Add a workbook" :loading="upload?.state === 'reading'" @click="picker?.click()" />
+          <input ref="picker" type="file" accept=".xlsx" hidden @change="onPick" />
+        </div>
+      </header>
 
-    <section v-if="upload" class="gbdi-card upload" :role="upload.state === 'rejected' ? 'alert' : 'status'">
-      <template v-if="upload.state === 'reading'">
-        <p>
-          Reading {{ upload.name }}. openbdf translates and validates every line: a COLA building takes 15 to 60
-          seconds.
+      <section v-if="upload" class="sheet__panel upload" :role="upload.state === 'rejected' ? 'alert' : 'status'">
+        <template v-if="upload.state === 'reading'">
+          <p>
+            Reading {{ upload.name }}. openbdf translates and validates every line: a COLA building takes 15 to 60
+            seconds.
+          </p>
+          <q-linear-progress indeterminate color="primary" />
+        </template>
+        <p v-else-if="upload.state === 'added'">
+          Added {{ upload.name }}: {{ kg.format(upload.building.rows_read) }} lines, {{ upload.building.findings }}
+          warnings kept with it.
+          <router-link class="link" :to="`/buildings/${upload.building.id}`">Open it</router-link>
         </p>
-        <q-linear-progress indeterminate color="primary" />
-      </template>
-      <p v-else-if="upload.state === 'added'">
-        Added {{ upload.name }}: {{ kg.format(upload.building.rows_read) }} lines, {{ upload.building.findings }}
-        warnings kept with it.
-        <router-link class="link" :to="`/buildings/${upload.building.id}`">Open it</router-link>
+        <template v-else-if="upload.state === 'rejected'">
+          <p>{{ upload.rejection.message }} The first findings, rejects first:</p>
+          <p>
+            <q-btn
+              unelevated
+              no-caps
+              class="btn-secondary"
+              label="Store it as a draft"
+              @click="send(upload.file, true)"
+            />
+            It will be listed as a draft, never counted, with only what the rejects leave readable.
+          </p>
+          <table class="upload__findings">
+            <thead>
+              <tr><th>Severity</th><th>Code</th><th>Sheet</th><th class="num">Row</th><th>Finding</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="(f, i) in rejectsFirst" :key="i">
+                <td>{{ f.severity }}</td>
+                <td>{{ f.code }}</td>
+                <td>{{ f.sheet ?? '' }}</td>
+                <td class="num">{{ f.row ?? '' }}</td>
+                <td>{{ f.message }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </template>
+        <p v-else>{{ upload.name }} could not be added. {{ upload.message }}</p>
+      </section>
+
+      <p v-if="error" class="sheet__panel" role="alert">The buildings could not be loaded. {{ error }}</p>
+      <p v-else-if="buildings === null" class="sheet__panel u-text-muted">Loading the buildings…</p>
+      <p v-else-if="buildings.length === 0" class="sheet__panel">
+        No building yet. Add an OpenBDF workbook to start; the list fills as workbooks are read.
       </p>
-      <template v-else-if="upload.state === 'rejected'">
-        <p>{{ upload.rejection.message }} The first findings, rejects first:</p>
-        <p>
-          <q-btn
-            unelevated
-            no-caps
-            class="btn-secondary"
-            label="Store it as a draft"
-            @click="send(upload.file, true)"
-          />
-          It will be listed as a draft, never counted, with only what the rejects leave readable.
-        </p>
-        <table class="upload__findings">
+
+      <section v-else class="sheet__panel portfolio">
+        <ul class="portfolio__legend">
+          <li v-for="(stage, i) in STAGES" :key="stage.key">
+            <span class="portfolio__swatch" :style="{ background: STAGE_COLORS[i] }" /><Term :name="stage.label" />
+          </li>
+          <li>
+            <span class="portfolio__swatch portfolio__swatch--net" />Net whole life: emitted (right of zero) minus
+            stored (left), the Whole life column
+          </li>
+        </ul>
+        <table class="portfolio__table">
           <thead>
-            <tr><th>Severity</th><th>Code</th><th>Sheet</th><th class="num">Row</th><th>Finding</th></tr>
+            <tr>
+              <th scope="col">Compare</th>
+              <th
+                v-for="col in COLUMNS"
+                :key="col.label"
+                scope="col"
+                :class="{ num: col.num }"
+                :aria-sort="col.key && sort.key === col.key ? (sort.asc ? 'ascending' : 'descending') : undefined"
+              >
+                <button v-if="col.key" type="button" class="portfolio__sort" @click="sortBy(col.key)">
+                  {{ col.label }}<span aria-hidden="true">{{ sort.key === col.key ? (sort.asc ? ' ↑' : ' ↓') : '' }}</span>
+                </button>
+                <template v-else>{{ col.label }}</template>
+              </th>
+            </tr>
           </thead>
           <tbody>
-            <tr v-for="(f, i) in rejectsFirst" :key="i">
-              <td>{{ f.severity }}</td>
-              <td>{{ f.code }}</td>
-              <td>{{ f.sheet ?? '' }}</td>
-              <td class="num">{{ f.row ?? '' }}</td>
-              <td>{{ f.message }}</td>
+            <tr
+              v-for="b in sorted"
+              :key="b.id"
+              class="portfolio__row"
+              :class="{ 'portfolio__row--picked': picked.includes(b.id) }"
+              @click="router.push(`/buildings/${b.id}`)"
+            >
+              <!-- The row opens the building; the checkbox only picks it. -->
+              <td @click.stop>
+                <q-checkbox
+                  v-model="picked"
+                  :val="b.id"
+                  dense
+                  :disable="noCarbon(b) || (picked.length >= 2 && !picked.includes(b.id))"
+                  :aria-label="`Compare ${code(b)}`"
+                />
+              </td>
+              <td class="portfolio__building">
+                <router-link class="portfolio__link" :to="`/buildings/${b.id}`">{{ code(b) }}</router-link>
+                <span>
+                  {{ b.project_name ?? 'Unnamed project' }}
+                  <q-badge v-if="b.draft" outline color="warning" label="Draft" :title="b.rejects.join(' ')" />
+                </span>
+                <span class="u-text-muted">{{ b.country ?? 'Country not declared' }}</span>
+              </td>
+              <td class="num">{{ figure(b.gross_floor_area_m2, kg) }}</td>
+              <td class="portfolio__plot" aria-hidden="true">
+                <template v-if="b.stages_per_m2">
+                  <span
+                    v-for="seg in segments(b.stages_per_m2)"
+                    :key="seg.key"
+                    class="portfolio__seg"
+                    :style="{ left: `${seg.left}%`, width: `${seg.width}%`, background: seg.color }"
+                  />
+                  <span class="portfolio__zero" :style="{ left: `${at(0)}%` }" />
+                  <span
+                    v-if="b.whole_life_per_m2 !== null"
+                    class="portfolio__net"
+                    :style="{ left: `${at(b.whole_life_per_m2)}%` }"
+                  />
+                </template>
+              </td>
+              <td class="num portfolio__figure">{{ noCarbon(b) ? 'draft' : figure(b.whole_life_per_m2, kg) }}</td>
             </tr>
           </tbody>
         </table>
-      </template>
-      <p v-else>{{ upload.name }} could not be added. {{ upload.message }}</p>
-    </section>
+        <p class="portfolio__caption">
+          Bars left of zero are negative: most often biogenic carbon stored in timber at A1–A3 and released at end of
+          life. The black tick is the net, so it sits short of the bar's right end, which is what is emitted. Click a column to sort, a row to open the building, or pick two to compare them.
+        </p>
+      </section>
+    </article>
 
-    <p v-if="error" class="gbdi-card" role="alert">The buildings could not be loaded. {{ error }}</p>
-    <p v-else-if="buildings === null" class="u-text-muted">Loading the buildings…</p>
-    <p v-else-if="buildings.length === 0" class="gbdi-card">
-      No building yet. Add an OpenBDF workbook to start; the list fills as workbooks are read.
-    </p>
-
-    <section v-else class="portfolio">
-      <ul class="portfolio__legend">
-        <li v-for="(stage, i) in STAGES" :key="stage.key">
-          <span class="portfolio__swatch" :style="{ background: STAGE_COLORS[i] }" /><Term :name="stage.label" />
-        </li>
-        <li>
-          <span class="portfolio__swatch portfolio__swatch--net" />Net whole life: emitted (right of zero) minus
-          stored (left), the Whole life column
-        </li>
-      </ul>
-      <table class="portfolio__table">
-        <thead>
-          <tr>
-            <th scope="col">Compare</th>
-            <th
-              v-for="col in COLUMNS"
-              :key="col.label"
-              scope="col"
-              :class="{ num: col.num }"
-              :aria-sort="col.key && sort.key === col.key ? (sort.asc ? 'ascending' : 'descending') : undefined"
-            >
-              <button v-if="col.key" type="button" class="portfolio__sort" @click="sortBy(col.key)">
-                {{ col.label }}<span aria-hidden="true">{{ sort.key === col.key ? (sort.asc ? ' ↑' : ' ↓') : '' }}</span>
-              </button>
-              <template v-else>{{ col.label }}</template>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="b in sorted"
-            :key="b.id"
-            class="portfolio__row"
-            :class="{ 'portfolio__row--picked': picked.includes(b.id) }"
-            @click="router.push(`/buildings/${b.id}`)"
-          >
-            <!-- The row opens the building; the checkbox only picks it. -->
-            <td @click.stop>
-              <q-checkbox
-                v-model="picked"
-                :val="b.id"
-                dense
-                :disable="noCarbon(b) || (picked.length >= 2 && !picked.includes(b.id))"
-                :aria-label="`Compare ${code(b)}`"
-              />
-            </td>
-            <td class="portfolio__building">
-              <router-link class="portfolio__link" :to="`/buildings/${b.id}`">{{ code(b) }}</router-link>
-              <span>
-                {{ b.project_name ?? 'Unnamed project' }}
-                <q-badge v-if="b.draft" outline color="warning" label="Draft" :title="b.rejects.join(' ')" />
-              </span>
-              <span class="u-text-muted">{{ b.country ?? 'Country not declared' }}</span>
-            </td>
-            <td class="num">{{ figure(b.gross_floor_area_m2, kg) }}</td>
-            <td class="portfolio__plot" aria-hidden="true">
-              <template v-if="b.stages_per_m2">
-                <span
-                  v-for="seg in segments(b.stages_per_m2)"
-                  :key="seg.key"
-                  class="portfolio__seg"
-                  :style="{ left: `${seg.left}%`, width: `${seg.width}%`, background: seg.color }"
-                />
-                <span class="portfolio__zero" :style="{ left: `${at(0)}%` }" />
-                <span
-                  v-if="b.whole_life_per_m2 !== null"
-                  class="portfolio__net"
-                  :style="{ left: `${at(b.whole_life_per_m2)}%` }"
-                />
-              </template>
-            </td>
-            <td class="num portfolio__figure">{{ noCarbon(b) ? 'draft' : figure(b.whole_life_per_m2, kg) }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <p class="portfolio__caption">
-        Bars left of zero are negative: most often biogenic carbon stored in timber at A1–A3 and released at end of
-        life. The black tick is the net, so it sits short of the bar's right end, which is what is emitted. Click a column to sort, a row to open the building, or pick two to compare them.
-      </p>
-    </section>
-
+    <!-- Outside the card: the card clips, and the bar must stick to the bottom. -->
     <div v-if="picked.length > 0" class="compare-bar">
       <p v-if="picked.length === 1">Pick one more building to compare with {{ codeOf(picked[0]) }}.</p>
       <q-btn
@@ -320,6 +323,7 @@ function segments(stages: Record<string, number>) {
 
 .buildings__head {
   display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-end;
@@ -476,7 +480,8 @@ function segments(stages: Record<string, number>) {
   display: flex;
   align-items: center;
   gap: tokens.$spacing-md;
-  justify-self: start;
+  width: fit-content;
+  margin: tokens.$spacing-lg auto 0;
   padding: tokens.$spacing-md tokens.$spacing-lg;
   border: tokens.$border-width solid tokens.$color-border;
   border-radius: tokens.$radius-card;
