@@ -129,7 +129,7 @@
 
       <section class="sheet__panel">
         <h2 class="sheet__panel-title">Project details</h2>
-        <p class="u-text-muted">General Information, as declared. Choose the columns to compare.</p>
+        <p class="u-text-muted">General Information, as declared. Choose the fields to show.</p>
         <ProjectFieldsTable :fields="overview.project_fields" />
       </section>
     </article>

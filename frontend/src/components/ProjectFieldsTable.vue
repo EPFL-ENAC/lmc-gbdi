@@ -1,6 +1,6 @@
 <template>
   <div class="fields">
-    <q-btn unelevated no-caps class="btn-secondary fields__toggle" :label="`Columns: ${shown.length} of ${fields.length}`">
+    <q-btn unelevated no-caps class="btn-secondary fields__toggle" :label="`Fields: ${shown.length} of ${fields.length}`">
       <q-menu anchor="bottom left" self="top left">
         <div class="fields__menu">
           <details v-for="group in groups" :key="group.name" open class="fields__group">
@@ -29,45 +29,42 @@
             <button type="button" class="btn-secondary" @click="shown = fields.map((f) => f.code)">
               Show all {{ fields.length }}
             </button>
-            <button type="button" class="btn-secondary" @click="shown = [...DEFAULT_COLUMNS]">Reset</button>
+            <button type="button" class="btn-secondary" @click="shown = [...DEFAULT_FIELDS]">Reset</button>
           </div>
         </div>
       </q-menu>
     </q-btn>
 
-    <q-table
-      flat
-      bordered
-      hide-bottom
-      :rows="[row]"
-      :columns="columns"
-      :visible-columns="shown"
-      :row-key="REQUIRED"
-      :pagination="{ rowsPerPage: 0 }"
-    >
-      <!-- Each field explains itself, and so do the OpenBDF values it holds. -->
-      <template #header-cell="cell">
-        <q-th :props="cell"><Term :name="cell.col.label" :field="cell.col.name" /></q-th>
-      </template>
-      <template #body-cell="cell">
-        <q-td :props="cell" :class="{ 'fields__missing': cell.value === NOT_DECLARED }"><Term :name="String(cell.value)" /></q-td>
-      </template>
-    </q-table>
+    <!-- Transposed (#96): one line per field, the groups side by side, so every field
+         reads without scrolling sideways. Each field explains itself, and so do the
+         OpenBDF values it holds. -->
+    <div class="fields__groups">
+      <table v-for="group in groups.filter((g) => g.shown > 0)" :key="group.name" class="fields__table">
+        <caption>{{ group.name }}</caption>
+        <tbody>
+          <tr v-for="field in group.fields.filter((f) => shown.includes(f.code))" :key="field.code">
+            <th scope="row"><Term :name="field.label" :field="field.code" /></th>
+            <td :class="{ fields__missing: fieldText(field.value) === NOT_DECLARED }">
+              <Term :name="fieldText(field.value)" />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { QTableColumn } from 'quasar';
 import type { ProjectField } from '@/api/overview';
 import Term from '@/components/atoms/Term.vue';
 import { fieldText, NOT_DECLARED } from '@/format';
 
 const props = defineProps<{ fields: ProjectField[] }>();
 
-// The project ID always shows: it names the row, as in a table of many projects.
+// The project ID always shows: it names the project.
 const REQUIRED = 'project_id';
-const DEFAULT_COLUMNS = [
+const DEFAULT_FIELDS = [
   REQUIRED,
   'project_name',
   'project_country',
@@ -80,20 +77,8 @@ const DEFAULT_COLUMNS = [
   'lca_reference_study_period',
   'lca_cycle_system_boundary',
 ];
-const shown = ref<string[]>([...DEFAULT_COLUMNS]);
+const shown = ref<string[]>([...DEFAULT_FIELDS]);
 
-const row = computed(() =>
-  Object.fromEntries(props.fields.map((field) => [field.code, fieldText(field.value)])),
-);
-const columns = computed<QTableColumn<Record<string, string>>[]>(() =>
-  props.fields.map((field) => ({
-    name: field.code,
-    label: field.label,
-    field: field.code,
-    align: 'left',
-    required: field.code === REQUIRED,
-  })),
-);
 const groups = computed(() =>
   [...new Set(props.fields.map((field) => field.group))].map((name) => {
     const fields = props.fields.filter((field) => field.group === name);
@@ -119,8 +104,38 @@ function toggle(fields: ProjectField[], show: boolean) {
   gap: tokens.$spacing-md;
 }
 
-.fields > .q-table__container {
+.fields__groups {
   align-self: stretch;
+  columns: 2 24rem;
+  column-gap: tokens.$spacing-xl;
+}
+
+.fields__table {
+  width: 100%;
+  margin-bottom: tokens.$spacing-lg;
+  border-collapse: collapse;
+  break-inside: avoid;
+  font-size: tokens.$text-size-sm;
+}
+
+.fields__table caption {
+  padding-bottom: tokens.$spacing-xs;
+  text-align: left;
+  font-weight: tokens.$text-weight-medium;
+}
+
+.fields__table th,
+.fields__table td {
+  padding: tokens.$spacing-xs tokens.$spacing-sm;
+  border-bottom: tokens.$border-width solid tokens.$color-border;
+  text-align: left;
+  vertical-align: top;
+}
+
+.fields__table th {
+  width: 45%;
+  font-weight: tokens.$text-weight-regular;
+  color: tokens.$color-text-muted;
 }
 
 .fields__menu {
