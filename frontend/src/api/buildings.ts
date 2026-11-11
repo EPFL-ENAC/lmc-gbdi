@@ -1,5 +1,5 @@
 import { deleteJson, getJson, postForm } from './client';
-import type { Benchmark, ProjectField } from './overview';
+import type { ProjectField } from './overview';
 
 // Mirrors backend/app/buildings/schemas.py. Per m² means per m² of gross floor area.
 
@@ -25,7 +25,6 @@ export interface BuildingSummary {
   whole_life: number | null; // null for a draft whose rejects block carbon
   whole_life_per_m2: number | null;
   stages_per_m2: Record<string, number> | null;
-  leti_band: string | null;
   draft: boolean; // stored despite reject findings
   blocked: ('carbon' | 'materials')[]; // the parts its rejects block
   rejects: string[];
@@ -60,7 +59,6 @@ export interface ComparedBuilding {
   whole_life_per_m2: number | null;
   upfront_per_m2: number | null;
   module_d1_per_m2: number | null;
-  benchmarks: Benchmark[];
 }
 
 export interface ComparedRow {

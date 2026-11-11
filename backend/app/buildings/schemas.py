@@ -8,7 +8,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.overview.schemas import Benchmark, ProjectField
+from app.overview.schemas import ProjectField
 
 
 class Finding(BaseModel):
@@ -27,14 +27,13 @@ class BuildingSummary(BaseModel):
     project_name: str | None
     country: str | None
     gross_floor_area_m2: float | None
-    useful_floor_area_m2: float | None  # RE2020 places a building only with it
+    useful_floor_area_m2: float | None
     study_period_years: float | None  # the years of use are drawn only with it
     rows_read: int
     # None for a draft whose rejects block carbon: no figure, never a wrong one.
     whole_life: float | None
     whole_life_per_m2: float | None  # None when the gross floor area is not declared
     stages_per_m2: dict[str, float] | None  # keyed by StageTotal.key
-    leti_band: str | None
     draft: bool = False  # stored despite reject findings
     blocked: list[str] = []  # the parts its rejects block: "carbon", "materials"
     rejects: list[str] = []  # what the rejects say, for the list and the page
@@ -73,7 +72,6 @@ class ComparedBuilding(BaseModel):
     whole_life_per_m2: float | None
     upfront_per_m2: float | None
     module_d1_per_m2: float | None
-    benchmarks: list[Benchmark]
 
 
 class ComparedRow(BaseModel):

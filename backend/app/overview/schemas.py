@@ -99,23 +99,6 @@ class ModuleCheck(BaseModel):
     status: str  # ok | declared_no_result | result_not_declared
 
 
-class BenchmarkBand(BaseModel):
-    label: str
-    upper: float | None  # kg CO₂e per m²; None for the open-ended last band
-
-
-class Benchmark(BaseModel):
-    key: str
-    name: str
-    source: str
-    source_url: str
-    scope: str  # what the scale counts, and how this project differs
-    basis: str  # the Headline figure compared: per_m2_gross | per_m2_useful
-    value: float | None  # None when the project lacks that floor area
-    bands: list[BenchmarkBand]  # ascending
-    band: str | None
-
-
 class Overview(BaseModel):
     project: ProjectInfo
     project_fields: list[ProjectField]  # the sheet's Project table, in its order
@@ -137,6 +120,5 @@ class Overview(BaseModel):
     mass_other_share: float  # of the mass, outside the top 10
     material_classes: list[MaterialClassTotal]  # every class present, in code order
     use_per_year: float | None  # B1–B8 spread evenly over the study period
-    benchmarks: list[Benchmark]
     data_type_weighting: str  # gwp_fossil_a1_a3 | mass | not_computed
     data_types: list[DataTypeShare]  # the seven EU 2026/52 types, then "undeclared"

@@ -92,30 +92,6 @@ export interface ModuleCheck {
   status: 'ok' | 'declared_no_result' | 'result_not_declared';
 }
 
-export interface BenchmarkBand {
-  label: string;
-  upper: number | null; // kg CO₂e per m²; null for the open-ended last band
-}
-
-export interface Benchmark {
-  key: string;
-  name: string;
-  source: string;
-  source_url: string;
-  scope: string;
-  basis: 'per_m2_gross' | 'per_m2_useful';
-  value: number | null;
-  bands: BenchmarkBand[];
-  band: string | null;
-}
-
-// A building placed on a scale beside another: `a` drawn green, `b` blue.
-export interface BenchmarkMark {
-  key: 'a' | 'b';
-  value: number | null;
-  band: string | null;
-}
-
 export interface Overview {
   project: ProjectInfo;
   project_fields: ProjectField[];
@@ -136,7 +112,6 @@ export interface Overview {
   mass_other_share: number;
   material_classes: MaterialClassTotal[];
   use_per_year: number | null;
-  benchmarks: Benchmark[];
   data_type_weighting: 'gwp_fossil_a1_a3' | 'mass' | 'not_computed';
   data_types: DataTypeShare[];
 }

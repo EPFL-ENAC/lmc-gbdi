@@ -8,7 +8,6 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings, get_settings
 from app.main import app
-from app.overview.benchmarks import SCALES, band_of
 from app.overview.repo import BOM_FIELDS, GWP_FIELDS, PMD_FIELDS, read_project
 from app.overview.service import build_overview, in_element, study_period, text
 
@@ -226,25 +225,6 @@ def test_material_hotspots_carry_their_stage_split(overview):
 
 def test_use_stage_is_spread_over_the_study_period(overview):
     assert overview.use_per_year == pytest.approx(4 / 50)
-
-
-def test_benchmarks_place_the_project_on_each_scale(overview):
-    bands = {b.key: (b.value, b.band) for b in overview.benchmarks}
-    assert bands["leti"] == (pytest.approx(0.59), "A++")  # per m² gross
-    assert bands["re2020"] == (pytest.approx(1.18), "Within the 2031 ceiling")
-
-
-@pytest.mark.parametrize(
-    ("value", "inclusive", "band"),
-    [(299.9, False, "A"), (300, False, "B"), (1200, False, "Beyond G")],
-)
-def test_leti_bands_are_upper_exclusive(value, inclusive, band):
-    assert band_of(value, SCALES[0][7], inclusive) == band
-
-
-def test_re2020_ceilings_are_inclusive():
-    assert band_of(490, SCALES[1][7], True) == "Within the 2031 ceiling"
-    assert band_of(740.1, SCALES[1][7], True) == "Above the 2022 ceiling"
 
 
 def test_the_placeholder_project_id_is_not_declared():
