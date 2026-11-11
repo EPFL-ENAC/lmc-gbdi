@@ -1,6 +1,6 @@
 <template>
-  <!-- Element × stage. Emissions are grey, the darker the heavier; a credit is green,
-       since more is not better (org#90). -->
+  <!-- Rows (elements or materials) × stage. Emissions are grey, the darker the heavier;
+       a credit is green, since more is not better (org#90). -->
   <table class="matrix">
     <caption class="matrix__caption">
       {{ units.carbon }}. Each cell is shaded by its size against the largest cell:
@@ -12,14 +12,14 @@
     </caption>
     <thead>
       <tr>
-        <th scope="col">Element</th>
+        <th scope="col">{{ rowHeader }}</th>
         <th v-for="stage in stages" :key="stage.key" scope="col" class="num"><Term :name="stage.label" /></th>
-        <th scope="col" class="num">Dominant</th>
+        <th v-if="dominant" scope="col" class="num">Dominant</th>
       </tr>
     </thead>
     <tbody>
-      <tr v-for="row in rows" :key="row.element">
-        <th scope="row">{{ row.element }}</th>
+      <tr v-for="row in rows" :key="row.key">
+        <th scope="row">{{ row.label }}</th>
         <td
           v-for="stage in stages"
           :key="stage.key"
@@ -28,10 +28,10 @@
         >
           {{ num.format(row.gwp_by_stage[stage.key]) }}
         </td>
-        <td class="num">{{ row.dominant_stage }} {{ percent.format(row.dominant_share) }}</td>
+        <td v-if="dominant" class="num">{{ row.dominant_stage }} {{ percent.format(row.dominant_share ?? 0) }}</td>
       </tr>
       <tr v-if="rows.length === 0">
-        <td :colspan="stages.length + 2" class="u-text-muted">No classified building elements in this project.</td>
+        <td :colspan="stages.length + (dominant ? 2 : 1)" class="u-text-muted">{{ emptyLabel }}</td>
       </tr>
     </tbody>
   </table>
@@ -39,12 +39,27 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { ElementStages, StageTotal, Units } from '@/api/overview';
+import type { StageTotal, Units } from '@/api/overview';
 import Term from '@/components/atoms/Term.vue';
 import { amount, percent } from '@/format';
 
-const props = defineProps<{ stages: StageTotal[]; rows: ElementStages[]; units: Units }>();
+export interface StageRow {
+  key: string;
+  label: string;
+  gwp_by_stage: Record<string, number>;
+  dominant_stage?: string; // from the backend; the column shows only when rows carry it
+  dominant_share?: number;
+}
+
+const props = defineProps<{
+  stages: StageTotal[];
+  rows: StageRow[];
+  units: Units;
+  rowHeader: string;
+  emptyLabel: string;
+}>();
 const num = computed(() => amount(props.units));
+const dominant = computed(() => props.rows.some((row) => row.dominant_stage !== undefined));
 
 // Shading geometry only: three steps of the grey ramp, each with an AA text colour.
 const largest = computed(() =>

@@ -78,6 +78,18 @@
   </section>
 
   <section class="sheet__panel passport__section">
+    <h2 class="sheet__panel-title">Material by stage</h2>
+    <p class="u-text-muted">The ten materials with the most whole-life carbon, stage by stage.</p>
+    <StageMatrix
+      :stages="overview.stages"
+      :rows="overview.material_hotspots.map((h) => ({ key: pairKey(h), label: materialLabel(h), gwp_by_stage: h.gwp_by_stage }))"
+      :units="overview.units"
+      row-header="Material"
+      empty-label="No materials in this project."
+    />
+  </section>
+
+  <section class="sheet__panel passport__section">
     <h2 class="sheet__panel-title">Material by material</h2>
     <p class="u-text-muted">
       The ten materials with the most whole-life carbon. Heavy is not the same as intense: compare the mass with
@@ -100,6 +112,7 @@
 import { computed, ref } from 'vue';
 import BrickWall from '@/components/BrickWall.vue';
 import MaterialSheet from '@/components/MaterialSheet.vue';
+import StageMatrix from '@/components/StageMatrix.vue';
 import ShowMore from '@/components/atoms/ShowMore.vue';
 import Term from '@/components/atoms/Term.vue';
 import type { Overview } from '@/api/overview';

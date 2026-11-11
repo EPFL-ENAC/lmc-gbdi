@@ -89,7 +89,13 @@
 
       <section class="sheet__panel">
         <h2 class="sheet__panel-title">Element by stage</h2>
-        <StageMatrix :stages="overview.stages" :rows="overview.element_stages" :units="units" />
+        <StageMatrix
+          :stages="overview.stages"
+          :rows="overview.element_stages.map((e) => ({ ...e, key: e.element, label: e.element }))"
+          :units="units"
+          row-header="Element"
+          empty-label="No classified building elements in this project."
+        />
         <p class="sheet__note">
           Not classified: {{ num.format(overview.not_classified.gwp) }} {{ units.carbon }},
           {{ percent.format(overview.not_classified.share) }} of the total.
