@@ -52,13 +52,18 @@ import Term from '@/components/atoms/Term.vue';
 import { STAGE_COLORS } from '@/dataviz';
 import { amount, figure, percent, three } from '@/format';
 
-const props = defineProps<{ hotspot: MaterialHotspot; stages: StageTotal[]; rank: number; units: Units }>();
+// `largest`: the largest positive stage across every card, so the cards share one scale.
+const props = defineProps<{
+  hotspot: MaterialHotspot;
+  stages: StageTotal[];
+  rank: number;
+  units: Units;
+  largest: number;
+}>();
 const num = computed(() => amount(props.units));
 
-// Bar geometry only: against the largest positive stage of this material; a
-// negative stage keeps its signed figure and draws no bar.
-const largest = computed(() => Math.max(...Object.values(props.hotspot.gwp_by_stage), 0));
-const barWidth = (value: number) => (value > 0 && largest.value > 0 ? (value / largest.value) * 100 : 0);
+// Bar geometry only: a negative stage keeps its signed figure and draws no bar.
+const barWidth = (value: number) => (value > 0 && props.largest > 0 ? (value / props.largest) * 100 : 0);
 </script>
 
 <style scoped lang="scss">

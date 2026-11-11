@@ -22,14 +22,18 @@
       {{ rankBy === 'mass' ? 'The ten heaviest materials, and the carbon each carries.' : 'The ten materials with the most whole-life carbon, and what each weighs.' }}
       One colour per material in both walls; one brick is one per cent.
     </p>
+    <p class="passport__cover">
+      Together, these ten make {{ percent.format(cover.carbon) }} of the whole-life carbon and
+      {{ percent.format(cover.mass) }} of the mass.
+    </p>
     <div class="grid-2-col passport__walls">
       <figure class="passport__wall">
         <figcaption>Mass, {{ num.format(overview.total_mass_kg) }} {{ overview.units.mass }}</figcaption>
-        <BrickWall :parts="ranked.map((r) => ({ color: r.color, share: r.share_of_mass ?? 0 }))" label="Mass by material" />
+        <BrickWall :parts="ranked.map((r) => ({ color: r.color, label: r.label, share: r.share_of_mass ?? 0 }))" label="Mass by material" />
       </figure>
       <figure class="passport__wall">
         <figcaption>Whole-life carbon, modules A to C, {{ num.format(overview.headline.whole_life) }} {{ overview.units.carbon }}</figcaption>
-        <BrickWall :parts="ranked.map((r) => ({ color: r.color, share: r.share }))" label="Whole-life carbon by material" />
+        <BrickWall :parts="ranked.map((r) => ({ color: r.color, label: r.label, share: r.share }))" label="Whole-life carbon by material" />
       </figure>
     </div>
     <table class="passport__legend">
@@ -74,10 +78,22 @@
   </section>
 
   <section class="sheet__panel passport__section">
+    <h2 class="sheet__panel-title">Material by stage</h2>
+    <p class="u-text-muted">The ten materials with the most whole-life carbon, stage by stage.</p>
+    <StageMatrix
+      :stages="overview.stages"
+      :rows="overview.material_hotspots.map((h) => ({ key: pairKey(h), label: materialLabel(h), gwp_by_stage: h.gwp_by_stage }))"
+      :units="overview.units"
+      row-header="Material"
+      empty-label="No materials in this project."
+    />
+  </section>
+
+  <section class="sheet__panel passport__section">
     <h2 class="sheet__panel-title">Material by material</h2>
     <p class="u-text-muted">
       The ten materials with the most whole-life carbon. Heavy is not the same as intense: compare the mass with
-      the carbon per kg.
+      the carbon per kg. The bars of every card share one scale.
     </p>
     <div class="grid-2-col">
       <MaterialSheet
@@ -87,6 +103,7 @@
         :stages="overview.stages"
         :units="overview.units"
         :rank="i + 1"
+        :largest="largestStage"
       />
     </div>
   </section>
@@ -96,6 +113,7 @@
 import { computed, ref } from 'vue';
 import BrickWall from '@/components/BrickWall.vue';
 import MaterialSheet from '@/components/MaterialSheet.vue';
+import StageMatrix from '@/components/StageMatrix.vue';
 import ShowMore from '@/components/atoms/ShowMore.vue';
 import Term from '@/components/atoms/Term.vue';
 import type { Overview } from '@/api/overview';
@@ -125,6 +143,18 @@ const ranked = computed(() => {
   }));
 });
 
+// ponytail: the ten backend shares summed here, as the payload has no such total;
+// move it into the overview when a backend PR next touches it.
+const cover = computed(() => ({
+  carbon: ranked.value.reduce((sum, r) => sum + r.share, 0),
+  mass: ranked.value.reduce((sum, r) => sum + (r.share_of_mass ?? 0), 0),
+}));
+
+// Bar geometry only: the largest positive stage of the ten, one scale for every card.
+const largestStage = computed(() =>
+  Math.max(0, ...props.overview.material_hotspots.flatMap((h) => Object.values(h.gwp_by_stage))),
+);
+
 // The materials the wall paints as "every other", in the same ranking.
 const open = ref(false);
 const rest = computed(() => {
@@ -147,6 +177,10 @@ const rest = computed(() => {
 
 .passport__section p {
   margin: 0;
+}
+
+.passport__cover {
+  font-size: tokens.$text-size-lg;
 }
 
 .passport__head {

@@ -29,14 +29,31 @@
         <text :x="L" :y="T - 4">GWP ({{ units.carbon }})</text>
       </g>
       <g v-for="p in points" :key="p.key" class="intensity__point">
-        <title>{{ p.name }}</title>
-        <circle :cx="p.cx" :cy="p.cy" r="5" />
-        <text :x="p.flip ? p.cx - 9 : p.cx + 9" :y="p.cy + 4" :text-anchor="p.flip ? 'end' : 'start'">
-          {{ p.label }}
-        </text>
+        <title>{{ p.rank }}. {{ p.name }}</title>
+        <circle :cx="p.cx" :cy="p.cy" r="9" />
+        <text :x="p.cx" :y="p.cy + 4" text-anchor="middle">{{ p.rank }}</text>
       </g>
     </svg>
-    <figcaption class="intensity__caption">{{ caption }}</figcaption>
+    <!-- The legend (#87): what a dot and a dashed line stand for, then the numbers'
+         names, as the material cards rank them. -->
+    <figcaption class="intensity__caption">
+      <ul class="intensity__keys">
+        <li>
+          <svg viewBox="0 0 16 16" class="intensity__key" aria-hidden="true"><circle cx="8" cy="8" r="7" /></svg>
+          One material, at its mass and its whole-life carbon. The number is its rank by carbon.
+        </li>
+        <li>
+          <svg viewBox="0 0 24 16" class="intensity__key intensity__key--iso" aria-hidden="true">
+            <line x1="0" y1="14" x2="24" y2="2" />
+          </svg>
+          Equal carbon per kg, in {{ units.intensity }}: a material above a line is more carbon intense.
+        </li>
+      </ul>
+      <ol class="intensity__names">
+        <li v-for="p in points" :key="p.key" :value="p.rank">{{ p.name }}</li>
+      </ol>
+      <p>{{ caption }}</p>
+    </figcaption>
   </figure>
 </template>
 
@@ -44,6 +61,7 @@
 import { computed, useId } from 'vue';
 import type { MaterialHotspot, Units } from '@/api/overview';
 import { kg } from '@/format';
+import { materialLabel, pairKey } from '@/materials';
 
 const props = defineProps<{ hotspots: MaterialHotspot[]; units: Units }>();
 
@@ -55,7 +73,8 @@ const clipId = `intensity-${useId()}`;
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact' });
 
 // Plot geometry only: log10 positions within powers-of-ten bounds.
-const plotted = computed(() => props.hotspots.filter((h) => h.mass_kg > 0 && h.gwp > 0));
+const ranks = computed(() => props.hotspots.map((h, i) => ({ ...h, rank: i + 1 })));
+const plotted = computed(() => ranks.value.filter((h) => h.mass_kg > 0 && h.gwp > 0));
 const bounds = (values: number[]) => [
   10 ** Math.floor(Math.log10(Math.min(...values))),
   10 ** Math.ceil(Math.log10(Math.max(...values))),
@@ -83,24 +102,18 @@ const isoLines = computed(() => {
 });
 
 const points = computed(() =>
-  plotted.value.map((h) => {
-    const name = h.material || h.epd_product;
-    const cx = x(h.mass_kg);
-    return {
-      key: `${h.material}|${h.epd_product}`,
-      name,
-      // Long EPD names are cut; the full name is the point's tooltip.
-      label: name.length > 24 ? `${name.slice(0, 23)}…` : name,
-      cx,
-      cy: y(h.gwp),
-      flip: cx > W * 0.7, // labels near the right edge read leftwards
-    };
-  }),
+  plotted.value.map((h) => ({
+    key: pairKey(h),
+    name: materialLabel(h),
+    rank: h.rank, // the dot shows its rank: names collided, numbers do not
+    cx: x(h.mass_kg),
+    cy: y(h.gwp),
+  })),
 );
 
 const skipped = computed(() => props.hotspots.length - plotted.value.length);
 const summary = computed(
-  () => `${plotted.value.length} materials by mass and whole-life carbon; the same values are in the hotspot table.`,
+  () => `${plotted.value.length} materials by mass and whole-life carbon; the same values are in the material tables.`,
 );
 const caption = computed(
   () =>
@@ -139,16 +152,59 @@ const caption = computed(
   fill: tokens.$dataviz-axis-text;
 }
 
-.intensity__point circle {
-  fill: tokens.$color-primary;
+.intensity__point circle,
+.intensity__key circle {
+  fill: tokens.$color-primary-strong; // white rank numbers on it stay legible
 }
 
 .intensity__point text {
-  fill: tokens.$color-text;
+  fill: tokens.$color-text-on-primary;
+  font-weight: tokens.$text-weight-bold;
+}
+
+.intensity__key--iso line {
+  stroke: tokens.$illustration-stroke;
+  stroke-width: tokens.$illustration-stroke-width;
+  stroke-dasharray: 4 4;
 }
 
 .intensity__caption {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-sm;
   font-size: tokens.$text-size-xs;
   color: tokens.$color-text-muted;
+}
+
+.intensity__caption p {
+  margin: 0;
+}
+
+.intensity__keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$spacing-xs tokens.$spacing-xl;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.intensity__keys li {
+  display: flex;
+  align-items: center;
+  gap: tokens.$spacing-sm;
+}
+
+.intensity__key {
+  flex: none;
+  width: tokens.$spacing-lg;
+  height: tokens.$spacing-md;
+}
+
+.intensity__names {
+  columns: 2 14rem;
+  margin: 0;
+  padding-left: tokens.$spacing-xl;
+  color: tokens.$color-text;
 }
 </style>
