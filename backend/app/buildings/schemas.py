@@ -34,7 +34,6 @@ class BuildingSummary(BaseModel):
     whole_life: float | None
     whole_life_per_m2: float | None  # None when the gross floor area is not declared
     stages_per_m2: dict[str, float] | None  # keyed by StageTotal.key
-    leti_band: str | None
     draft: bool = False  # stored despite reject findings
     blocked: list[str] = []  # the parts its rejects block: "carbon", "materials"
     rejects: list[str] = []  # what the rejects say, for the list and the page

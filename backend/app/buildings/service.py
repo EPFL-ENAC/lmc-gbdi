@@ -99,10 +99,6 @@ def per_m2(value: float, o: Overview) -> float | None:
     return value / area if area else None
 
 
-def leti_band(o: Overview) -> str | None:
-    return next((b.band for b in o.benchmarks if b.key == "leti"), None)
-
-
 def summary(upload: Upload, o: Overview) -> BuildingSummary:
     area = o.project.gross_floor_area_m2
     return BuildingSummary(
@@ -119,7 +115,6 @@ def summary(upload: Upload, o: Overview) -> BuildingSummary:
         whole_life=o.headline.whole_life,
         whole_life_per_m2=o.headline.per_m2_gross,
         stages_per_m2={s.key: s.gwp / area for s in o.stages} if area else None,
-        leti_band=leti_band(o),
         draft=upload.draft,
         rejects=rejects(upload) if upload.draft else [],
     )
@@ -144,7 +139,6 @@ def draft_summary(
         whole_life=None,
         whole_life_per_m2=None,
         stages_per_m2=None,
-        leti_band=None,
         draft=True,
         blocked=blocked(upload),
         rejects=rejects(upload),

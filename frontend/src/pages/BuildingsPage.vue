@@ -137,7 +137,6 @@
               </template>
             </td>
             <td class="num portfolio__figure">{{ noCarbon(b) ? 'draft' : figure(b.whole_life_per_m2, kg) }}</td>
-            <td>{{ b.leti_band ?? 'not placed' }}</td>
           </tr>
         </tbody>
       </table>
@@ -235,20 +234,17 @@ const rejectsFirst = computed(() => {
 const router = useRouter();
 
 // Sortable columns: a value per building; missing values always sort last.
-type SortKey = 'code' | 'area' | 'whole_life' | 'leti';
+type SortKey = 'code' | 'area' | 'whole_life';
 const VALUE: Record<SortKey, (b: BuildingSummary) => string | number | null> = {
   code: (b) => code(b),
   area: (b) => b.gross_floor_area_m2,
   whole_life: (b) => b.whole_life_per_m2,
-  leti: (b) => b.leti_band,
 };
 const COLUMNS: { label: string; key?: SortKey; num?: boolean }[] = [
   { label: 'Building', key: 'code' },
   { label: 'm² gross', key: 'area', num: true },
   { label: 'kg CO₂e per m², by life-cycle stage' },
   { label: 'Whole life, net', key: 'whole_life', num: true },
-  // ponytail: band labels sort as text (A+ before A); the bands follow whole life anyway.
-  { label: 'LETI band', key: 'leti' },
 ];
 const sort = ref<{ key: SortKey; asc: boolean }>({ key: 'whole_life', asc: true });
 const sortBy = (key: SortKey) => (sort.value = { key, asc: sort.value.key === key ? !sort.value.asc : true });

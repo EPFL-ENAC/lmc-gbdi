@@ -102,19 +102,6 @@
           />
         </div>
       </section>
-
-      <section v-if="letiA && letiB" class="compare__section">
-        <h2 class="compare__title">{{ letiA.name }}</h2>
-        <p class="u-text-muted">{{ bothScope(letiA.scope) }}</p>
-        <!-- One scale, both buildings tagged on it, as on the Benchmark comparison. -->
-        <RatingLabel
-          :benchmark="letiA"
-          :marks="[
-            { key: 'a', value: letiA.value, band: letiA.band },
-            { key: 'b', value: letiB.value, band: letiB.band },
-          ]"
-        />
-      </section>
     </template>
   </q-page>
 </template>
@@ -123,10 +110,8 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { buildingPath } from '@/buildingLayouts';
-import { bothScope } from '@/compare';
 import { code, fetchBuildings, fetchComparison, noCarbon, type BuildingSummary, type ComparedBuilding, type Comparison } from '@/api/buildings';
 import PairedBars from '@/components/PairedBars.vue';
-import RatingLabel from '@/components/RatingLabel.vue';
 import { figure, kg, percent } from '@/format';
 
 const SIDES = ['a', 'b'] as const;
@@ -146,8 +131,6 @@ const b = computed(() => idOf(inBuilding.value ? route.params.other : route.quer
 const options = computed(() =>
   buildings.value.filter((x) => !noCarbon(x)).map((x) => ({ id: x.id, label: `${code(x)}, ${x.project_name ?? 'unnamed'}` })),
 );
-const letiA = computed(() => comparison.value?.a.benchmarks.find((x) => x.key === 'leti'));
-const letiB = computed(() => comparison.value?.b.benchmarks.find((x) => x.key === 'leti'));
 
 // Once both are picked, the comparison lives under the first building, in its layouts.
 const pick = (side: 'a' | 'b', id: number) => {

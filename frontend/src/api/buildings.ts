@@ -25,7 +25,6 @@ export interface BuildingSummary {
   whole_life: number | null; // null for a draft whose rejects block carbon
   whole_life_per_m2: number | null;
   stages_per_m2: Record<string, number> | null;
-  leti_band: string | null;
   draft: boolean; // stored despite reject findings
   blocked: ('carbon' | 'materials')[]; // the parts its rejects block
   rejects: string[];

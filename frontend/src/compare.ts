@@ -32,6 +32,4 @@ export const noDataTypes = (...os: Overview[]) =>
   os.every((o) => o.data_types.every((d) => d.key === 'undeclared' || d.share === 0));
 
 
-// A benchmark's scope text speaks of "this project"; on a compare page, of both.
-export const bothScope = (scope: string) => scope.replace(/This project/g, 'Each building');
 export const NO_DATA_TYPES_SENTENCE = 'Neither building declares the data type of its materials yet.';
