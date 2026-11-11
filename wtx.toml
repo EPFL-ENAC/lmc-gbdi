@@ -1,0 +1,105 @@
+# wtx: every branch gets its own worktree, ports, tmux session and agent.
+# Reference for every key: https://github.com/EPFL-ENAC/wtx/blob/main/docs/schema.md
+schema_version = 1
+
+[repo]
+name = "lmc-gbdi"
+base_branch = "dev"
+# The single source for the push guard, the completion and the deny rules.
+protected_branches = ["dev", "main"]
+
+# One offset per worktree, one port per family at that offset.
+[ports]
+
+[[ports.family]]
+name = "backend"
+main = 8000   # what the main checkout keeps
+
+[[ports.family]]
+name = "frontend"
+main = 9000   # what the main checkout keeps
+
+# Gitignored files a fresh worktree needs. Never overwritten.
+[seed]
+copy = [".env", "backend/.env"]
+symlink = ["backend/data"]
+
+[deps]
+
+[[deps.step]]
+if_missing = "frontend/node_modules"
+cwd = "frontend"
+run = "npm ci"
+
+[[deps.step]]
+if_missing = "backend/.venv"
+cwd = "backend"
+run = "uv sync --frozen"
+
+# The agent pane fills the left half, the rest stack on the right.
+[panes]
+
+[[panes.pane]]
+name = "agent"
+role = "agent"
+
+[[panes.pane]]
+name = "backend"
+role = "server"
+cwd = "backend"
+cmd = "uv run alembic upgrade head && uv run uvicorn app.main:app --reload --reload-dir app --reload-dir \"$OPENBDF_PATH\" --port $BACKEND_PORT"
+log = true   # mirrored to .wt-logs/, the agent reads it
+
+[[panes.pane]]
+name = "frontend"
+role = "server"
+cwd = "frontend"
+cmd = "npx quasar dev --port $FRONTEND_PORT"
+log = true   # mirrored to .wt-logs/, the agent reads it
+
+[[panes.pane]]
+name = "shell"
+role = "shell"
+
+[agent]
+tool = "claude"
+llm = "opus"
+subagent_model = "sonnet"
+auto_compact_window = 200000
+explore_agent_model = "haiku"
+
+# Plan on one model, implement on another. A brief starts on
+# plan_model in plan mode. With Claude, accepting the plan carries
+# the same conversation on to build_model, at the effort the plan
+# asked for. With opencode the agent switch does it, and the
+# effort routing does not apply.
+[agent.orchestration]
+enabled = true
+plan_model = "fable"
+plan_effort = "low"
+build_model = "opus"
+build_effort = "medium"
+
+# Added to the baseline wtx ships. A repo can tighten, never loosen.
+[permissions]
+allow = ["Bash(make build)", "Bash(make format)", "Bash(make lint)", "Bash(make test)", "Bash(uv run ruff *)", "Bash(uv run pytest *)", "Bash(npm run lint)", "Bash(npm run type-check)", "Bash(npm run build)"]
+deny = ["Bash(make migration*)", "Bash(uv run alembic revision*)", "Bash(alembic revision*)"]
+
+# Run by `wtx land --local`.
+[checks]
+lint = ["make lint"]
+test = ["make test"]
+
+[[repos]]
+name = "books"
+path = "../books"
+access = "read"   # read free, never writable
+base_branch = "main"
+
+[[repos]]
+name = "lmc-openbdf"
+path = "../lmc-openbdf"
+access = "pair"   # read free, edits only through a paired worktree
+base_branch = "main"
+env_prefix = "OPENBDF"
+editable_install = { cwd = "backend", run = "uv pip install --quiet --editable {path}" }
