@@ -9,6 +9,16 @@ export interface Finding {
   sheet: string | null;
   row: number | null;
   message: string;
+  count: number; // above 1, the entry stands for the rest of its code and sheet
+}
+
+// The findings of one code on one sheet, rejects first, then the most frequent.
+export interface FindingGroup {
+  code: string;
+  severity: Finding['severity'];
+  sheet: string | null;
+  count: number;
+  examples: Finding[]; // the first ones, then one entry for the rest
 }
 
 export interface BuildingSummary {
@@ -16,6 +26,8 @@ export interface BuildingSummary {
   file_name: string;
   uploaded_at: string;
   findings: number;
+  dropped_lines: number; // bill of materials lines dropped for a missing field
+  dropped_lines_with_data: number; // of those, the ones that carried mass or results
   project_name: string | null;
   country: string | null;
   gross_floor_area_m2: number | null;
@@ -25,6 +37,8 @@ export interface BuildingSummary {
   whole_life: number | null; // null for a draft whose rejects block carbon
   whole_life_per_m2: number | null;
   stages_per_m2: Record<string, number> | null;
+  scope: string | null; // of whole_life; null with it
+  lcia_methodology: string | null; // as General Information declares it
   draft: boolean; // stored despite reject findings
   blocked: ('carbon' | 'materials')[]; // the parts its rejects block
   rejects: string[];
@@ -37,7 +51,8 @@ export interface DraftView {
   project_fields: ProjectField[];
   rows_read: number;
   rejects: Finding[];
-  findings: Finding[]; // everything openbdf reported, warnings included
+  findings_count: number; // everything openbdf reported, warnings included
+  finding_groups: FindingGroup[];
   blocked: ('carbon' | 'materials')[];
   gross_floor_area_m2: number | null;
   total_mass_kg: number | null;
@@ -46,7 +61,8 @@ export interface DraftView {
 
 export interface Rejection {
   message: string;
-  findings: Finding[];
+  findings_count: number;
+  finding_groups: FindingGroup[];
 }
 
 export interface ComparedBuilding {
@@ -56,6 +72,8 @@ export interface ComparedBuilding {
   country: string | null;
   gross_floor_area_m2: number | null;
   rows_read: number;
+  scope: string;
+  lcia_methodology: string | null;
   whole_life_per_m2: number | null;
   upfront_per_m2: number | null;
   module_d1_per_m2: number | null;
@@ -70,6 +88,8 @@ export interface ComparedRow {
 export interface Comparison {
   a: ComparedBuilding;
   b: ComparedBuilding;
+  comparability: 'same_method' | 'methods_differ' | 'method_not_declared'; // of their LCIA methods
+  method_note: string; // why two LCIA methods do not compare one to one
   ratio: number | null;
   stages: ComparedRow[];
   elements: ComparedRow[];

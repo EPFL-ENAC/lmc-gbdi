@@ -17,7 +17,7 @@ from openbdf.model.tables import ProjectRecord
 from app.buildings.ingest import Finding, RejectedWorkbook, blocked_parts
 from app.buildings.models import Upload
 from app.buildings.repo import as_text, general_of, material_row
-from app.buildings.service import compared, draft_summary, summary
+from app.buildings.service import comparability, compared, draft_summary, summary
 from app.overview.repo import GWP_FIELDS, read_project
 from app.overview.service import build_overview, declared
 from tests.test_overview import write_project
@@ -80,6 +80,20 @@ def test_summary_and_compared_build_from_an_overview(tmp_path):
     s = summary(upload, o)
     assert (s.useful_floor_area_m2, s.study_period_years) == (100, 50)
     assert compared(upload, o).gross_floor_area_m2 == 200
+
+
+@pytest.mark.parametrize(
+    ("a", "b", "verdict"),
+    [
+        ("EN 15804:2012+A2:2019", "EN 15804:2012+A2:2019", "same_method"),
+        # A1 leaves biogenic carbon out of the GWP total, A2 counts it in.
+        ("EN 15804+A1", "EN 15804:2012+A2:2019", "methods_differ"),
+        (None, "EN 15804:2012+A2:2019", "method_not_declared"),
+        ("", "", "method_not_declared"),
+    ],
+)
+def test_two_buildings_compare_only_within_one_method(a, b, verdict):
+    assert comparability(a, b) == verdict
 
 
 def reject(code, sheet):
@@ -168,3 +182,78 @@ def test_warm_up_skips_a_building_it_cannot_read(monkeypatch):
     monkeypatch.setattr(service, "summary_of", summary_of)
     asyncio.run(service.warm_up())
     assert read == [2]
+
+
+def upload(client, replace):
+    files = {"file": ("AT-09.xlsx", b"workbook")}
+    return client.post(f"/api/buildings?replace={replace}&draft=true", files=files)
+
+
+@pytest.fixture
+def client():
+    from fastapi.testclient import TestClient
+
+    from app.db import get_session
+    from app.main import app
+
+    app.dependency_overrides[get_session] = lambda: None
+    yield TestClient(app)
+    app.dependency_overrides.clear()
+
+
+def test_replacing_an_unknown_building_is_404_before_the_parse(client, monkeypatch):
+    from app.buildings import repo, routes
+
+    async def get_upload(_session, project_id):
+        raise repo.ProjectNotFound(project_id)
+
+    async def in_parser(*_args):
+        raise AssertionError("parsed")
+
+    monkeypatch.setattr(repo, "get_upload", get_upload)
+    monkeypatch.setattr(routes, "in_parser", in_parser)
+    assert upload(client, 999).status_code == 404
+
+
+def test_a_replace_is_kept_when_the_client_leaves(client, monkeypatch, tmp_path):
+    """The old building is deleted already: deleting the new one would lose both."""
+    from starlette.requests import Request
+
+    from app.buildings import repo, routes, service
+
+    new = summary(
+        Upload(
+            project_record_id=200,
+            file_name="AT-09.xlsx",
+            uploaded_at=datetime.now(UTC),
+            findings=[],
+        ),
+        build_overview(read_project(write_project(tmp_path))),
+    )
+    calls: list[tuple] = []
+
+    async def get_upload(_session, project_id):
+        return None
+
+    async def in_parser(fn, workbook, file_name, draft, replace):
+        calls.append(("ingest", draft, replace))
+        return new, None
+
+    async def delete(_session, project_id):
+        calls.append(("delete", project_id))
+
+    async def left(_request):
+        return True
+
+    monkeypatch.setattr(repo, "get_upload", get_upload)
+    monkeypatch.setattr(routes, "in_parser", in_parser)
+    monkeypatch.setattr(service, "delete", delete)
+    monkeypatch.setattr(
+        service, "forget", lambda project_id: calls.append(("forget", project_id))
+    )
+    monkeypatch.setattr(service, "remember", lambda *_: calls.append(("remember",)))
+    monkeypatch.setattr(Request, "is_disconnected", left)
+
+    response = upload(client, 121)
+    assert (response.status_code, response.json()["id"]) == (201, 200)
+    assert calls == [("ingest", True, 121), ("forget", 121), ("remember",)]

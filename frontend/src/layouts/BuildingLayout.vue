@@ -47,6 +47,11 @@
         </div>
       </nav>
     </Teleport>
+    <p v-if="current?.dropped_lines" class="building-draft" role="note">
+      openbdf dropped {{ kg.format(current.dropped_lines) }} bill of materials lines that miss a required field.
+      {{ kg.format(current.dropped_lines_with_data) }} of them carried a mass or results, and no figure here counts
+      them.
+    </p>
     <DraftPage v-if="draftOnly" :id="id" />
     <!-- Not before the list settles: until then a carbon-blocked draft looks like any
          building, and the Overview would ask for figures it cannot have (409). -->
@@ -64,6 +69,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { code, fetchBuildings, noCarbon, type BuildingSummary } from '@/api/buildings';
 import { buildingPath } from '@/buildingLayouts';
+import { kg } from '@/format';
 import DraftPage from '@/pages/DraftPage.vue';
 
 const route = useRoute();

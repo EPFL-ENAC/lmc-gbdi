@@ -5,6 +5,7 @@ not compare. Gross, because the COLA workbooks declare no useful floor area.
 """
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -17,13 +18,26 @@ class Finding(BaseModel):
     sheet: str | None
     row: int | None
     message: str
+    count: int = 1  # above 1, the entry stands for the rest of its code and sheet
+
+
+class FindingGroup(BaseModel):
+    """The findings of one code on one sheet, as the pages list them."""
+
+    code: str
+    severity: str
+    sheet: str | None
+    count: int  # every finding of the group, the condensed ones included
+    examples: list[Finding]  # the first ones, then one entry for the rest
 
 
 class BuildingSummary(BaseModel):
     id: int
     file_name: str
     uploaded_at: datetime
-    findings: int  # openbdf warnings kept with the upload
+    findings: int  # openbdf findings kept with the upload
+    dropped_lines: int = 0  # bill of materials lines dropped for a missing field
+    dropped_lines_with_data: int = 0  # of those, the ones that carried mass or results
     project_name: str | None
     country: str | None
     gross_floor_area_m2: float | None
@@ -34,6 +48,8 @@ class BuildingSummary(BaseModel):
     whole_life: float | None
     whole_life_per_m2: float | None  # None when the gross floor area is not declared
     stages_per_m2: dict[str, float] | None  # keyed by StageTotal.key
+    scope: str | None = None  # of whole_life; None with it
+    lcia_methodology: str | None = None  # as General Information declares it
     draft: bool = False  # stored despite reject findings
     blocked: list[str] = []  # the parts its rejects block: "carbon", "materials"
     rejects: list[str] = []  # what the rejects say, for the list and the page
@@ -50,7 +66,8 @@ class DraftView(BaseModel):
     project_fields: list[ProjectField]
     rows_read: int
     rejects: list[Finding]
-    findings: list[Finding]  # everything openbdf reported, warnings included
+    findings_count: int  # everything openbdf reported, warnings included
+    finding_groups: list[FindingGroup]  # rejects first, then the most frequent
     blocked: list[str]
     gross_floor_area_m2: float | None
     total_mass_kg: float | None  # None when the rejects block the materials too
@@ -59,7 +76,8 @@ class DraftView(BaseModel):
 
 class Rejection(BaseModel):
     message: str
-    findings: list[Finding]
+    findings_count: int
+    finding_groups: list[FindingGroup]  # rejects first, then the most frequent
 
 
 class ComparedBuilding(BaseModel):
@@ -69,6 +87,8 @@ class ComparedBuilding(BaseModel):
     country: str | None
     gross_floor_area_m2: float | None
     rows_read: int
+    scope: str
+    lcia_methodology: str | None
     whole_life_per_m2: float | None
     upfront_per_m2: float | None
     module_d1_per_m2: float | None
@@ -80,9 +100,14 @@ class ComparedRow(BaseModel):
     b: float | None
 
 
+Comparability = Literal["same_method", "methods_differ", "method_not_declared"]
+
+
 class Comparison(BaseModel):
     a: ComparedBuilding
     b: ComparedBuilding
+    comparability: Comparability
+    method_note: str  # why two LCIA methods do not compare one to one
     ratio: float | None  # b's whole life per m² over a's
     stages: list[ComparedRow]  # kg CO₂e per m²
     elements: list[ComparedRow]  # kg CO₂e per m², OpenBDF Tier 2 order

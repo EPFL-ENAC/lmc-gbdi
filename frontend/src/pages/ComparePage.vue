@@ -34,6 +34,7 @@
       <p v-else-if="comparison === null" class="sheet__panel u-text-muted">Loading the comparison…</p>
 
       <template v-else>
+        <MethodNotice :comparison="comparison" />
         <section class="sheet__panel" aria-label="Whole-life carbon per m²">
           <div class="duel">
             <article v-for="side in SIDES" :key="side" class="duel__side">
@@ -45,7 +46,7 @@
                 {{ comparison[side].project_name ?? 'Unnamed project' }}, {{ comparison[side].country ?? 'country not declared' }}
               </p>
               <p class="duel__figure">{{ figure(comparison[side].whole_life_per_m2, kg) }}</p>
-              <p>kg CO₂e per m² over the whole life, modules A to C.</p>
+              <p>kg CO₂e per m², {{ comparison[side].scope }}.</p>
               <dl class="duel__facts">
                 <div><dt>Gross floor area</dt><dd>{{ figure(comparison[side].gross_floor_area_m2, kg) }} m²</dd></div>
                 <div><dt>Upfront, A1–A5</dt><dd>{{ figure(comparison[side].upfront_per_m2, kg) }} kg/m²</dd></div>
@@ -115,6 +116,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { buildingPath } from '@/buildingLayouts';
 import { code, fetchBuildings, fetchComparison, noCarbon, type BuildingSummary, type ComparedBuilding, type Comparison } from '@/api/buildings';
+import MethodNotice from '@/components/MethodNotice.vue';
 import PairedBars from '@/components/PairedBars.vue';
 import { figure, kg, percent } from '@/format';
 

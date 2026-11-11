@@ -53,16 +53,26 @@ async def list_buildings(session: Session) -> list[BuildingSummary]:
     },
 )
 async def upload_building(
-    request: Request, file: UploadFile, session: Session, draft: bool = False
+    request: Request,
+    file: UploadFile,
+    session: Session,
+    draft: bool = False,
+    replace: int | None = None,
 ) -> BuildingSummary:
     """Read an OpenBDF workbook with lmc-openbdf and store it. Rejects store nothing,
-    unless `draft`: stored as a draft, without the parts its rejects block."""
+    unless `draft`: stored as a draft, without the parts its rejects block.
+    `replace` deletes that building once the new one is stored; it gets a new id."""
     if not (file.filename or "").lower().endswith(".xlsx"):
         raise HTTPException(415, "Upload an OpenBDF workbook (.xlsx)")
+    if replace is not None:
+        try:  # before the parse, which takes a minute
+            await repo.get_upload(session, replace)
+        except repo.ProjectNotFound:
+            raise HTTPException(404, f"No building {replace}") from None
     workbook = await file.read()
     try:
         summary, overview = await in_parser(
-            service.ingest, workbook, file.filename or "", draft
+            service.ingest, workbook, file.filename or "", draft, replace
         )
     except BrokenProcessPool:
         raise HTTPException(
@@ -71,16 +81,23 @@ async def upload_building(
             "memory. Nothing was stored.",
         ) from None
     except RejectedWorkbook as rejected:
+        findings = [f.__dict__ for f in rejected.findings]
         body = Rejection(
             message=f"openbdf rejected {file.filename}: nothing was stored.",
-            findings=[f.__dict__ for f in rejected.findings],
+            findings_count=service.findings_count(findings),
+            finding_groups=service.finding_groups(findings),
         )
         return JSONResponse(body.model_dump(), status_code=422)
     except ValueError as unreadable:
         raise HTTPException(422, f"{file.filename}: {unreadable}") from None
+    except repo.ProjectNotFound:  # deleted by someone else during the parse
+        raise HTTPException(404, f"No building {replace}") from None
+    if replace is not None:
+        service.forget(replace)
     # Uploads queue one at a time: a client that gave up (a proxy timeout) never
-    # learns this one was stored, and would store it twice on retry.
-    if await request.is_disconnected():
+    # learns this one was stored, and would store it twice on retry. Not on a
+    # replace: the old building is gone already, so both would be lost.
+    elif await request.is_disconnected():
         await service.delete(session, summary.id)
         raise HTTPException(499, "The client left before the upload ended.")
     service.remember(summary, overview)

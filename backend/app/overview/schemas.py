@@ -30,6 +30,7 @@ class ProjectInfo(BaseModel):
 
 class Headline(BaseModel):
     whole_life: float
+    scope: str  # the stages the totals cover, e.g. "A–C · whole life"
     upfront: float  # A1–A5
     upfront_share: float  # of the whole life, emitted before the building is used
     per_m2_useful: float | None  # None when the floor area is not declared

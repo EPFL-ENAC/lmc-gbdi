@@ -7,7 +7,7 @@
         <div>
           <h1>Buildings</h1>
           <p class="text-lead">
-            OpenBDF workbooks read by lmc-openbdf. Whole-life carbon, modules A to C, per m² of gross floor area:
+            OpenBDF workbooks read by lmc-openbdf. Whole-life carbon over the modules each one declares, per m² of gross floor area:
             the size of a building drops out, its design stays.
           </p>
         </div>
@@ -26,12 +26,19 @@
           <q-linear-progress indeterminate color="primary" />
         </template>
         <p v-else-if="upload.state === 'added'">
-          Added {{ upload.name }}: {{ kg.format(upload.building.rows_read) }} lines, {{ upload.building.findings }}
-          warnings kept with it.
+          Added {{ upload.name }}: {{ kg.format(upload.building.rows_read) }} lines,
+          {{ kg.format(upload.building.findings) }} findings kept with it.
+          <template v-if="upload.building.dropped_lines">
+            openbdf dropped {{ kg.format(upload.building.dropped_lines) }} lines that miss a required field, and
+            {{ kg.format(upload.building.dropped_lines_with_data) }} of them carried a mass or results.
+          </template>
           <router-link class="link" :to="`/buildings/${upload.building.id}`">Open it</router-link>
         </p>
         <template v-else-if="upload.state === 'rejected'">
-          <p>{{ upload.rejection.message }} The first findings, rejects first:</p>
+          <p>
+            {{ upload.rejection.message }} {{ kg.format(upload.rejection.findings_count) }} findings, by code, rejects
+            first:
+          </p>
           <p>
             <q-btn
               unelevated
@@ -44,15 +51,18 @@
           </p>
           <table class="upload__findings">
             <thead>
-              <tr><th>Severity</th><th>Code</th><th>Sheet</th><th class="num">Row</th><th>Finding</th></tr>
+              <tr><th>Severity</th><th>Code</th><th>Sheet</th><th class="num">Count</th><th>First finding</th></tr>
             </thead>
             <tbody>
-              <tr v-for="(f, i) in rejectsFirst" :key="i">
-                <td>{{ f.severity }}</td>
-                <td>{{ f.code }}</td>
-                <td>{{ f.sheet ?? '' }}</td>
-                <td class="num">{{ f.row ?? '' }}</td>
-                <td>{{ f.message }}</td>
+              <tr v-for="group in upload.rejection.finding_groups" :key="`${group.code} ${group.sheet}`">
+                <td>{{ group.severity }}</td>
+                <td>{{ group.code }}</td>
+                <td>{{ group.sheet }}</td>
+                <td class="num">{{ kg.format(group.count) }}</td>
+                <td>
+                  <template v-if="group.examples[0]?.row != null">Row {{ group.examples[0].row }}: </template
+                  >{{ group.examples[0]?.message }}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -138,6 +148,8 @@
                 </template>
               </td>
               <td class="num portfolio__figure">{{ noCarbon(b) ? 'draft' : figure(b.whole_life_per_m2, kg) }}</td>
+              <td>{{ b.scope }}</td>
+              <td>{{ b.lcia_methodology }}</td>
             </tr>
           </tbody>
         </table>
@@ -209,7 +221,7 @@ async function onPick(event: Event) {
 }
 
 const isRejection = (body: unknown): body is Rejection =>
-  body !== null && typeof body === 'object' && Array.isArray((body as Rejection).findings);
+  body !== null && typeof body === 'object' && Array.isArray((body as Rejection).finding_groups);
 
 async function send(file: File, draft = false) {
   upload.value = { state: 'reading', name: file.name };
@@ -228,12 +240,6 @@ async function send(file: File, draft = false) {
   }
 }
 
-const rejectsFirst = computed(() => {
-  if (upload.value?.state !== 'rejected') return [];
-  const findings = upload.value.rejection.findings;
-  return [...findings.filter((f) => f.severity === 'Reject'), ...findings.filter((f) => f.severity !== 'Reject')].slice(0, 12);
-});
-
 const router = useRouter();
 
 // Sortable columns: a value per building; missing values always sort last.
@@ -248,6 +254,8 @@ const COLUMNS: { label: string; key?: SortKey; num?: boolean }[] = [
   { label: 'm² gross', key: 'area', num: true },
   { label: 'kg CO₂e per m², by life-cycle stage' },
   { label: 'Whole life, net', key: 'whole_life', num: true },
+  { label: 'Scope' },
+  { label: 'Method' },
 ];
 const sort = ref<{ key: SortKey; asc: boolean }>({ key: 'whole_life', asc: true });
 const sortBy = (key: SortKey) => (sort.value = { key, asc: sort.value.key === key ? !sort.value.asc : true });

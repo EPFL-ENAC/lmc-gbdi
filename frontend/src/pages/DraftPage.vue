@@ -40,16 +40,20 @@
       <section class="sheet__panel">
         <h2 class="sheet__panel-title">Everything openbdf reported</h2>
         <p class="u-text-muted">
-          {{ kg.format(draft.findings.length) }} findings, grouped by code, rejects first. Warnings do not block
+          {{ kg.format(draft.findings_count) }} findings, grouped by code, rejects first. Warnings do not block
           anything; they are what to tidy in the workbook.
         </p>
-        <details v-for="group in groups" :key="group.key" class="draft__group">
+        <details
+          v-for="group in draft.finding_groups"
+          :key="`${group.code} ${group.sheet}`"
+          class="draft__group"
+        >
           <summary>
             <strong>{{ group.code }}</strong> {{ group.severity }}, {{ group.sheet ?? 'workbook' }},
-            {{ kg.format(group.items.length) }}×: {{ group.items[0]!.message }}
+            {{ kg.format(group.count) }}×: {{ group.examples[0]?.message }}
           </summary>
           <ol class="draft__findings">
-            <li v-for="(f, i) in group.items" :key="i">
+            <li v-for="(f, i) in group.examples" :key="i">
               <template v-if="f.row !== null">Row {{ f.row }}: </template>{{ f.message }}
             </li>
           </ol>
@@ -66,7 +70,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { fetchDraft, type DraftView, type Finding } from '@/api/buildings';
+import { fetchDraft, type DraftView } from '@/api/buildings';
 import ProjectFieldsTable from '@/components/ProjectFieldsTable.vue';
 import RankedBars, { type Bar } from '@/components/RankedBars.vue';
 import { kg } from '@/format';
@@ -92,18 +96,6 @@ watch(
 const name = computed(
   () => draft.value?.project_fields.find((f) => f.code === 'project_name')?.value ?? 'Unnamed project',
 );
-// Findings by code, severity and sheet, rejects first, then the most frequent.
-const groups = computed(() => {
-  const by = new Map<string, { key: string; code: string; severity: string; sheet: string | null; items: Finding[] }>();
-  for (const f of draft.value?.findings ?? []) {
-    const key = `${f.severity}|${f.code}|${f.sheet ?? ''}`;
-    if (!by.has(key)) by.set(key, { key, code: f.code, severity: f.severity, sheet: f.sheet, items: [] });
-    by.get(key)!.items.push(f);
-  }
-  const rank = (s: string) => (s === 'Reject' ? 0 : s === 'Warning' ? 1 : 2);
-  return [...by.values()].sort((x, y) => rank(x.severity) - rank(y.severity) || y.items.length - x.items.length);
-});
-
 const massBars = computed<Bar[]>(() =>
   [...(draft.value?.material_classes ?? [])]
     .sort((x, y) => y.mass_kg - x.mass_kg)

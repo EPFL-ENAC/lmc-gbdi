@@ -43,6 +43,13 @@ ELEMENTS = {  # kg CO₂ eq, as Excel shows them rounded
     ),
     "2.7 Internal walls": (40329, 148, 0, 1908, "A1–A3", 0.95),
 }
+ELEMENT_TOTALS = {  # kg CO₂ eq, share of the whole life (A–C)
+    "1.1 Foundations and piling": (222160, 0.1735),
+    "2.1 Frame": (266525, 0.2081),
+    "2.2 Upper floors": (476694, 0.3722),
+    "2.5 External envelope including roof finishes": (169578, 0.1324),
+    "2.7 Internal walls": (42385, 0.0331),
+}
 MATERIALS = {  # (material, EPD product): (GWP, mass)
     ("Stahlbeton C25/30", "Beton der Druckfestigkeitsklasse C25/30"): (
         358948.6890979356,
@@ -77,6 +84,8 @@ def test_rows_and_headline_match_the_workbook(overview):
     assert h.per_m2_gross == pytest.approx(234.93198331300084, rel=1e-9)
     assert h.per_m2_useful_per_year == pytest.approx(5.448263097379994, rel=1e-9)
     assert h.module_d1 == pytest.approx(-209782.211595777, rel=1e-9)
+    assert h.module_d2 == 0
+    assert overview.total_mass_kg == pytest.approx(8090747.234717346, rel=1e-9)
 
 
 def test_stages_match_the_workbook(overview):
@@ -93,6 +102,13 @@ def test_elements_match_the_recalculated_sheet(overview):
         for e in overview.element_stages
     }
     assert got == ELEMENTS
+
+
+def test_element_totals_and_shares_match_the_workbook(overview):
+    got = {e.element: (round(e.gwp), round(e.share, 4)) for e in overview.elements}
+    assert got == ELEMENT_TOTALS
+    assert overview.other_classified.gwp == 0
+    assert round(overview.not_classified.gwp) == 103271
 
 
 def test_material_pairs_match_the_workbook(project, overview):

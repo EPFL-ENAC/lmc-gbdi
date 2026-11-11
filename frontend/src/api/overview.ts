@@ -16,6 +16,7 @@ export interface ProjectInfo {
 
 export interface Headline {
   whole_life: number;
+  scope: string; // the stages the totals cover, e.g. "A–C · whole life"
   upfront: number;
   upfront_share: number;
   per_m2_useful: number | null;

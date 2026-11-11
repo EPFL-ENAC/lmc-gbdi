@@ -9,11 +9,14 @@ from fastapi.testclient import TestClient
 from app.config import Settings, get_settings
 from app.main import app
 from app.overview.repo import BOM_FIELDS, GWP_FIELDS, PMD_FIELDS, read_project
+from app.overview.schemas import ModuleCheck
 from app.overview.service import (
+    MODULES,
     BasisUnavailable,
     build_overview,
     in_element,
     on_basis,
+    scope_label,
     study_period,
     text,
 )
@@ -119,6 +122,34 @@ def test_dominant_stage_divides_by_the_element_total(overview):
     frame = overview.element_stages[1]
     assert frame.dominant_stage == "A1–A3"
     assert frame.dominant_share == pytest.approx(36 / 65)
+
+
+AT_09 = ("A1–A3", "A4", "A5", "B1", "B2", "B3", "C1", "C2", "C3", "C4")
+CHILE = ("A1–A3", "A1", "A2", "A3", "A4", "A5", "C1", "C2", "C3", "C4")
+
+
+@pytest.mark.parametrize(
+    ("declared", "results", "label"),
+    [
+        (AT_09, ("A1–A3", "A4", "A5", "B1", "C1"), "A–C · whole life"),
+        # 45 Chilean buildings: no B declared, yet their totals carry a B2 result.
+        (CHILE, ("A1–A3", "A4", "A5", "B2", "C3"), "A1–A5, C1–C4"),
+        ((), ("A1", "A3"), "A1–A3 · cradle to gate"),  # nothing declared: the results
+        (("A1–A3", "A5.2"), ("B6",), "A1–A5 · upfront"),
+        (("A4", "B6"), (), "A4–A5, B1–B8"),
+    ],
+)
+def test_the_scope_names_the_declared_stages(declared, results, label):
+    checks = [
+        ModuleCheck(
+            module=name,
+            declared=name in declared,
+            has_result=name in results,
+            status="ok",
+        )
+        for name, _, _ in MODULES
+    ]
+    assert scope_label(checks) == label
 
 
 @pytest.mark.parametrize(
