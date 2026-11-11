@@ -11,6 +11,9 @@ from pydantic import BaseModel
 # What every absolute figure is divided by: nothing, the gross or the useful floor
 # area, or the gross floor area and the study period.
 Basis = Literal["total", "gfa", "ufa", "gfa_year"]
+# What elements and materials are named by: the OpenBDF classification (Tier 2
+# elements, material classes), or the project's own names (bec_custom, materials).
+Naming = Literal["openbdf", "custom"]
 
 
 class ProjectInfo(BaseModel):
@@ -49,7 +52,9 @@ class StageTotal(BaseModel):
 class ElementTotal(BaseModel):
     element: str
     gwp: float
-    share: float
+    share: float  # of whole-life GWP
+    mass_kg: float
+    share_of_mass: float | None  # of the total mass; None when no mass is declared
 
 
 class ElementStages(BaseModel):
@@ -83,6 +88,36 @@ class MaterialClassTotal(BaseModel):
     label: str  # OpenBDF material class, "4.2 Concrete"; "Not classified" when blank
     gwp: float
     mass_kg: float
+
+
+class ElementMaterial(BaseModel):
+    material: str  # as MaterialHotspot.material, under the view's naming
+    epd_product: str
+    mass_kg: float
+    share: float | None  # of the element's mass; None when the element has none
+
+
+class ElementMaterials(BaseModel):
+    """The materials one element bar is made of, heaviest first."""
+
+    element: str  # the label of its row in the element bars
+    mass_kg: float
+    materials: list[ElementMaterial]  # the 5 heaviest
+    other: ElementMaterial | None  # every other material as one row; None if none
+
+
+class NamingView(BaseModel):
+    """Every element and material figure of the overview under one naming."""
+
+    elements: list[ElementTotal]  # the first 8 classified elements
+    other_classified: ElementTotal  # classified elements beyond the first 8
+    not_classified: ElementTotal  # rows the naming leaves blank: shown, never dropped
+    element_stages: list[ElementStages]  # the first 8 that carry carbon
+    material_hotspots: list[MaterialHotspot]  # top 10 by whole-life GWP
+    mass_hotspots: list[MassHotspot]  # top 10 by mass
+    materials: list[MaterialHotspot]  # every material, by whole-life GWP
+    mass_other_share: float  # of the mass, outside the top 10
+    element_materials: list[ElementMaterials]  # one per element bar, in their order
 
 
 class DataTypeShare(BaseModel):
@@ -152,6 +187,9 @@ class Overview(BaseModel):
     total_mass_kg: float  # every bill of materials row, floor repetition included
     mass_other_share: float  # of the mass, outside the top 10
     material_classes: list[MaterialClassTotal]  # every class present, in code order
+    # The page's names toggle. The fields above hold the OpenBDF elements and the
+    # custom materials, which the comparison and the building list read.
+    namings: dict[Naming, NamingView]
     time: TimeFigures
     units: Units
     bases: list[BasisOption]  # every basis, with whether this building can serve it

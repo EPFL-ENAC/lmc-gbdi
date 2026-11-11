@@ -115,3 +115,12 @@ def test_module_checks_match_the_workbook(overview):
 def test_use_per_year(overview):
     # B1–B8 (cell C37) over the 50-year study period.
     assert overview.time.use_per_year == pytest.approx(33010.08131827447 / 50, rel=1e-9)
+
+
+def test_the_custom_names_of_at09_reconcile_to_the_workbook(project):
+    overview = build_overview(project)
+    view = overview.namings["custom"]
+    bars = [*view.elements, view.other_classified, view.not_classified]
+    assert sum(e.gwp for e in bars) == pytest.approx(sum(STAGES.values()))
+    assert sum(e.mass_kg for e in bars) == pytest.approx(overview.total_mass_kg)
+    assert "2E.01 Außenwandkonstruktionen" in [e.element for e in view.elements]

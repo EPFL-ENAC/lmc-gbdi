@@ -46,6 +46,7 @@ def line(**changes):
         "dataset": "C30/37",
         "mass": Decimal("10"),
         "material_class": Material("4.2"),
+        "element_custom": " 2E.01 Wand ",
         "wide_id": 7,
     } | changes
     gwp = tuple(Decimal(i) for i, _ in enumerate(GWP_FIELDS))
@@ -58,6 +59,7 @@ def test_material_row_from_a_stored_line():
     assert row.pair == ("Beton", "C30/37")
     assert row.repetition == 1  # blank counts once
     assert row.material_class == "4.2 Concrete"
+    assert row.element_custom == "2E.01 Wand"
     assert row.gwp[GWP_FIELDS[3]] == 3
 
 

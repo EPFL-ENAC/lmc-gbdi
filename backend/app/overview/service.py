@@ -17,6 +17,8 @@ from app.overview.schemas import (
     Basis,
     BasisOption,
     DataTypeShare,
+    ElementMaterial,
+    ElementMaterials,
     ElementStages,
     ElementTotal,
     Headline,
@@ -24,6 +26,8 @@ from app.overview.schemas import (
     MaterialClassTotal,
     MaterialHotspot,
     ModuleCheck,
+    Naming,
+    NamingView,
     Overview,
     ProjectField,
     ProjectInfo,
@@ -41,6 +45,10 @@ STAGES = (
 )
 TOP_ELEMENTS = 8
 TOP_MATERIALS = 10
+TOP_ELEMENT_MATERIALS = 5
+NAMINGS: tuple[Naming, ...] = ("openbdf", "custom")
+OTHER_CLASSIFIED = "Other classified elements"
+NOT_CLASSIFIED = "Not classified"
 # The seven construction product data types of Regulation (EU) 2026/52.
 DATA_TYPES = (
     ("cpr_dopc", "Construction Products Regulation data"),
@@ -116,6 +124,7 @@ MODULES = (
 
 with (Path(__file__).parent / "bec_tier2.csv").open(encoding="utf-8") as f:
     BEC_TIER2 = [(row["code"], row["name"]) for row in csv.DictReader(f)]
+TIER2_ORDER = {name: i for i, (_, name) in enumerate(BEC_TIER2)}
 
 Stages = dict[str, Decimal]
 
@@ -151,17 +160,50 @@ def in_element(row_element: str, code: str) -> bool:
     return row_element == code or row_element.startswith((f"{code}.", f"{code} "))
 
 
-def element_rollup(rows: list[tuple[MaterialRow, Stages]]) -> list[tuple[str, Stages]]:
-    """Stage totals of every Tier 2 element that carries GWP, in OpenBDF order."""
-    rollup = []
-    for code, name in BEC_TIER2:
-        totals = {key: ZERO for key, _ in STAGES}
-        for row, stages in rows:
-            if in_element(row.element, code):
-                totals = add(totals, stages)
-        if sum(totals.values()) != ZERO:
-            rollup.append((name, totals))
-    return rollup
+def element_label(row: MaterialRow, naming: Naming) -> str:
+    """The element a row counts in: its Tier 2 element, or its bec_custom class.
+
+    "" when the row is not classified under the naming. The custom element is
+    bec_custom, the counterpart the OpenBDF translator derives bec_openbdf from;
+    custom_element_name names one element and, on AT-09, repeats the material.
+    """
+    if naming == "custom":
+        return row.element_custom
+    return next((name for code, name in BEC_TIER2 if in_element(row.element, code)), "")
+
+
+def material_key(row: MaterialRow, naming: Naming) -> MaterialPair:
+    """The material a row counts in: its custom name and EPD product, or its class."""
+    if naming == "custom":
+        return row.pair
+    return (row.material_class or NOT_CLASSIFIED, "")
+
+
+def element_rollup(
+    rows: list[tuple[MaterialRow, Stages]], naming: Naming = "openbdf"
+) -> list[tuple[str, Stages, Decimal]]:
+    """Stage totals and mass of every element that carries GWP or mass.
+
+    OpenBDF elements come in classification order; custom classes by label, which
+    their codes lead ("2D.01 …", "2E.01 …").
+    """
+    groups: dict[str, tuple[Stages, list[Decimal]]] = defaultdict(
+        lambda: ({key: ZERO for key, _ in STAGES}, [ZERO])
+    )
+    for row, stages in rows:
+        if label := element_label(row, naming):
+            totals, mass = groups[label]
+            for key, value in stages.items():
+                totals[key] += value
+            mass[0] += row.mass_kg * row.repetition
+    rollup = [
+        (name, totals, mass)
+        for name, (totals, [mass]) in groups.items()
+        if sum(totals.values(), ZERO) != ZERO or mass != ZERO
+    ]
+    if naming == "openbdf":
+        return sorted(rollup, key=lambda item: TIER2_ORDER[item[0]])
+    return sorted(rollup, key=lambda item: item[0])
 
 
 def element_stages(name: str, stages: Stages) -> ElementStages:
@@ -176,9 +218,10 @@ def element_stages(name: str, stages: Stages) -> ElementStages:
 
 
 def material_rollup(
-    rows: list[tuple[MaterialRow, Stages]],
+    rows: list[tuple[MaterialRow, Stages]], naming: Naming = "custom"
 ) -> dict[MaterialPair, Stages]:
-    """Whole-life GWP, mass and GWP fossil A1–A3 of each material + EPD product."""
+    """Whole-life GWP, mass and GWP fossil A1–A3 of each material + EPD product, or
+    of each OpenBDF material class."""
     pairs: dict[MaterialPair, Stages] = defaultdict(
         lambda: (
             {"gwp": ZERO, "mass": ZERO, "fossil": ZERO} | {k: ZERO for k, _ in STAGES}
@@ -186,7 +229,7 @@ def material_rollup(
     )
     fossil_parts = ("gwp_f_a1", "gwp_f_a2", "gwp_f_a3")
     for row, stages in rows:
-        pair = pairs[row.pair]
+        pair = pairs[material_key(row, naming)]
         pair["gwp"] += sum(stages.values(), ZERO)
         for key, value in stages.items():
             pair[key] += value
@@ -241,7 +284,7 @@ def class_rollup(rows: list[tuple[MaterialRow, Stages]]) -> list[MaterialClassTo
     across projects, where custom material names never match."""
     classes: dict[str, Stages] = defaultdict(lambda: {"gwp": ZERO, "mass": ZERO})
     for row, stages in rows:
-        totals = classes[row.material_class or "Not classified"]
+        totals = classes[row.material_class or NOT_CLASSIFIED]
         totals["gwp"] += sum(stages.values(), ZERO)
         totals["mass"] += row.mass_kg * row.repetition
     return [
@@ -402,8 +445,131 @@ def module_checks(data: ProjectData) -> list[ModuleCheck]:
     return checks
 
 
-def bucket(name: str, gwp: Decimal, whole_life: Decimal) -> ElementTotal:
-    return ElementTotal(element=name, gwp=float(gwp), share=float(gwp / whole_life))
+def bucket(
+    name: str, gwp: Decimal, mass: Decimal, whole_life: Decimal, total_mass: Decimal
+) -> ElementTotal:
+    return ElementTotal(
+        element=name,
+        gwp=float(gwp),
+        share=float(gwp / whole_life),
+        mass_kg=float(mass),
+        share_of_mass=float(mass / total_mass) if total_mass else None,
+    )
+
+
+def element_materials(
+    rows: list[tuple[MaterialRow, Stages]], naming: Naming, shown: list[str]
+) -> list[ElementMaterials]:
+    """The mass of each material within each element bar: the shown elements, then
+    the other classified ones together, then the rows not classified."""
+    bars: dict[str, dict[MaterialPair, Decimal]] = {
+        name: defaultdict(lambda: ZERO)
+        for name in (*shown, OTHER_CLASSIFIED, NOT_CLASSIFIED)
+    }
+    for row, _ in rows:
+        label = element_label(row, naming)
+        bar = label if label in shown else OTHER_CLASSIFIED if label else NOT_CLASSIFIED
+        bars[bar][material_key(row, naming)] += row.mass_kg * row.repetition
+
+    def part(material: MaterialPair, mass: Decimal, total: Decimal) -> ElementMaterial:
+        return ElementMaterial(
+            material=material[0],
+            epd_product=material[1],
+            mass_kg=float(mass),
+            share=float(mass / total) if total else None,
+        )
+
+    result = []
+    for name, masses in bars.items():
+        total = sum(masses.values(), ZERO)
+        heaviest = sorted(
+            ((m, kg) for m, kg in masses.items() if kg != ZERO),
+            key=lambda item: item[1],
+            reverse=True,
+        )
+        top, rest = heaviest[:TOP_ELEMENT_MATERIALS], heaviest[TOP_ELEMENT_MATERIALS:]
+        others = sum((kg for _, kg in rest), ZERO)
+        result.append(
+            ElementMaterials(
+                element=name,
+                mass_kg=float(total),
+                materials=[part(m, kg, total) for m, kg in top],
+                other=part((f"{len(rest)} other materials", ""), others, total)
+                if rest
+                else None,
+            )
+        )
+    return result
+
+
+def naming_view(
+    rows: list[tuple[MaterialRow, Stages]],
+    naming: Naming,
+    whole_life: Decimal,
+    total_mass: Decimal,
+) -> NamingView:
+    """Every element and material figure under one naming. The element bars add up
+    to the whole-life GWP and to the total mass."""
+    elements = element_rollup(rows, naming)
+    shown = elements[:TOP_ELEMENTS]
+
+    def gwp(items: list[tuple[str, Stages, Decimal]]) -> Decimal:
+        return sum((sum(s.values(), ZERO) for _, s, _ in items), ZERO)
+
+    def mass(items: list[tuple[str, Stages, Decimal]]) -> Decimal:
+        return sum((m for _, _, m in items), ZERO)
+
+    material_hotspots, mass_hotspots, mass_other_share, materials = hotspots(
+        material_rollup(rows, naming), whole_life
+    )
+    return NamingView(
+        elements=[
+            bucket(name, sum(s.values(), ZERO), m, whole_life, total_mass)
+            for name, s, m in shown
+        ],
+        other_classified=bucket(
+            OTHER_CLASSIFIED,
+            gwp(elements) - gwp(shown),
+            mass(elements) - mass(shown),
+            whole_life,
+            total_mass,
+        ),
+        not_classified=bucket(
+            NOT_CLASSIFIED,
+            whole_life - gwp(elements),
+            total_mass - mass(elements),
+            whole_life,
+            total_mass,
+        ),
+        # The dominant stage divides by the element's carbon: mass-only ones skip.
+        element_stages=[
+            element_stages(name, s)
+            for name, s, _ in shown
+            if sum(s.values(), ZERO) != ZERO
+        ],
+        material_hotspots=material_hotspots,
+        mass_hotspots=mass_hotspots,
+        materials=materials,
+        mass_other_share=float(mass_other_share),
+        element_materials=element_materials(rows, naming, [n for n, _, _ in shown]),
+    )
+
+
+def from_views(namings: dict[Naming, NamingView]) -> dict:
+    """The top-level fields the comparison and the building list read: OpenBDF
+    elements and custom materials, as before the names toggle."""
+    elements, materials = namings["openbdf"], namings["custom"]
+    return {
+        "elements": elements.elements,
+        "other_classified": elements.other_classified,
+        "not_classified": elements.not_classified,
+        "element_stages": elements.element_stages,
+        "material_hotspots": materials.material_hotspots,
+        "mass_hotspots": materials.mass_hotspots,
+        "materials": materials.materials,
+        "mass_other_share": materials.mass_other_share,
+        "namings": namings,
+    }
 
 
 def build_overview(data: ProjectData) -> Overview:
@@ -413,14 +579,9 @@ def build_overview(data: ProjectData) -> Overview:
     if whole_life == ZERO:
         raise ValueError("The project's whole-life GWP is zero: nothing to share out")
 
-    elements = element_rollup(rows)
-    classified = sum((sum(s.values(), ZERO) for _, s in elements), ZERO)
-    shown = elements[:TOP_ELEMENTS]
-    shown_total = sum((sum(s.values(), ZERO) for _, s in shown), ZERO)
+    total_mass = sum((row.mass_kg * row.repetition for row, _ in rows), ZERO)
+    namings = {n: naming_view(rows, n, whole_life, total_mass) for n in NAMINGS}
     pairs = material_rollup(rows)
-    material_hotspots, mass_hotspots, mass_other_share, materials = hotspots(
-        pairs, whole_life
-    )
     period = study_period(data.general)
     summary = headline(data, totals)
     weighting, data_types = data_type_profile(pairs, data.data_types)
@@ -451,24 +612,8 @@ def build_overview(data: ProjectData) -> Overview:
         ),
         headline=summary,
         stages=stages,
-        elements=[
-            ElementTotal(
-                element=name,
-                gwp=float(t := sum(s.values(), ZERO)),
-                share=float(t / whole_life),
-            )
-            for name, s in shown
-        ],
-        other_classified=bucket(
-            "Other classified elements", classified - shown_total, whole_life
-        ),
-        not_classified=bucket("Not classified", whole_life - classified, whole_life),
-        element_stages=[element_stages(name, s) for name, s in shown],
-        material_hotspots=material_hotspots,
-        mass_hotspots=mass_hotspots,
-        materials=materials,
-        total_mass_kg=float(sum((p["mass"] for p in pairs.values()), ZERO)),
-        mass_other_share=float(mass_other_share),
+        **from_views(namings),
+        total_mass_kg=float(total_mass),
         material_classes=class_rollup(rows),
         time=TimeFigures(
             stages=stages,
@@ -554,25 +699,11 @@ def on_basis(o: Overview, basis: Basis) -> Overview:
     # digit can differ from a full rebuild; rebuild per basis if that ever shows.
     c = area * years
 
-    def stages(d: dict[str, float], by: float = c) -> dict[str, float]:
-        return {k: v / by for k, v in d.items()}
-
-    def hotspot(h: MaterialHotspot) -> MaterialHotspot:
-        return h.model_copy(
-            update={
-                "gwp": h.gwp / c,
-                "mass_kg": h.mass_kg / area,
-                "gwp_by_stage": stages(h.gwp_by_stage),
-            }
-        )
-
-    def element(e: ElementTotal) -> ElementTotal:
-        return e.model_copy(update={"gwp": e.gwp / c})
-
     def stage(s: StageTotal, by: float) -> StageTotal:
         return s.model_copy(update={"gwp": s.gwp / by})
 
     h, t = o.headline, o.time
+    namings = {n: view_on_basis(v, c, area) for n, v in o.namings.items()}
     return o.model_copy(
         update={
             "headline": h.model_copy(
@@ -584,19 +715,7 @@ def on_basis(o: Overview, basis: Basis) -> Overview:
                 }
             ),
             "stages": [stage(s, c) for s in o.stages],
-            "elements": [element(e) for e in o.elements],
-            "other_classified": element(o.other_classified),
-            "not_classified": element(o.not_classified),
-            "element_stages": [
-                e.model_copy(update={"gwp_by_stage": stages(e.gwp_by_stage)})
-                for e in o.element_stages
-            ],
-            "material_hotspots": [hotspot(m) for m in o.material_hotspots],
-            "materials": [hotspot(m) for m in o.materials],
-            "mass_hotspots": [
-                m.model_copy(update={"gwp": m.gwp / c, "mass_kg": m.mass_kg / area})
-                for m in o.mass_hotspots
-            ],
+            **from_views(namings),
             "total_mass_kg": o.total_mass_kg / area,
             "material_classes": [
                 m.model_copy(update={"gwp": m.gwp / c, "mass_kg": m.mass_kg / area})
@@ -609,6 +728,60 @@ def on_basis(o: Overview, basis: Basis) -> Overview:
                 module_d1=t.module_d1 / area,
             ),
             "units": units(basis),
+        }
+    )
+
+
+def view_on_basis(v: NamingView, c: float, area: float) -> NamingView:
+    """A naming's figures with carbon divided by `c` and mass by `area`.
+
+    model_copy skips a field it is not told about, so a figure added to the view
+    needs a line here; test_overview_namings walks every field to catch one.
+    """
+
+    def stages(d: dict[str, float]) -> dict[str, float]:
+        return {k: x / c for k, x in d.items()}
+
+    def element(e: ElementTotal) -> ElementTotal:
+        return e.model_copy(update={"gwp": e.gwp / c, "mass_kg": e.mass_kg / area})
+
+    def hotspot(h: MaterialHotspot) -> MaterialHotspot:
+        return h.model_copy(
+            update={
+                "gwp": h.gwp / c,
+                "mass_kg": h.mass_kg / area,
+                "gwp_by_stage": stages(h.gwp_by_stage),
+            }
+        )
+
+    def part(m: ElementMaterial) -> ElementMaterial:
+        return m.model_copy(update={"mass_kg": m.mass_kg / area})
+
+    return v.model_copy(
+        update={
+            "elements": [element(e) for e in v.elements],
+            "other_classified": element(v.other_classified),
+            "not_classified": element(v.not_classified),
+            "element_stages": [
+                e.model_copy(update={"gwp_by_stage": stages(e.gwp_by_stage)})
+                for e in v.element_stages
+            ],
+            "material_hotspots": [hotspot(m) for m in v.material_hotspots],
+            "materials": [hotspot(m) for m in v.materials],
+            "mass_hotspots": [
+                m.model_copy(update={"gwp": m.gwp / c, "mass_kg": m.mass_kg / area})
+                for m in v.mass_hotspots
+            ],
+            "element_materials": [
+                e.model_copy(
+                    update={
+                        "mass_kg": e.mass_kg / area,
+                        "materials": [part(m) for m in e.materials],
+                        "other": None if e.other is None else part(e.other),
+                    }
+                )
+                for e in v.element_materials
+            ],
         }
     )
 

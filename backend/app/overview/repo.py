@@ -46,6 +46,8 @@ class MaterialRow:
     gwp: dict[str, Decimal | None]  # None = blank cell, which drives the fallbacks
     # OpenBDF material class, "4.2 Concrete"; the CSV export has no such column.
     material_class: str = ""
+    # bec_custom, the project's own element class, "2E.01 Außenwandkonstruktionen".
+    element_custom: str = ""
 
 
 @dataclass(frozen=True)
@@ -93,6 +95,8 @@ def join_row(bom: dict[str, str], wide: dict[str, str]) -> MaterialRow:
         repetition=repetition,
         mass_kg=number(bom["material_weight_kg"]) or Decimal(0),
         gwp={field: number(wide[field]) for field in GWP_FIELDS},
+        # Optional in the export, so BOM_FIELDS does not require it.
+        element_custom=(bom.get("bec_custom") or "").strip(),
     )
 
 
