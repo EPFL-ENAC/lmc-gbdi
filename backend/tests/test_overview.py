@@ -9,7 +9,14 @@ from fastapi.testclient import TestClient
 from app.config import Settings, get_settings
 from app.main import app
 from app.overview.repo import BOM_FIELDS, GWP_FIELDS, PMD_FIELDS, read_project
-from app.overview.service import build_overview, in_element, study_period, text
+from app.overview.service import (
+    BasisUnavailable,
+    build_overview,
+    in_element,
+    on_basis,
+    study_period,
+    text,
+)
 
 # id, repetition, element, material, epd product, mass, GWP fields
 ROWS = [
@@ -45,7 +52,7 @@ def write_csv(path: Path, header: list[str], rows: list[list[str]]) -> None:
         writer.writerows(rows)
 
 
-def write_project(directory: Path, rows=ROWS, data_types=None) -> Path:
+def write_project(directory: Path, rows=ROWS, data_types=None, general=GENERAL) -> Path:
     wide_fields = [*GWP_FIELDS, "gwp_total_b6_1"]
     write_csv(
         directory / "bill_of_materials.csv",
@@ -58,7 +65,7 @@ def write_project(directory: Path, rows=ROWS, data_types=None) -> Path:
         [[r[0], *(r[6].get(f, "") for f in wide_fields)] for r in rows],
     )
     write_csv(
-        directory / "general_information.csv", ["field_code", "value"], GENERAL.items()
+        directory / "general_information.csv", ["field_code", "value"], general.items()
     )
     write_csv(
         directory / "project_material_database.csv",
@@ -232,7 +239,7 @@ def test_material_hotspots_carry_their_stage_split(overview):
 
 
 def test_use_stage_is_spread_over_the_study_period(overview):
-    assert overview.use_per_year == pytest.approx(4 / 50)
+    assert overview.time.use_per_year == pytest.approx(4 / 50)
 
 
 def test_the_placeholder_project_id_is_not_declared():
@@ -252,3 +259,77 @@ def test_study_period_reads_a_number_of_years(declared, years):
 def test_a_study_period_without_a_number_is_refused():
     with pytest.raises(ValueError, match="study period"):
         study_period({"lca_reference_study_period": "the building's life"})
+
+
+# The fixture: 200 m² GFA, 100 m² UFA, 50 years.
+@pytest.mark.parametrize(
+    ("basis", "carbon", "mass", "unit"),
+    [
+        ("total", 1, 1, "kg CO₂e"),
+        ("gfa", 200, 200, "kg CO₂e per m² GFA"),
+        ("ufa", 100, 100, "kg CO₂e per m² UFA"),
+        ("gfa_year", 200 * 50, 200, "kg CO₂e per m² GFA and year"),
+    ],
+)
+def test_a_basis_divides_carbon_and_mass(overview, basis, carbon, mass, unit):
+    o = on_basis(overview, basis)
+    assert o.units.basis == basis and o.units.carbon == unit
+    assert o.headline.whole_life == pytest.approx(118 / carbon)
+    assert o.headline.module_d1 == pytest.approx(overview.headline.module_d1 / carbon)
+    for kind in ("stages", "elements", "material_hotspots", "materials"):
+        for got, total in zip(getattr(o, kind), getattr(overview, kind), strict=True):
+            assert got.gwp == pytest.approx(total.gwp / carbon)
+    for got, total in zip(o.element_stages, overview.element_stages, strict=True):
+        assert got.gwp_by_stage == pytest.approx(
+            {k: v / carbon for k, v in total.gwp_by_stage.items()}
+        )
+    assert o.not_classified.gwp == pytest.approx(overview.not_classified.gwp / carbon)
+    # Mass is per area, never per year; so are the Time section's figures.
+    assert o.total_mass_kg == pytest.approx(overview.total_mass_kg / mass)
+    assert o.mass_hotspots[0].mass_kg == pytest.approx(
+        overview.mass_hotspots[0].mass_kg / mass
+    )
+    assert o.material_classes[0].mass_kg == pytest.approx(
+        overview.material_classes[0].mass_kg / mass
+    )
+    assert o.time.upfront == pytest.approx(overview.time.upfront / mass)
+    assert o.time.use_per_year == pytest.approx(4 / 50 / mass)
+
+
+def test_a_basis_leaves_shares_and_intensities(overview):
+    o = on_basis(overview, "gfa_year")
+    assert o.headline.upfront_share == overview.headline.upfront_share
+    assert [s.share for s in o.stages] == [s.share for s in overview.stages]
+    assert [m.share for m in o.materials] == [m.share for m in overview.materials]
+    assert [m.gwp_per_kg for m in o.materials] == [
+        m.gwp_per_kg for m in overview.materials
+    ]
+    assert [m.share_of_mass for m in o.materials] == [
+        m.share_of_mass for m in overview.materials
+    ]
+    assert o.data_types == overview.data_types
+    assert o.units.intensity == "kg CO₂e per kg and year"
+
+
+def test_per_m2_gfa_matches_the_headline_figure(overview):
+    # The float division of the cache against the Decimal one of the headline.
+    assert on_basis(overview, "gfa").headline.whole_life == pytest.approx(
+        overview.headline.per_m2_gross, rel=1e-12
+    )
+    assert on_basis(overview, "gfa_year").headline.whole_life == pytest.approx(
+        overview.headline.per_m2_gross_per_year, rel=1e-12
+    )
+
+
+def test_a_basis_the_building_cannot_serve_is_refused(tmp_path):
+    general = {"project_id": "TEST-2", "building_gross_floor_area": "200"}
+    o = build_overview(read_project(write_project(tmp_path, general=general)))
+    options = {b.key: b for b in o.bases}
+    assert [k for k, b in options.items() if b.available] == ["total", "gfa"]
+    assert options["ufa"].reason == "The workbook declares no useful floor area."
+    assert options["gfa_year"].reason == "The workbook declares no study period."
+    for basis in ("ufa", "gfa_year"):
+        with pytest.raises(BasisUnavailable, match="declares no"):
+            on_basis(o, basis)
+    # None stays None: no study period, no use per year, on any basis.
+    assert on_basis(o, "gfa").time.use_per_year is None

@@ -12,7 +12,8 @@ from app.buildings import repo, service
 from app.buildings.ingest import RejectedWorkbook
 from app.buildings.schemas import BuildingSummary, Comparison, DraftView, Rejection
 from app.db import get_session
-from app.overview.schemas import Overview
+from app.overview.schemas import Basis, Overview
+from app.overview.service import BasisUnavailable
 
 router = APIRouter(prefix="/api/buildings", tags=["buildings"])
 Session = Annotated[AsyncSession, Depends(get_session)]
@@ -108,10 +109,15 @@ async def get_building(project_id: int, session: Session) -> BuildingSummary:
 
 
 @router.get("/{project_id}/overview")
-async def get_overview(project_id: int, session: Session) -> Overview:
-    """The building carbon overview sheet, computed from the stored project."""
+async def get_overview(
+    project_id: int, session: Session, basis: Basis = "total"
+) -> Overview:
+    """The building carbon overview sheet, computed from the stored project, with
+    every absolute figure on the basis asked for."""
     try:
-        return await service.overview(session, project_id)
+        return await service.overview(session, project_id, basis)
+    except BasisUnavailable as why:
+        raise HTTPException(422, str(why)) from None
     except repo.ProjectNotFound:
         raise HTTPException(404, f"No building {project_id}") from None
     except service.DraftBlocked:
