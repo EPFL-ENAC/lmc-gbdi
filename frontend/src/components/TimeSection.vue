@@ -16,6 +16,7 @@
     <div v-if="period !== null && overview.time.use_per_year !== null" class="time__chart">
       <CarbonOverTime
         :stages="overview.time.stages"
+        :upfront="overview.time.upfront"
         :use-per-year="overview.time.use_per_year"
         :module-d="overview.time.module_d1"
         :units="overview.units"
