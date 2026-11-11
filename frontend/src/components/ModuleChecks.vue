@@ -81,13 +81,17 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
   color: tokens.$color-text-muted;
 }
 
-.checks__module--complete,
-.checks__module--result_not_declared {
+.checks__module--complete {
   background: tokens.$color-data-present;
 }
 
+// The severity openbdf gives each: E25 is a Warning, E26 a Reject.
 .checks__module--declared_no_result {
-  background: tokens.$color-data-missing;
+  background: tokens.$color-severity-warning;
+}
+
+.checks__module--result_not_declared {
+  background: tokens.$color-severity-reject;
 }
 
 .checks__module--out {

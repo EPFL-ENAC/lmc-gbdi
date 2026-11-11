@@ -1,5 +1,6 @@
 <template>
-  <!-- Element × stage, each cell shaded by its size: the darker, the heavier. -->
+  <!-- Element × stage. Emissions are grey, the darker the heavier; a credit is green,
+       since more is not better (org#90). -->
   <table class="matrix">
     <caption class="matrix__caption">
       kg CO₂e. Each cell is shaded by its size against the largest cell:
@@ -44,8 +45,7 @@ import { kg, percent } from '@/format';
 
 const props = defineProps<{ stages: StageTotal[]; rows: ElementStages[] }>();
 
-// Shading geometry only: three steps of the green ramp, each with an AA text colour
-// (Green Bright is skipped: neither Black nor white reaches 4.5:1 on it).
+// Shading geometry only: three steps of the grey ramp, each with an AA text colour.
 const largest = computed(() =>
   Math.max(...props.rows.flatMap((row) => Object.values(row.gwp_by_stage).map(Math.abs))),
 );
@@ -120,21 +120,22 @@ const shade = (value: number) =>
   border-radius: tokens.$radius-xs;
 }
 
+// Black on Grey Pastel: 8:1, on Grey Text: 6:1. White on Grey Dark: 5.9:1.
 .matrix__cell--pastel {
-  background: var(--gbdi-dataviz-green-4);
+  background: var(--gbdi-dataviz-grey-3);
 }
 
 .matrix__cell--light {
-  background: var(--gbdi-dataviz-green-3);
+  background: var(--gbdi-dataviz-grey-2);
 }
 
-// White on Green Dark: 6.2:1. Black on Green Light: 6.8:1.
 .matrix__cell--dark {
-  background: var(--gbdi-dataviz-green-1);
+  background: var(--gbdi-dataviz-grey-1);
   color: tokens.$color-text-on-primary;
 }
 
+// A credit is the good cell. Black on Green Light: 6.8:1.
 .matrix__cell--negative {
-  background: var(--gbdi-dataviz-orange-4);
+  background: var(--gbdi-dataviz-green-3);
 }
 </style>

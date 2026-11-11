@@ -48,10 +48,14 @@ $color-status-warning: opt.$tokens-colors-orange-dark !default;
 // WARNING: not GBDI — see the box in _options.scss.
 $color-status-error: opt.$tokens-colors-suggested-red-not-gbdi !default;
 
-// Data present or missing, the same everywhere: green has it (good), grey lacks
-// it (bad). Black text reads on both.
+// Data present, the same everywhere: green has it (good). Black text reads on it.
 $color-data-present: opt.$tokens-colors-green-light !default;
-$color-data-missing: opt.$tokens-colors-grey-text !default;
+// A data problem, never grey (grey is emissions, org#90): one orange per openbdf
+// Severity, the stronger the worse. Black text reads on each (4.9:1 on Reject);
+// Orange Dark is left out, Black fails AA on it.
+$color-severity-info: opt.$tokens-colors-orange-pastel !default;
+$color-severity-warning: opt.$tokens-colors-orange-light !default;
+$color-severity-reject: opt.$tokens-colors-orange-bright !default;
 
 // ---------------------------------------------------------------------------
 // Focus
@@ -106,6 +110,8 @@ $dataviz-ramps: (
   'blue': (opt.$tokens-colors-blue-dark, opt.$tokens-colors-blue-bright, opt.$tokens-colors-blue-light, opt.$tokens-colors-blue-pastel),
   'purple': (opt.$tokens-colors-purple-dark, opt.$tokens-colors-purple-bright, opt.$tokens-colors-purple-light, opt.$tokens-colors-purple-pastel),
   'orange': (opt.$tokens-colors-orange-dark, opt.$tokens-colors-orange-bright, opt.$tokens-colors-orange-light, opt.$tokens-colors-orange-pastel),
+  // Emissions in a table cell, three steps only: the heavier, the darker (org#90).
+  'grey': (opt.$tokens-colors-grey-dark, opt.$tokens-colors-grey-text, opt.$tokens-colors-grey-pastel),
 ) !default;
 $dataviz-highlight: opt.$tokens-colors-orange-bright !default; // the dot on range charts (p.16)
 $dataviz-end-of-life: opt.$tokens-colors-green-lime !default; // C1–C4, after three greens
