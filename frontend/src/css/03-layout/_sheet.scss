@@ -1,0 +1,102 @@
+@use '../02-tokens' as tokens;
+
+// A drawing sheet on a Green-Grey Card desk (#91): a white card on a grey page, its
+// panels on one hairline grid.
+//   <q-page class="sheet-page">
+//     <article class="sheet">
+//       <header class="sheet__title">…<dl class="sheet__block">…</dl></header>
+//       <section class="sheet__panel"><h2 class="sheet__panel-title">…</h2>…</section>
+//       <div class="sheet__pair"><section class="sheet__panel">…</section>…</div>
+//     </article>
+//   </q-page>
+.sheet-page {
+  padding: tokens.$spacing-xl tokens.$spacing-lg;
+  background: tokens.$color-surface-muted;
+}
+
+.sheet {
+  max-width: tokens.$layout-page-width;
+  margin: 0 auto;
+  background: tokens.$color-surface;
+  border: tokens.$border-width solid tokens.$color-border-control;
+  border-radius: tokens.$radius-panel;
+  overflow: hidden;
+}
+
+.sheet > * + * {
+  border-top: tokens.$border-width solid tokens.$color-border-control;
+}
+
+.sheet__title {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-lg;
+  padding: tokens.$spacing-xl;
+}
+
+// The title block of a drawing: small labels over values, ruled apart.
+.sheet__block {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  row-gap: tokens.$spacing-md;
+  margin: 0;
+}
+
+.sheet__block > div {
+  padding: 0 tokens.$spacing-lg;
+  border-left: tokens.$border-width solid tokens.$color-border-control;
+}
+
+.sheet__block dt {
+  font-size: tokens.$text-size-xs;
+  color: tokens.$color-text-muted;
+}
+
+.sheet__block dd {
+  margin: 0;
+  font-size: tokens.$text-size-sm;
+}
+
+.sheet__pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.sheet__pair > .sheet__panel + .sheet__panel {
+  border-left: tokens.$border-width solid tokens.$color-border-control;
+}
+
+.sheet__panel {
+  display: flex;
+  flex-direction: column;
+  gap: tokens.$spacing-lg;
+  padding: tokens.$spacing-xl;
+}
+
+.sheet__panel > p {
+  margin: 0;
+}
+
+.sheet__panel-title {
+  margin: 0;
+  font-family: tokens.$text-font-family;
+  font-size: tokens.$text-size-base;
+  font-weight: tokens.$text-weight-medium;
+}
+
+.sheet__note {
+  margin: 0;
+  font-size: tokens.$text-size-sm;
+  color: tokens.$color-text-muted;
+}
+
+@media (max-width: 1199px) {
+  .sheet__pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sheet__pair > .sheet__panel + .sheet__panel {
+    border-left: 0;
+    border-top: tokens.$border-width solid tokens.$color-border-control;
+  }
+}
