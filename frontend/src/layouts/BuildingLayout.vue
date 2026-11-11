@@ -48,7 +48,9 @@
       </nav>
     </Teleport>
     <DraftPage v-if="draftOnly" :id="id" />
-    <template v-else>
+    <!-- Not before the list settles: until then a carbon-blocked draft looks like any
+         building, and the Overview would ask for figures it cannot have (409). -->
+    <template v-else-if="settled">
       <p v-if="current?.draft" class="building-draft" role="note">
         Draft, stored despite: {{ current.rejects.join('; ') }}. Its figures stand; the home page does not count it.
       </p>
@@ -67,6 +69,7 @@ import DraftPage from '@/pages/DraftPage.vue';
 const route = useRoute();
 const router = useRouter();
 const buildings = ref<BuildingSummary[]>([]);
+const settled = ref(false);
 const id = computed(() => Number(route.params.id));
 const other = computed(() => (route.params.other === undefined ? null : Number(route.params.other)));
 const options = computed(() =>
@@ -80,6 +83,7 @@ const draftOnly = computed(() => current.value !== undefined && noCarbon(current
 onMounted(async () => {
   // The bar works without the list: only the two building menus need it.
   buildings.value = await fetchBuildings().catch(() => []);
+  settled.value = true;
 });
 </script>
 
