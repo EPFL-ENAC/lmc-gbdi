@@ -19,6 +19,8 @@
           class="building-bar__pick"
           @update:model-value="(next: number) => router.push(buildingPath(next, next === other ? null : other))"
         />
+        <!-- The page's own controls, such as the Overview's basis, teleport here. -->
+        <div id="basis-control" />
         <div v-if="!draftOnly" class="building-bar__compare">
           <q-select
             :model-value="other"

@@ -15,7 +15,7 @@
       </g>
       <g class="intensity__iso-label">
         <text v-for="iso in isoLines" :key="iso.k" :x="iso.x2 - 4" :y="iso.y2 + 14" text-anchor="end">
-          {{ iso.k }} kg CO₂e/kg
+          {{ iso.k }} {{ units.intensity }}
         </text>
       </g>
       <g class="intensity__axis">
@@ -25,8 +25,8 @@
         <text v-for="t in yTicks" :key="`yl${t}`" :x="L - 8" :y="y(t) + 4" text-anchor="end">
           {{ compact.format(t) }}
         </text>
-        <text :x="W - R" :y="H - 4" text-anchor="end">Mass (kg)</text>
-        <text :x="L" :y="T - 4">GWP (kg CO₂e)</text>
+        <text :x="W - R" :y="H - 4" text-anchor="end">Mass ({{ units.mass }})</text>
+        <text :x="L" :y="T - 4">GWP ({{ units.carbon }})</text>
       </g>
       <g v-for="p in points" :key="p.key" class="intensity__point">
         <title>{{ p.name }}</title>
@@ -42,10 +42,10 @@
 
 <script setup lang="ts">
 import { computed, useId } from 'vue';
-import type { MaterialHotspot } from '@/api/overview';
+import type { MaterialHotspot, Units } from '@/api/overview';
 import { kg } from '@/format';
 
-const props = defineProps<{ hotspots: MaterialHotspot[] }>();
+const props = defineProps<{ hotspots: MaterialHotspot[]; units: Units }>();
 
 const W = 640;
 const H = 420;

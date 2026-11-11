@@ -24,11 +24,11 @@
     </p>
     <div class="grid-2-col passport__walls">
       <figure class="passport__wall">
-        <figcaption>Mass, {{ kg.format(overview.total_mass_kg) }} kg</figcaption>
+        <figcaption>Mass, {{ num.format(overview.total_mass_kg) }} {{ overview.units.mass }}</figcaption>
         <BrickWall :parts="ranked.map((r) => ({ color: r.color, share: r.share_of_mass ?? 0 }))" label="Mass by material" />
       </figure>
       <figure class="passport__wall">
-        <figcaption>Whole-life carbon, modules A to C, {{ kg.format(overview.headline.whole_life) }} kg CO₂e</figcaption>
+        <figcaption>Whole-life carbon, modules A to C, {{ num.format(overview.headline.whole_life) }} {{ overview.units.carbon }}</figcaption>
         <BrickWall :parts="ranked.map((r) => ({ color: r.color, share: r.share }))" label="Whole-life carbon by material" />
       </figure>
     </div>
@@ -36,9 +36,9 @@
       <thead>
         <tr>
           <th scope="col">Material</th>
-          <th scope="col" class="num">kg</th>
+          <th scope="col" class="num">{{ overview.units.mass }}</th>
           <th scope="col" class="num">Share of the mass</th>
-          <th scope="col" class="num">kg CO₂e</th>
+          <th scope="col" class="num">{{ overview.units.carbon }}</th>
           <th scope="col" class="num">Share of the carbon</th>
         </tr>
       </thead>
@@ -48,9 +48,9 @@
             <span class="passport__swatch" :style="{ background: row.color }" /><Term :name="row.label" />
             <span class="passport__product">{{ row.epd_product }}</span>
           </th>
-          <td class="num">{{ kg.format(row.mass_kg) }}</td>
+          <td class="num">{{ num.format(row.mass_kg) }}</td>
           <td class="num">{{ row.share_of_mass === null ? 'no mass declared' : percent.format(row.share_of_mass) }}</td>
-          <td class="num">{{ kg.format(row.gwp) }}</td>
+          <td class="num">{{ num.format(row.gwp) }}</td>
           <td class="num">{{ percent.format(row.share) }}</td>
         </tr>
         <tr>
@@ -63,9 +63,9 @@
               <span class="passport__swatch" :style="{ background: OTHER_COLOR }" /><Term :name="row.label" />
               <span class="passport__product">{{ row.epd_product }}</span>
             </th>
-            <td class="num">{{ kg.format(row.mass_kg) }}</td>
+            <td class="num">{{ num.format(row.mass_kg) }}</td>
             <td class="num">{{ row.share_of_mass === null ? 'no mass declared' : percent.format(row.share_of_mass) }}</td>
-            <td class="num">{{ kg.format(row.gwp) }}</td>
+            <td class="num">{{ num.format(row.gwp) }}</td>
             <td class="num">{{ percent.format(row.share) }}</td>
           </tr>
         </template>
@@ -85,6 +85,7 @@
         :key="`${hotspot.material}|${hotspot.epd_product}`"
         :hotspot="hotspot"
         :stages="overview.stages"
+        :units="overview.units"
         :rank="i + 1"
       />
     </div>
@@ -99,10 +100,11 @@ import ShowMore from '@/components/atoms/ShowMore.vue';
 import Term from '@/components/atoms/Term.vue';
 import type { Overview } from '@/api/overview';
 import { MATERIAL_COLORS, OTHER_COLOR } from '@/dataviz';
-import { kg, percent } from '@/format';
+import { amount, percent } from '@/format';
 import { materialLabel, pairKey, RANKINGS, remaining, type RankBy } from '@/materials';
 
 const props = defineProps<{ overview: Overview }>();
+const num = computed(() => amount(props.overview.units));
 
 const rankBy = ref<RankBy>('mass');
 

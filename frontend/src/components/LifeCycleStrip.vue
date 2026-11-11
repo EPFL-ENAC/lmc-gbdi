@@ -1,5 +1,5 @@
 <template>
-  <figure class="life-strip" :aria-label="`Whole-life carbon by life-cycle stage, ${kg.format(wholeLife)} kg CO₂e`">
+  <figure class="life-strip" :aria-label="`Whole-life carbon by life-cycle stage, ${num.format(wholeLife)} ${units.carbon}`">
     <!-- The life cycle in order, A to C; module D sits beyond the boundary, on the same scale -->
     <div class="life-strip__track">
       <div
@@ -15,12 +15,12 @@
       <li v-for="(stage, i) in stages" :key="stage.key">
         <span class="life-strip__swatch" :style="{ background: STAGE_COLORS[i] }" />
         <span class="life-strip__name"><Term :name="stage.label" /></span>
-        <span class="life-strip__value">{{ kg.format(stage.gwp) }} kg, {{ percent.format(stage.share) }}</span>
+        <span class="life-strip__value">{{ num.format(stage.gwp) }} {{ units.carbon }}, {{ percent.format(stage.share) }}</span>
       </li>
       <li class="life-strip__outside">
         <span class="life-strip__swatch life-strip__swatch--beyond" />
         <span class="life-strip__name">D1, outside the total</span>
-        <span class="life-strip__value">{{ kg.format(moduleD) }} kg</span>
+        <span class="life-strip__value">{{ num.format(moduleD) }} {{ units.carbon }}</span>
       </li>
     </ol>
     <p v-if="negative.length > 0" class="life-strip__note">
@@ -33,10 +33,11 @@
 import { computed } from 'vue';
 import Term from '@/components/atoms/Term.vue';
 import { STAGE_COLORS } from '@/dataviz';
-import type { StageTotal } from '@/api/overview';
-import { kg, percent } from '@/format';
+import type { StageTotal, Units } from '@/api/overview';
+import { amount, percent } from '@/format';
 
-const props = defineProps<{ stages: StageTotal[]; wholeLife: number; moduleD: number }>();
+const props = defineProps<{ stages: StageTotal[]; wholeLife: number; moduleD: number; units: Units }>();
+const num = computed(() => amount(props.units));
 
 // Shares of a whole only draw positive parts; a negative stage (biogenic carbon
 // stored at A1–A3) is named instead of silently missing.

@@ -92,6 +92,33 @@ export interface ModuleCheck {
   status: 'ok' | 'declared_no_result' | 'result_not_declared';
 }
 
+// What every absolute figure is divided by (backend `Basis`).
+export type Basis = 'total' | 'gfa' | 'ufa' | 'gfa_year';
+
+export interface BasisOption {
+  key: Basis;
+  label: string;
+  available: boolean;
+  reason: string | null; // why the building cannot serve it
+}
+
+// The unit each kind of figure reads in, on the overview's basis.
+export interface Units {
+  basis: Basis;
+  carbon: string;
+  mass: string; // by area only, never per year
+  time: string; // the Time section's carbon, by area only
+  intensity: string; // carbon over mass
+}
+
+// The Time section's figures, on the basis's area but never per year.
+export interface TimeFigures {
+  stages: StageTotal[];
+  upfront: number;
+  use_per_year: number | null; // B1–B8 spread evenly over the study period
+  module_d1: number;
+}
+
 export interface Overview {
   project: ProjectInfo;
   project_fields: ProjectField[];
@@ -112,9 +139,12 @@ export interface Overview {
   total_mass_kg: number;
   mass_other_share: number;
   material_classes: MaterialClassTotal[];
-  use_per_year: number | null;
+  time: TimeFigures;
+  units: Units;
+  bases: BasisOption[]; // every basis, with whether this building can serve it
   data_type_weighting: 'gwp_fossil_a1_a3' | 'mass' | 'not_computed';
   data_types: DataTypeShare[];
 }
 
-export const fetchOverview = (id: number) => getJson<Overview>(`/buildings/${id}/overview`);
+export const fetchOverview = (id: number, basis: Basis) =>
+  getJson<Overview>(`/buildings/${id}/overview?basis=${basis}`);
