@@ -462,14 +462,18 @@ def element_materials(
 ) -> list[ElementMaterials]:
     """The mass of each material within each element bar: the shown elements, then
     the other classified ones together, then the rows not classified."""
-    bars: dict[str, dict[MaterialPair, Decimal]] = {
-        name: defaultdict(lambda: ZERO)
+    # The two buckets are kept apart from the shown bars: a project can name one of
+    # its own elements "Not classified".
+    bars: list[tuple[str, dict[MaterialPair, Decimal]]] = [
+        (name, defaultdict(lambda: ZERO))
         for name in (*shown, OTHER_CLASSIFIED, NOT_CLASSIFIED)
-    }
+    ]
+    by_label = dict(bars[: len(shown)])
+    other, unclassified = bars[-2][1], bars[-1][1]
     for row, _ in rows:
         label = element_label(row, naming)
-        bar = label if label in shown else OTHER_CLASSIFIED if label else NOT_CLASSIFIED
-        bars[bar][material_key(row, naming)] += row.mass_kg * row.repetition
+        bar = by_label.get(label, other) if label else unclassified
+        bar[material_key(row, naming)] += row.mass_kg * row.repetition
 
     def part(material: MaterialPair, mass: Decimal, total: Decimal) -> ElementMaterial:
         return ElementMaterial(
@@ -480,14 +484,20 @@ def element_materials(
         )
 
     result = []
-    for name, masses in bars.items():
+    for i, (name, masses) in enumerate(bars):
         total = sum(masses.values(), ZERO)
+        if i >= len(shown) and total == ZERO:
+            continue  # an empty bucket would open onto nothing
         heaviest = sorted(
             ((m, kg) for m, kg in masses.items() if kg != ZERO),
             key=lambda item: item[1],
             reverse=True,
         )
-        top, rest = heaviest[:TOP_ELEMENT_MATERIALS], heaviest[TOP_ELEMENT_MATERIALS:]
+        # One material left over is shown, not folded into "1 other materials".
+        cut = (
+            TOP_ELEMENT_MATERIALS if len(heaviest) > TOP_ELEMENT_MATERIALS + 1 else None
+        )
+        top, rest = heaviest[:cut], heaviest[cut:] if cut else []
         others = sum((kg for _, kg in rest), ZERO)
         result.append(
             ElementMaterials(
@@ -511,7 +521,13 @@ def naming_view(
     """Every element and material figure under one naming. The element bars add up
     to the whole-life GWP and to the total mass."""
     elements = element_rollup(rows, naming)
-    shown = elements[:TOP_ELEMENTS]
+    # The bars go to the largest elements, by carbon (a credit counts by its size),
+    # then by mass, and keep the classification or label order on screen.
+    largest = sorted(
+        elements, key=lambda e: (abs(sum(e[1].values(), ZERO)), e[2]), reverse=True
+    )[:TOP_ELEMENTS]
+    kept = {name for name, _, _ in largest}
+    shown = [e for e in elements if e[0] in kept]
 
     def gwp(items: list[tuple[str, Stages, Decimal]]) -> Decimal:
         return sum((sum(s.values(), ZERO) for _, s, _ in items), ZERO)
