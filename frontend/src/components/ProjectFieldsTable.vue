@@ -166,9 +166,9 @@ function toggle(fields: ProjectField[], show: boolean) {
   font-variant-numeric: tabular-nums;
 }
 
-// A blank field reads grey, as missing data does everywhere.
+// A blank field is filled as an Info, the lowest severity: orange text would fail AA.
 .fields__missing {
-  color: tokens.$color-text-muted;
+  background: tokens.$color-severity-info;
 }
 
 .fields__actions {

@@ -26,7 +26,7 @@ export interface Bar {
   label: string;
   value: number;
   display: string; // formatted by the page, in the reader's locale
-  missing?: boolean; // data the workbook lacks (Not classified, Undeclared): grey
+  missing?: boolean; // data the workbook lacks (Not classified, Undeclared): Info orange
 }
 
 const props = defineProps<{ bars: Bar[]; caption: string; emptyLabel: string }>();
@@ -76,7 +76,7 @@ const drawn = computed(() => {
 }
 
 .bars-chart__bar--missing {
-  background: tokens.$color-data-missing;
+  background: tokens.$color-severity-info;
 }
 
 .bars-chart__caption {

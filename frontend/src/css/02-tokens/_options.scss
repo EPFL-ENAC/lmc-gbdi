@@ -59,6 +59,9 @@ $tokens-colors-grey-dark: #646464 !default; // also illustration stroke (p.24)
 // p.18 (palette page) prints #BCC4C2; p.13 and gbdi.io use #BEBFBF.
 // The palette page wins. 1.78:1 on white.
 $tokens-colors-grey-text: #bcc4c2 !default;
+// Not a brand colour: Grey Text at half strength, the light step of the emissions
+// ramp. The palette's own light greys are green-tinted and would read as a credit.
+$tokens-colors-grey-pastel: #dee2e1 !default;
 $tokens-colors-green-grey-accent: #d5e6e2 !default; // highlight / illustration accent
 $tokens-colors-green-grey-border: #eef2f2 !default; // card border
 $tokens-colors-green-grey-card: #f6f8f8 !default; // standard card fill
