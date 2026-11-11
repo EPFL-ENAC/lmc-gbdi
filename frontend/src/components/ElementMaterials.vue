@@ -2,7 +2,7 @@
   <!-- What each element bar is made of, by mass: one fold per bar, the first one open.
        The backend gives the five heaviest materials and the rest as one row. -->
   <div class="within">
-    <details v-for="(element, i) in elements" :key="element.element" class="within__element" :open="i === 0">
+    <details v-for="(element, i) in elements" :key="i" class="within__element" :open="i === 0">
       <summary class="within__summary">
         {{ element.element }}
         <span class="within__mass">{{ num.format(element.mass_kg) }} {{ units.mass }}</span>

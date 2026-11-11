@@ -521,12 +521,14 @@ def naming_view(
     """Every element and material figure under one naming. The element bars add up
     to the whole-life GWP and to the total mass."""
     elements = element_rollup(rows, naming)
-    # The bars go to the largest elements, by carbon (a credit counts by its size),
-    # then by mass, and keep the classification or label order on screen.
-    largest = sorted(
-        elements, key=lambda e: (abs(sum(e[1].values(), ZERO)), e[2]), reverse=True
-    )[:TOP_ELEMENTS]
-    kept = {name for name, _, _ in largest}
+    # Elements that carry carbon take the bars first, in classification or label
+    # order. A mass-only element gets a bar only when fewer than eight carry carbon,
+    # so it never pushes a carbon element into "Other classified elements".
+    # ponytail: order, not size, picks the eight, as before stage 4. The comparison
+    # aligns two buildings by element name, and order keeps their sets alike.
+    carbon = [e for e in elements if sum(e[1].values(), ZERO) != ZERO]
+    mass_only = [e for e in elements if sum(e[1].values(), ZERO) == ZERO]
+    kept = {name for name, _, _ in (carbon + mass_only)[:TOP_ELEMENTS]}
     shown = [e for e in elements if e[0] in kept]
 
     def gwp(items: list[tuple[str, Stages, Decimal]]) -> Decimal:

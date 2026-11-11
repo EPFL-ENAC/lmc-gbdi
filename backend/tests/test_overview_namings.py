@@ -121,19 +121,6 @@ def test_elements_after_the_eighth_go_to_other_classified(tmp_path):
     assert view.element_materials[-1].element == "Other classified elements"
 
 
-def test_the_bars_go_to_the_largest_elements_not_the_first_ones(tmp_path):
-    # C00 to C03 come first in label order but are small; C04 to C11 are larger.
-    rows = [
-        (f"N{n}", "", "2.1", "Brick", "B", "1", {"gwp_total_a1_a3": str(n + 1)})
-        for n in range(12)
-    ]
-    labels = {f"N{n}": (f"C{n:02}", "") for n in range(12)}
-    data = named(read_project(write_project(tmp_path, rows=rows)), labels)
-    view = build_overview(data).namings["custom"]
-    assert [e.element for e in view.elements] == [f"C{n:02}" for n in range(4, 12)]
-    assert view.other_classified.gwp == 1 + 2 + 3 + 4
-
-
 def test_a_mass_only_element_does_not_take_the_bar_of_a_carbon_one(tmp_path):
     gwp = {"gwp_total_a1_a3": "1"}
     carbon = [(f"N{n}", "", "2.1", "Brick", "B", "1", gwp) for n in range(8)]
