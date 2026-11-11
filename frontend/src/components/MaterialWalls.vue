@@ -22,6 +22,10 @@
       {{ rankBy === 'mass' ? 'The ten heaviest materials, and the carbon each carries.' : 'The ten materials with the most whole-life carbon, and what each weighs.' }}
       One colour per material in both walls; one brick is one per cent.
     </p>
+    <p class="passport__cover">
+      Together, these ten make {{ percent.format(cover.carbon) }} of the whole-life carbon and
+      {{ percent.format(cover.mass) }} of the mass.
+    </p>
     <div class="grid-2-col passport__walls">
       <figure class="passport__wall">
         <figcaption>Mass, {{ num.format(overview.total_mass_kg) }} {{ overview.units.mass }}</figcaption>
@@ -125,6 +129,13 @@ const ranked = computed(() => {
   }));
 });
 
+// ponytail: the ten backend shares summed here, as the payload has no such total;
+// move it into the overview when a backend PR next touches it.
+const cover = computed(() => ({
+  carbon: ranked.value.reduce((sum, r) => sum + r.share, 0),
+  mass: ranked.value.reduce((sum, r) => sum + (r.share_of_mass ?? 0), 0),
+}));
+
 // The materials the wall paints as "every other", in the same ranking.
 const open = ref(false);
 const rest = computed(() => {
@@ -147,6 +158,10 @@ const rest = computed(() => {
 
 .passport__section p {
   margin: 0;
+}
+
+.passport__cover {
+  font-size: tokens.$text-size-lg;
 }
 
 .passport__head {
