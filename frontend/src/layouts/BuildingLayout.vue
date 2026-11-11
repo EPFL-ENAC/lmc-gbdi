@@ -1,40 +1,13 @@
 <template>
-  <!-- One stored building: which one, how to read it (the design demo's layouts), and
-       which other building, if any, sits beside it in the same layout. -->
+  <!-- One stored building: which one, and which other building, if any, sits beside it.
+       The bar goes into the fixed header, so it stays in view while the page scrolls (#93). -->
   <div>
-    <nav class="building-bar" aria-label="Building">
-      <router-link class="link" to="/buildings">All buildings</router-link>
-      <q-select
-        :model-value="id"
-        :options="options"
-        option-label="label"
-        option-value="id"
-        emit-value
-        map-options
-        dense
-        outlined
-        options-dense
-        label="Building"
-        class="building-bar__pick"
-        @update:model-value="(next: number) => router.push(buildingPath(next, layout, next === other ? null : other))"
-      />
-      <q-btn-toggle
-        v-if="!draftOnly"
-        :model-value="layout"
-        :options="LAYOUTS.map(({ label, value }) => ({ label, value }))"
-        no-caps
-        unelevated
-        dense
-        toggle-color="primary"
-        color="white"
-        text-color="dark"
-        class="building-bar__layouts"
-        @update:model-value="(value: string) => router.push(buildingPath(id, value, other))"
-      />
-      <div v-if="!draftOnly" class="building-bar__compare">
+    <Teleport defer to="#building-bar">
+      <nav class="building-bar" aria-label="Building">
+        <router-link class="link" to="/buildings">All buildings</router-link>
         <q-select
-          :model-value="other"
-          :options="comparable.filter((o) => o.id !== id)"
+          :model-value="id"
+          :options="options"
           option-label="label"
           option-value="id"
           emit-value
@@ -42,20 +15,36 @@
           dense
           outlined
           options-dense
-          clearable
-          label="Compare with"
+          label="Building"
           class="building-bar__pick"
-          @update:model-value="(next: number | null) => router.push(buildingPath(id, layout, next))"
+          @update:model-value="(next: number) => router.push(buildingPath(next, next === other ? null : other))"
         />
-        <q-btn
-          v-if="other !== null"
-          flat
-          no-caps
-          label="Swap"
-          @click="router.push(buildingPath(other, layout, id))"
-        />
-      </div>
-    </nav>
+        <div v-if="!draftOnly" class="building-bar__compare">
+          <q-select
+            :model-value="other"
+            :options="comparable.filter((o) => o.id !== id)"
+            option-label="label"
+            option-value="id"
+            emit-value
+            map-options
+            dense
+            outlined
+            options-dense
+            clearable
+            label="Compare with"
+            class="building-bar__pick"
+            @update:model-value="(next: number | null) => router.push(buildingPath(id, next))"
+          />
+          <q-btn
+            v-if="other !== null"
+            flat
+            no-caps
+            label="Swap"
+            @click="router.push(buildingPath(other, id))"
+          />
+        </div>
+      </nav>
+    </Teleport>
     <DraftPage v-if="draftOnly" :id="id" />
     <template v-else>
       <p v-if="current?.draft" class="building-draft" role="note">
@@ -70,7 +59,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { code, fetchBuildings, noCarbon, type BuildingSummary } from '@/api/buildings';
-import { buildingPath, LAYOUTS } from '@/buildingLayouts';
+import { buildingPath } from '@/buildingLayouts';
 import DraftPage from '@/pages/DraftPage.vue';
 
 const route = useRoute();
@@ -78,12 +67,11 @@ const router = useRouter();
 const buildings = ref<BuildingSummary[]>([]);
 const id = computed(() => Number(route.params.id));
 const other = computed(() => (route.params.other === undefined ? null : Number(route.params.other)));
-const layout = computed(() => String(route.meta.layout ?? ''));
 const options = computed(() =>
   buildings.value.map((b) => ({ id: b.id, label: `${code(b)}, ${b.project_name ?? 'unnamed'}` })),
 );
 const comparable = computed(() => options.value.filter((o) => !buildings.value.some((b) => b.id === o.id && noCarbon(b))));
-// A draft whose rejects block carbon has no layout to read: it shows its draft page.
+// A draft whose rejects block carbon has no overview to read: it shows its draft page.
 const current = computed(() => buildings.value.find((b) => b.id === id.value));
 const draftOnly = computed(() => current.value !== undefined && noCarbon(current.value));
 
@@ -102,7 +90,7 @@ onMounted(async () => {
   align-items: center;
   gap: tokens.$spacing-md;
   padding: tokens.$spacing-sm tokens.$spacing-lg;
-  border-bottom: tokens.$border-width solid tokens.$color-border;
+  border-top: tokens.$border-width solid tokens.$color-border;
   background: tokens.$color-surface;
 }
 
@@ -115,14 +103,6 @@ onMounted(async () => {
 
 .building-bar__pick {
   width: 14rem;
-}
-
-.building-bar__layouts {
-  border: tokens.$border-width solid tokens.$color-border;
-}
-
-.building-bar__layouts :deep(.q-btn) {
-  padding: tokens.$spacing-xs tokens.$spacing-md;
 }
 
 .building-bar__compare {

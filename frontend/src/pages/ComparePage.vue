@@ -135,7 +135,7 @@ const options = computed(() =>
 // Once both are picked, the comparison lives under the first building, in its layouts.
 const pick = (side: 'a' | 'b', id: number) => {
   const next = { a: a.value, b: b.value, [side]: id };
-  if (next.a !== null && next.b !== null) void router.replace(buildingPath(next.a, '', next.b));
+  if (next.a !== null && next.b !== null) void router.replace(buildingPath(next.a, next.b));
   else void router.replace({ query: { ...route.query, [side]: id } });
 };
 

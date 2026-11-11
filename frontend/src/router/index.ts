@@ -1,6 +1,5 @@
 import { defineRouter } from '#q-app';
 import { createRouter, createWebHistory } from 'vue-router';
-import { LAYOUTS } from '@/buildingLayouts';
 
 export default defineRouter(() =>
   createRouter({
@@ -14,25 +13,23 @@ export default defineRouter(() =>
           { path: 'demo', redirect: '/' },
           { path: 'buildings', component: () => import('@/pages/BuildingsPage.vue') },
           { path: 'buildings/compare', component: () => import('@/pages/ComparePage.vue') },
-          // A stored building in each layout of the design demo, alone or beside another.
+          // A stored building, alone or beside another.
           {
             path: 'buildings/:id(\\d+)',
             component: () => import('@/layouts/BuildingLayout.vue'),
-            children: LAYOUTS.flatMap((l) => [
-              { path: l.value.slice(1), component: l.page, meta: { layout: l.value } },
-              {
-                path: `${l.value.slice(1)}${l.value ? '/' : ''}compare/:other(\\d+)`,
-                component: l.compare,
-                meta: { layout: l.value },
-              },
-            ]),
+            children: [
+              { path: '', component: () => import('@/pages/ProjectPage.vue') },
+              { path: 'compare/:other(\\d+)', component: () => import('@/pages/ComparePage.vue') },
+            ],
           },
-          // The demo's layouts, on its building (AT-09) from the database.
-          ...LAYOUTS.map((l) => ({
-            path: l.demo,
-            component: () => import('@/pages/DemoBuildingPage.vue'),
-            props: { layout: l.value },
-          })),
+          // The design demo's tabs became the one view (globalbuildingdatainitiative/org#97);
+          // their old addresses still open it.
+          {
+            path: 'buildings/:id(\\d+)/:tab(spread|section|sheet|time|passport)/:rest(compare/\\d+)?',
+            redirect: (to) => `/buildings/${String(to.params.id)}${to.params.rest ? `/${String(to.params.rest)}` : ''}`,
+          },
+          // The demo's old /demo/project* addresses, on its building (AT-09) from the database.
+          { path: 'demo/project:variant(_\\d)?', component: () => import('@/pages/DemoBuildingPage.vue') },
         ],
       },
     ],

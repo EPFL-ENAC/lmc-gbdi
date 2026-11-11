@@ -80,6 +80,24 @@ PROJECT_FIELDS = (
     ("Life cycle assessment", "lca_lci_modeling_approach", "LCI modelling approach"),
     ("Life cycle assessment", "lca_third_party_verified", "Third-party verified"),
 )
+# The Overview's title block, in the order of globalbuildingdatainitiative/org#97: what
+# the project is, then the five attributes that decide whether two results compare.
+TITLE_BLOCK = (
+    "project_id",
+    "project_country",
+    "building_use_type",
+    "building_structure_type",
+    "building_gross_floor_area",
+    "building_gross_floor_area_standard",
+    "lca_reference_study_period",
+    "project_assessment_type",
+    "project_phase_common",
+    "lca_cycle_system_boundary",
+    "lcia_methodology",
+    "lca_biogenic_method",
+    "lca_temporal_approach",
+    "lca_lci_modeling_approach",
+)
 # Module scope flags of General Information and their Wide result column.
 MODULES = (
     ("A1–A3", "lca_a1_3", "gwp_total_a1_a3"),
@@ -403,9 +421,12 @@ def build_overview(data: ProjectData) -> Overview:
     summary = headline(data, totals)
     weighting, data_types = data_type_profile(pairs, data.data_types)
     checks = module_checks(data)
+    fields = project_fields(data.general)
+    by_code = {f.code: f for f in fields}
     return Overview(
         project=project_info(data.general),
-        project_fields=project_fields(data.general),
+        project_fields=fields,
+        title_block=[by_code[code] for code in TITLE_BLOCK],
         rows_read=len(data.rows),
         module_checks=checks,
         modules_declared_without_result=sum(

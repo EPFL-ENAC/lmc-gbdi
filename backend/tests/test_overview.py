@@ -217,6 +217,14 @@ def test_project_fields_keep_blanks_as_not_declared(overview):
     assert fields["project_country"] is None
 
 
+def test_title_block_lists_the_fourteen_fields_in_the_issue_order(overview):
+    codes = [f.code for f in overview.title_block]
+    assert len(codes) == 14
+    assert codes[:3] == ["project_id", "project_country", "building_use_type"]
+    assert codes[-1] == "lca_lci_modeling_approach"
+    assert overview.title_block[0].value == "TEST-1"
+
+
 def test_material_hotspots_carry_their_stage_split(overview):
     concrete = overview.material_hotspots[0]
     assert concrete.gwp_by_stage == {"a1_a3": 36, "a4_a5": 11, "b1_b8": 6, "c1_c4": 12}

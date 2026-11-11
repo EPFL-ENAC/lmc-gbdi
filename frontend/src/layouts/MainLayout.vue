@@ -12,6 +12,8 @@
           <router-link class="main-nav__link" to="/buildings/compare">Compare</router-link>
         </nav>
       </q-toolbar>
+      <!-- A building's bar, teleported here by BuildingLayout so it stays in view. -->
+      <div id="building-bar" />
     </q-header>
     <q-page-container>
       <router-view />

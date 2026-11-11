@@ -166,7 +166,7 @@ const heroes = computed(() => {
       tone: 'purple' as const,
       number: `${kg.format(low.whole_life_per_m2!)}–${kg.format(high.whole_life_per_m2!)}`,
       text: `kg CO₂e per m², from ${code(low)} to ${code(high)}. Compare the two.`,
-      to: buildingPath(low.id, '', high.id),
+      to: buildingPath(low.id, high.id),
     },
   ];
 });
