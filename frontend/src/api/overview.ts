@@ -36,7 +36,24 @@ export interface StageTotal {
 export interface ElementTotal {
   element: string;
   gwp: number;
-  share: number;
+  share: number; // of the whole-life GWP
+  mass_kg: number;
+  share_of_mass: number | null; // of the total mass; null when no mass is declared
+}
+
+export interface ElementMaterial {
+  material: string;
+  epd_product: string;
+  mass_kg: number;
+  share: number | null; // of the element's mass; null when the element has none
+}
+
+// One element bar and the mass of the materials it holds.
+export interface ElementMaterials {
+  element: string;
+  mass_kg: number;
+  materials: ElementMaterial[]; // the 5 heaviest
+  other: ElementMaterial | null; // every other material as one row
 }
 
 export interface ElementStages {
@@ -119,6 +136,22 @@ export interface TimeFigures {
   module_d1: number;
 }
 
+// The names the element and material figures go by (backend `Naming`).
+export type Naming = 'openbdf' | 'custom';
+
+// Every figure named by element or material, under one naming.
+export interface NamingView {
+  elements: ElementTotal[];
+  other_classified: ElementTotal;
+  not_classified: ElementTotal;
+  element_stages: ElementStages[];
+  material_hotspots: MaterialHotspot[];
+  mass_hotspots: MassHotspot[];
+  materials: MaterialHotspot[];
+  mass_other_share: number;
+  element_materials: ElementMaterials[];
+}
+
 export interface Overview {
   project: ProjectInfo;
   project_fields: ProjectField[];
@@ -139,6 +172,7 @@ export interface Overview {
   total_mass_kg: number;
   mass_other_share: number;
   material_classes: MaterialClassTotal[];
+  namings: Record<Naming, NamingView>; // the top-level element and material fields are openbdf and custom
   time: TimeFigures;
   units: Units;
   bases: BasisOption[]; // every basis, with whether this building can serve it
