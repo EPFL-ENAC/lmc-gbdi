@@ -116,6 +116,15 @@ def reject(code, sheet):
         ([reject("E01", "Bill of Materials")], ["carbon", "materials"]),
         ([{**reject("E25", "LCA Result (Wide)"), "severity": "Warning"}], []),
         ([reject("E99", None)], ["carbon", "materials"]),
+        # The total checks judge only the declared total, which is never read.
+        (
+            [reject("E018", "LCA Result (Wide)"), reject("E019", "LCA Result (Wide)")],
+            [],
+        ),
+        (
+            [reject("E018", "LCA Result (Wide)"), reject("E005", "LCA Result (Wide)")],
+            ["carbon"],
+        ),
     ],
 )
 def test_a_draft_blocks_the_parts_its_rejects_touch(findings, blocked):

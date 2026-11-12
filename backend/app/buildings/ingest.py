@@ -69,17 +69,24 @@ class RejectedWorkbook(Exception):
 # part: General Information rejects (a missing country) block nothing.
 RESULT_SHEETS = ("LCA Result (Wide)", "LCA Result (Tall)")
 PROJECT_SHEETS = ("General Information", "Project Material Database")
+# ModuleDInTotal, TotalSumMismatch: they judge only the declared <indicator>_total,
+# which the dashboard never reads, so they block nothing.
+TOTAL_CHECKS = frozenset({"E018", "E019"})
 
 
 def blocked_parts(findings: list[dict]) -> list[str]:
     """The parts of a stored draft that cannot be shown: "carbon", "materials".
 
-    Results paired to the wrong lines (E05) block carbon. A reject on the bill of
+    Results paired to the wrong lines (E005) block carbon. A reject on the bill of
     materials, or one naming no sheet, blocks both, as nothing proves the lines.
     """
     blocked: set[str] = set()
     for f in findings:
-        if f["severity"] != "Reject" or f["sheet"] in PROJECT_SHEETS:
+        if (
+            f["severity"] != "Reject"
+            or f["sheet"] in PROJECT_SHEETS
+            or f["code"] in TOTAL_CHECKS
+        ):
             continue
         blocked.add("carbon")
         if f["sheet"] not in RESULT_SHEETS:
