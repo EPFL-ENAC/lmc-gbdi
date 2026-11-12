@@ -25,8 +25,8 @@ target-version = "py314"
 select = ["E", "F", "I", "UP"]
 
 [tool.uv.sources]
-# ponytail: temporary pin to the head of lmc-openbdf#36; move to a tag when #36 merges.
-openbdf = { git = "https://github.com/EPFL-ENAC/lmc-openbdf", rev = "d80647694095884b98a514d1b4ffb2839a075601" }
+# 0.1.4 is a GitHub tag only (no "v"): a v* tag publishes to PyPI.
+openbdf = { git = "https://github.com/EPFL-ENAC/lmc-openbdf", tag = "0.1.4" }
 
 [dependency-groups]
 dev = [
