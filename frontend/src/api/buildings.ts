@@ -26,8 +26,6 @@ export interface BuildingSummary {
   file_name: string;
   uploaded_at: string;
   findings: number;
-  dropped_lines: number; // bill of materials lines dropped for a missing field
-  dropped_lines_with_data: number; // of those, the ones that carried mass or results
   project_name: string | null;
   country: string | null;
   gross_floor_area_m2: number | null;

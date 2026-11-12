@@ -10,7 +10,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from openbdf.lib.converters.dataframe import project_package_from_tables
-from openbdf.lib.openbdf_tables import OpenBDFTables, workbook_translator
+from openbdf.lib.converters.translators import DocumentTranslator
+from openbdf.lib.openbdf_tables import OpenBDFTables
 from openbdf.lib.sources import ExcelSheetSource
 from openbdf.lib.validation import (
     DroppedLine,
@@ -93,15 +94,12 @@ def finding(f: OpenBDFValidationError) -> Finding:
 def parse(workbook: bytes, draft: bool = False) -> tuple[ProjectRecord, list[Finding]]:
     """The lmc-openbdf README's ingest: translate, convert, validate.
 
-    openbdf picks the layout from the workbook: the template, or the specification's.
-    A line that misses a required field is dropped and reported (W005, and W012 when
-    it carried a mass or results). A draft is stored despite its rejects, as
-    `openbdf open --draft` saves; the parts they block are emptied first, so no
-    misaligned figure is ever stored.
+    A draft is stored despite its rejects, as `openbdf open --draft` saves; the parts
+    they block are emptied first, so no misaligned figure is ever stored.
     """
+    translator = DocumentTranslator.default_openbdf_translator()
     findings: list[OpenBDFValidationError] = []
     with ExcelSheetSource([workbook]) as source:
-        translator = workbook_translator(source)
         tables = OpenBDFTables.from_source(source, translator)
     if tables is None:
         raise RejectedWorkbook(
@@ -116,7 +114,7 @@ def parse(workbook: bytes, draft: bool = False) -> tuple[ProjectRecord, list[Fin
             ]
         )
     project = project_package_from_tables(
-        tables, translator, findings=findings, draft=draft, drop_invalid=True
+        tables, translator, findings=findings, draft=draft
     )
     dropped = frozenset(
         f.row for f in findings if isinstance(f, DroppedLine) and f.row is not None

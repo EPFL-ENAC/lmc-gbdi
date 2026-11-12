@@ -36,8 +36,6 @@ class BuildingSummary(BaseModel):
     file_name: str
     uploaded_at: datetime
     findings: int  # openbdf findings kept with the upload
-    dropped_lines: int = 0  # bill of materials lines dropped for a missing field
-    dropped_lines_with_data: int = 0  # of those, the ones that carried mass or results
     project_name: str | None
     country: str | None
     gross_floor_area_m2: float | None

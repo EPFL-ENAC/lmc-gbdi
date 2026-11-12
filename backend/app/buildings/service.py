@@ -57,9 +57,9 @@ def rejects(upload: Upload) -> list[str]:
     return [f["message"] for f in upload.findings if f["severity"] == "Reject"]
 
 
-def findings_count(findings: list[dict], code: str | None = None) -> int:
-    """Every finding, or those of one code. Older uploads have no count: 1 each."""
-    return sum(f.get("count", 1) for f in findings if code in (None, f["code"]))
+def findings_count(findings: list[dict]) -> int:
+    """Every finding. Older uploads have no count: 1 each."""
+    return sum(f.get("count", 1) for f in findings)
 
 
 SEVERITY_ORDER = {"Reject": 0, "Warning": 1}
@@ -140,8 +140,6 @@ def summary(upload: Upload, o: Overview) -> BuildingSummary:
         file_name=upload.file_name,
         uploaded_at=upload.uploaded_at,
         findings=findings_count(upload.findings),
-        dropped_lines=findings_count(upload.findings, "W005"),
-        dropped_lines_with_data=findings_count(upload.findings, "W012"),
         project_name=o.project.project_name,
         country=o.project.country,
         gross_floor_area_m2=area,
@@ -168,8 +166,6 @@ def draft_summary(
         file_name=upload.file_name,
         uploaded_at=upload.uploaded_at,
         findings=findings_count(upload.findings),
-        dropped_lines=findings_count(upload.findings, "W005"),
-        dropped_lines_with_data=findings_count(upload.findings, "W012"),
         project_name=project.project_name,
         country=project.country,
         gross_floor_area_m2=project.gross_floor_area_m2,

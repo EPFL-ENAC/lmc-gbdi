@@ -28,10 +28,6 @@
         <p v-else-if="upload.state === 'added'">
           Added {{ upload.name }}: {{ kg.format(upload.building.rows_read) }} lines,
           {{ kg.format(upload.building.findings) }} findings kept with it.
-          <template v-if="upload.building.dropped_lines">
-            openbdf dropped {{ kg.format(upload.building.dropped_lines) }} lines that miss a required field, and
-            {{ kg.format(upload.building.dropped_lines_with_data) }} of them carried a mass or results.
-          </template>
           <router-link class="link" :to="`/buildings/${upload.building.id}`">Open it</router-link>
         </p>
         <template v-else-if="upload.state === 'rejected'">
