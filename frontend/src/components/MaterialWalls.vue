@@ -32,7 +32,7 @@
         <BrickWall :parts="ranked.map((r) => ({ color: r.color, label: r.label, share: r.share_of_mass ?? 0 }))" label="Mass by material" />
       </figure>
       <figure class="passport__wall">
-        <figcaption>Whole-life carbon, modules A to C, {{ num.format(overview.headline.whole_life) }} {{ overview.units.carbon }}</figcaption>
+        <figcaption>Carbon ({{ overview.headline.scope }}), {{ num.format(overview.headline.whole_life) }} {{ overview.units.carbon }}</figcaption>
         <BrickWall :parts="ranked.map((r) => ({ color: r.color, label: r.label, share: r.share }))" label="Whole-life carbon by material" />
       </figure>
     </div>

@@ -12,14 +12,17 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.buildings import repo
-from app.buildings.ingest import blocked_parts, parse, store
+from app.buildings.ingest import EXAMPLES, blocked_parts, parse, store
 from app.buildings.models import Upload
 from app.buildings.schemas import (
     BuildingSummary,
+    Comparability,
     ComparedBuilding,
     ComparedRow,
     Comparison,
     DraftView,
+    Finding,
+    FindingGroup,
     MaterialMass,
 )
 from app.config import get_settings
@@ -52,6 +55,33 @@ def blocked(upload: Upload) -> list[str]:
 
 def rejects(upload: Upload) -> list[str]:
     return [f["message"] for f in upload.findings if f["severity"] == "Reject"]
+
+
+def findings_count(findings: list[dict]) -> int:
+    """Every finding. Older uploads have no count: 1 each."""
+    return sum(f.get("count", 1) for f in findings)
+
+
+SEVERITY_ORDER = {"Reject": 0, "Warning": 1}
+
+
+def finding_groups(findings: list[dict]) -> list[FindingGroup]:
+    """By code, severity and sheet: rejects first, then the most frequent."""
+    groups: dict[tuple, FindingGroup] = {}
+    for f in findings:
+        key = (f["code"], f["severity"], f["sheet"])
+        group = groups.setdefault(
+            key,
+            FindingGroup(
+                code=key[0], severity=key[1], sheet=key[2], count=0, examples=[]
+            ),
+        )
+        group.count += f.get("count", 1)
+        if len(group.examples) <= EXAMPLES:  # with the entry for the rest, if any
+            group.examples.append(Finding(**f))
+    return sorted(
+        groups.values(), key=lambda g: (SEVERITY_ORDER.get(g.severity, 2), -g.count)
+    )
 
 
 async def overview(
@@ -109,7 +139,7 @@ def summary(upload: Upload, o: Overview) -> BuildingSummary:
         id=upload.project_record_id,
         file_name=upload.file_name,
         uploaded_at=upload.uploaded_at,
-        findings=len(upload.findings),
+        findings=findings_count(upload.findings),
         project_name=o.project.project_name,
         country=o.project.country,
         gross_floor_area_m2=area,
@@ -119,6 +149,8 @@ def summary(upload: Upload, o: Overview) -> BuildingSummary:
         whole_life=o.headline.whole_life,
         whole_life_per_m2=o.headline.per_m2_gross,
         stages_per_m2={s.key: s.gwp / area for s in o.stages} if area else None,
+        scope=o.headline.scope,
+        lcia_methodology=o.project.lcia_methodology,
         draft=upload.draft,
         rejects=rejects(upload) if upload.draft else [],
     )
@@ -133,7 +165,7 @@ def draft_summary(
         id=upload.project_record_id,
         file_name=upload.file_name,
         uploaded_at=upload.uploaded_at,
-        findings=len(upload.findings),
+        findings=findings_count(upload.findings),
         project_name=project.project_name,
         country=project.country,
         gross_floor_area_m2=project.gross_floor_area_m2,
@@ -143,6 +175,7 @@ def draft_summary(
         whole_life=None,
         whole_life_per_m2=None,
         stages_per_m2=None,
+        lcia_methodology=project.lcia_methodology,
         draft=True,
         blocked=blocked(upload),
         rejects=rejects(upload),
@@ -178,7 +211,8 @@ async def draft_view(session: AsyncSession, project_id: int) -> DraftView:
         project_fields=project_fields(data.general),
         rows_read=len(data.rows),
         rejects=[f for f in upload.findings if f["severity"] == "Reject"],
-        findings=upload.findings,
+        findings_count=findings_count(upload.findings),
+        finding_groups=finding_groups(upload.findings),
         blocked=parts,
         gross_floor_area_m2=project.gross_floor_area_m2,
         total_mass_kg=None if "materials" in parts else sum(c.mass_kg for c in classes),
@@ -189,19 +223,20 @@ async def draft_view(session: AsyncSession, project_id: int) -> DraftView:
 
 
 def ingest(
-    workbook: bytes, file_name: str, draft: bool
+    workbook: bytes, file_name: str, draft: bool, replace: int | None = None
 ) -> tuple[BuildingSummary, Overview | None]:
-    """Read, store and summarise one workbook, in the parser process.
+    """Read, store and summarise one workbook, in the parser process; with `replace`,
+    the project it replaces is deleted in the same transaction.
 
     Raises RejectedWorkbook, or ValueError when the overview cannot read it: then
     nothing is committed, so a broken project never breaks the list for everyone.
     Returns the overview too (None for a draft without carbon), for the API's cache.
     """
-    return asyncio.run(_ingest(workbook, file_name, draft))
+    return asyncio.run(_ingest(workbook, file_name, draft, replace))
 
 
 async def _ingest(
-    workbook: bytes, file_name: str, draft: bool
+    workbook: bytes, file_name: str, draft: bool, replace: int | None = None
 ) -> tuple[BuildingSummary, Overview | None]:
     project, findings = parse(workbook, draft)
     has_rejects = any(f.severity == "Reject" for f in findings)
@@ -209,7 +244,9 @@ async def _ingest(
     own = create_async_engine(get_settings().DB_URL)
     try:
         async with AsyncSession(own) as session:
-            project_id = await store(session, project, file_name, findings, has_rejects)
+            project_id = await store(
+                session, project, file_name, findings, has_rejects, replace
+            )
             summary = await building_summary(session, project_id)
             await session.commit()
             return summary, _overviews.get(project_id)
@@ -225,6 +262,8 @@ def compared(upload: Upload, o: Overview) -> ComparedBuilding:
         country=o.project.country,
         gross_floor_area_m2=o.project.gross_floor_area_m2,
         rows_read=o.rows_read,
+        scope=o.headline.scope,
+        lcia_methodology=o.project.lcia_methodology,
         whole_life_per_m2=o.headline.per_m2_gross,
         upfront_per_m2=per_m2(o.headline.upfront, o),
         module_d1_per_m2=per_m2(o.headline.module_d1, o),
@@ -256,6 +295,23 @@ def element_totals(o: Overview) -> dict[str, float]:
     }
 
 
+# The field mapping (openbdf_field to standard mapping in v2.0.0) on every gwp_total
+# field: "Comparable across methods: No – biogenic scope differs (A1 vs A2)".
+METHOD_NOTE = (
+    "A2: biogenic INCLUDED in the total (−1/+1 convention). A1: biogenic EXCLUDED "
+    "(reported separately, not summed into GWP). Equal for non-biobased; can differ "
+    "by the whole biogenic term for biobased. Pool/compare only within the same "
+    "lcia_methodology."
+)
+
+
+def comparability(a: str | None, b: str | None) -> Comparability:
+    """GWP totals compare one to one only within one LCIA method."""
+    if not a or not b:
+        return "method_not_declared"
+    return "same_method" if a == b else "methods_differ"
+
+
 async def compare(session: AsyncSession, a_id: int, b_id: int) -> Comparison:
     ua, ub = await repo.get_upload(session, a_id), await repo.get_upload(session, b_id)
     oa, ob = await overview(session, a_id), await overview(session, b_id)
@@ -269,6 +325,10 @@ async def compare(session: AsyncSession, a_id: int, b_id: int) -> Comparison:
     return Comparison(
         a=compared(ua, oa),
         b=compared(ub, ob),
+        comparability=comparability(
+            oa.project.lcia_methodology, ob.project.lcia_methodology
+        ),
+        method_note=METHOD_NOTE,
         ratio=wb / wa if wa and wb is not None else None,
         stages=aligned(
             [s.label for s in oa.stages],

@@ -52,7 +52,7 @@
       <section class="sheet__panel" aria-label="Headline results">
         <div class="grid-3-col">
           <BigNumber :value="num.format(overview.headline.whole_life)" tone="green">
-            {{ units.carbon }} over the whole life cycle, modules A to C.
+            {{ units.carbon }}, {{ overview.headline.scope }}.
           </BigNumber>
           <BigNumber :value="num.format(overview.headline.upfront)" tone="blue">
             {{ units.carbon }} before the building is used, A1–A5:

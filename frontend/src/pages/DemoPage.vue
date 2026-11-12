@@ -84,8 +84,8 @@
     <footer class="u-text-muted">
       <ol>
         <li>
-          Live from the GBDI database: whole-life carbon, modules A to C, per m² of gross floor area, as each COLA
-          workbook declares it.
+          Live from the GBDI database: whole-life carbon per m² of gross floor area, over the modules each COLA
+          workbook declares.
         </li>
       </ol>
     </footer>

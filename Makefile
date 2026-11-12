@@ -57,8 +57,8 @@ dev-backend: backend/.env ## API with reload on :8000
 	cd backend && uv run alembic upgrade head && uv run fastapi dev app/main.py
 
 .PHONY: load-buildings
-load-buildings: backend/.env ## Read OpenBDF workbooks into the database: make load-buildings FILES="~/Downloads/Output/*.xlsx"
-	cd backend && PYTHONPATH=. uv run python scripts/load_buildings.py $(FILES)
+load-buildings: backend/.env ## Read OpenBDF workbooks into the database: make load-buildings FILES="~/Downloads/Output/*.xlsx" [REPLACE=<id>] [DRAFT=1]
+	cd backend && PYTHONPATH=. uv run python scripts/load_buildings.py $(FILES) $(if $(REPLACE),--replace $(REPLACE)) $(if $(DRAFT),--draft)
 
 .PHONY: dev-frontend
 dev-frontend: ## Quasar dev server on :9000, proxies /api to :8000

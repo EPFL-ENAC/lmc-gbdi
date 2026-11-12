@@ -138,15 +138,25 @@ def with_fallback(row: MaterialRow, total: str, parts: tuple[str, ...]) -> Decim
     return value if value is not None else sum((module(row, p) for p in parts), ZERO)
 
 
+A1_A3 = ("gwp_total_a1", "gwp_total_a2", "gwp_total_a3")
+A5 = tuple(f"gwp_total_a5_{i}" for i in range(1, 5))
+B = tuple(f"gwp_total_b{i}" for i in range(1, 9))
+C = tuple(f"gwp_total_c{i}" for i in range(1, 5))
+# The Wide fields each stage of stage_gwp reads.
+STAGE_FIELDS = {
+    "a1_a3": ("gwp_total_a1_a3", *A1_A3),
+    "a4_a5": ("gwp_total_a4", "gwp_total_a5", *A5),
+    "b1_b8": B,
+    "c1_c4": C,
+}
+
+
 def stage_gwp(row: MaterialRow) -> Stages:
-    a5 = ("gwp_total_a5_1", "gwp_total_a5_2", "gwp_total_a5_3", "gwp_total_a5_4")
     stages = {
-        "a1_a3": with_fallback(
-            row, "gwp_total_a1_a3", ("gwp_total_a1", "gwp_total_a2", "gwp_total_a3")
-        ),
-        "a4_a5": module(row, "gwp_total_a4") + with_fallback(row, "gwp_total_a5", a5),
-        "b1_b8": sum((module(row, f"gwp_total_b{i}") for i in range(1, 9)), ZERO),
-        "c1_c4": sum((module(row, f"gwp_total_c{i}") for i in range(1, 5)), ZERO),
+        "a1_a3": with_fallback(row, "gwp_total_a1_a3", A1_A3),
+        "a4_a5": module(row, "gwp_total_a4") + with_fallback(row, "gwp_total_a5", A5),
+        "b1_b8": sum((module(row, f) for f in B), ZERO),
+        "c1_c4": sum((module(row, f) for f in C), ZERO),
     }
     return {key: value * row.repetition for key, value in stages.items()}
 
@@ -387,7 +397,7 @@ def project_info(general: dict[str, str]) -> ProjectInfo:
     )
 
 
-def headline(data: ProjectData, totals: Stages) -> Headline:
+def headline(data: ProjectData, totals: Stages, scope: str) -> Headline:
     whole_life = sum(totals.values(), ZERO)
     useful = quantity(data.general, "building_useful_floor_area")
     gross = quantity(data.general, "building_gross_floor_area")
@@ -398,6 +408,7 @@ def headline(data: ProjectData, totals: Stages) -> Headline:
     }
     return Headline(
         whole_life=float(whole_life),
+        scope=scope,
         upfront=float(totals["a1_a3"] + totals["a4_a5"]),
         upfront_share=float((totals["a1_a3"] + totals["a4_a5"]) / whole_life),
         per_m2_useful=per(whole_life, useful),
@@ -443,6 +454,27 @@ def module_checks(data: ProjectData) -> list[ModuleCheck]:
             )
         )
     return checks
+
+
+FIELD_OF = {name: field for name, _, field in MODULES}
+SCOPES = {
+    ("a1_a3",): "A1–A3 · cradle to gate",
+    ("a1_a3", "a4_a5"): "A1–A5 · upfront",
+    ("a1_a3", "a4_a5", "b1_b8", "c1_c4"): "A–C · whole life",
+}
+
+
+def scope_label(checks: list[ModuleCheck]) -> str:
+    """The stages a total covers: those with a module declared in General Information,
+    or with a module result where it declares none. One module is enough, so B1–B3
+    counts as B. The total itself always adds every module with a result."""
+    modules = [c.module for c in checks if c.declared] or [
+        c.module for c in checks if c.has_result
+    ]
+    fields = {FIELD_OF[m] for m in modules}
+    stages = tuple(k for k, _ in STAGES if fields & set(STAGE_FIELDS[k]))
+    listed = ", ".join(label for k, label in STAGES if k in stages)
+    return SCOPES.get(stages, listed.replace("A1–A3, A4–A5", "A1–A5"))
 
 
 def bucket(
@@ -601,9 +633,9 @@ def build_overview(data: ProjectData) -> Overview:
     namings = {n: naming_view(rows, n, whole_life, total_mass) for n in NAMINGS}
     pairs = material_rollup(rows)
     period = study_period(data.general)
-    summary = headline(data, totals)
-    weighting, data_types = data_type_profile(pairs, data.data_types)
     checks = module_checks(data)
+    summary = headline(data, totals, scope_label(checks))
+    weighting, data_types = data_type_profile(pairs, data.data_types)
     fields = project_fields(data.general)
     by_code = {f.code: f for f in fields}
     project = project_info(data.general)
