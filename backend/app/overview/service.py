@@ -281,6 +281,8 @@ def hotspots(
             share_of_mass=float(p["mass"] / total_mass),
             gwp=float(p["gwp"]),
             share=float(p["gwp"] / whole_life),
+            gwp_per_kg=float(p["gwp"] / p["mass"]),
+            gwp_by_stage={k: float(p[k]) for k, _ in STAGES},
         )
         for (material, epd), p in by_mass
         if round(p["mass"]) != 0
@@ -908,10 +910,7 @@ def view_on_basis(v: NamingView, c: float, area: float) -> NamingView:
             ],
             "material_hotspots": [hotspot(m) for m in v.material_hotspots],
             "materials": [hotspot(m) for m in v.materials],
-            "mass_hotspots": [
-                m.model_copy(update={"gwp": m.gwp / c, "mass_kg": m.mass_kg / area})
-                for m in v.mass_hotspots
-            ],
+            "mass_hotspots": [hotspot(m) for m in v.mass_hotspots],
             "element_materials": [
                 e.model_copy(
                     update={

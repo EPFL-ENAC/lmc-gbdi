@@ -82,13 +82,9 @@ export interface MaterialHotspot {
   gwp_by_stage: Record<string, number>;
 }
 
-export interface MassHotspot {
-  material: string;
-  epd_product: string;
-  mass_kg: number;
+// A material of the mass top 10: every figure of a carbon hotspot, always with a mass.
+export interface MassHotspot extends MaterialHotspot {
   share_of_mass: number;
-  gwp: number;
-  share: number; // of the whole-life GWP
 }
 
 export interface MaterialClassTotal {

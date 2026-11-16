@@ -292,6 +292,16 @@ def test_each_ranking_carries_the_other_measure(overview):
     assert (by_mass.gwp, by_mass.share) == (65, pytest.approx(65 / 118))
 
 
+def test_the_mass_ranking_carries_what_a_material_card_needs(overview):
+    """The matrix and the cards draw the mass top 10 as they draw the carbon one."""
+    carbon = {(m.material, m.epd_product): m for m in overview.materials}
+    for m in overview.mass_hotspots:
+        same = carbon[(m.material, m.epd_product)]
+        assert m.gwp_by_stage == pytest.approx(same.gwp_by_stage)
+        assert sum(m.gwp_by_stage.values()) == pytest.approx(m.gwp)
+        assert m.gwp_per_kg == pytest.approx(m.gwp / m.mass_kg)
+
+
 def test_materials_list_every_material_the_top_tens_draw_from(overview):
     """What "show the remaining materials" expands: all of them, by carbon."""
     every = [(m.material, m.epd_product) for m in overview.materials]
@@ -505,6 +515,11 @@ def test_a_basis_divides_carbon_and_mass(overview, basis, carbon, mass, unit):
     for kind in ("stages", "elements", "material_hotspots", "materials"):
         for got, total in zip(getattr(o, kind), getattr(overview, kind), strict=True):
             assert got.gwp == pytest.approx(total.gwp / carbon)
+    for got, total in zip(o.mass_hotspots, overview.mass_hotspots, strict=True):
+        assert got.gwp == pytest.approx(total.gwp / carbon)
+        assert got.gwp_by_stage == pytest.approx(
+            {k: v / carbon for k, v in total.gwp_by_stage.items()}
+        )
     for got, total in zip(o.element_stages, overview.element_stages, strict=True):
         assert got.gwp_by_stage == pytest.approx(
             {k: v / carbon for k, v in total.gwp_by_stage.items()}
@@ -529,6 +544,9 @@ def test_a_basis_leaves_shares_and_intensities(overview):
     assert [m.share for m in o.materials] == [m.share for m in overview.materials]
     assert [m.gwp_per_kg for m in o.materials] == [
         m.gwp_per_kg for m in overview.materials
+    ]
+    assert [m.gwp_per_kg for m in o.mass_hotspots] == [
+        m.gwp_per_kg for m in overview.mass_hotspots
     ]
     assert [m.share_of_mass for m in o.materials] == [
         m.share_of_mass for m in overview.materials
