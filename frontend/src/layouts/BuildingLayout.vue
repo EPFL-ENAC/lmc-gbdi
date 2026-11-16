@@ -70,9 +70,6 @@
     <!-- Not before the list settles: until then a carbon-blocked draft looks like any
          building, and the Overview would ask for figures it cannot have (409). -->
     <template v-else-if="settled">
-      <p v-if="current?.draft" class="building-draft" role="note">
-        Draft, stored despite: {{ current.rejects.join('; ') }}. Its figures stand; the home page does not count it.
-      </p>
       <router-view />
     </template>
   </div>
@@ -120,13 +117,6 @@ onMounted(async () => {
   padding: tokens.$spacing-sm tokens.$spacing-lg;
   border-top: tokens.$border-width solid tokens.$color-border;
   background: tokens.$color-surface;
-}
-
-.building-draft {
-  margin: 0;
-  padding: tokens.$spacing-sm tokens.$spacing-lg;
-  background: tokens.$color-surface-highlight;
-  font-size: tokens.$text-size-sm;
 }
 
 .building-bar__pick {

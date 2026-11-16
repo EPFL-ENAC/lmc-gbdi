@@ -21,6 +21,14 @@ export interface FindingGroup {
   examples: Finding[]; // the first ones, then one entry for the rest
 }
 
+// Every reject of one code in one line, most frequent first: the draft badge lists them.
+export interface RejectSummary {
+  code: string;
+  count: number;
+  message: string;
+  what_to_do: string;
+}
+
 export interface BuildingSummary {
   id: number;
   file_name: string;
@@ -40,6 +48,7 @@ export interface BuildingSummary {
   draft: boolean; // stored despite reject findings
   blocked: ('carbon' | 'materials')[]; // the parts its rejects block
   rejects: string[];
+  reject_summary: RejectSummary[];
 }
 
 // A draft is visible but never counted, and one without carbon never compared.
