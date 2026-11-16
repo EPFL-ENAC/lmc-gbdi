@@ -51,29 +51,47 @@ function tip(i: number) {
   return box;
 }
 
-// Chart geometry only: length relative to the largest magnitude, pinned, so the largest bar
-// fills the track. ponytail: negatives are drawn by magnitude; their label keeps the sign.
+// Chart geometry only: the axis is pinned to the data's own ends, zero included, so the
+// longest bar fills the track and a negative value runs left of zero.
 const option = computed((): ComposeOption<BarSeriesOption | GridComponentOption | TooltipComponentOption> => {
-  const largest = Math.max(...props.bars.map((bar) => Math.abs(bar.value)));
+  const values = props.bars.map((bar) => bar.value);
+  const low = Math.min(0, ...values);
+  const high = Math.max(0, ...values);
   const fill = cssColor('var(--gbdi-dataviz-1)');
   const missing = cssColor('var(--gbdi-color-severity-info)');
-  // Room for the longest value label, at about 7 px a character in the 12 px chart text.
-  const gutter = 8 + 7 * Math.max(...props.bars.map((bar) => bar.display.length));
+  // Room for the longest value label, measured in the 12 px chart text.
+  const pen = document.createElement('canvas').getContext('2d');
+  if (pen) pen.font = `12px ${getComputedStyle(document.body).fontFamily}`;
+  const gutter = 8 + Math.ceil(Math.max(...props.bars.map((bar) => pen?.measureText(bar.display).width ?? 7 * bar.display.length)));
   return {
     grid: { left: 0, right: gutter, top: 0, bottom: 0 },
-    xAxis: { type: 'value', show: false, min: 0, max: largest || 1 },
-    yAxis: { type: 'category', show: false, inverse: true, data: props.bars.map((bar) => bar.key) },
+    xAxis: { type: 'value', show: false, min: low, max: high || (low ? 0 : 1) },
+    // The zero line, drawn only when a bar runs left of it.
+    yAxis: {
+      type: 'category',
+      inverse: true,
+      data: props.bars.map((bar) => bar.key),
+      axisLabel: { show: false },
+      axisTick: { show: false },
+      axisLine: { show: low < 0, onZero: true },
+    },
     tooltip: {
       trigger: 'item',
-      // The default triggerOn, mousemove|click, also opens it on a tap.
-      confine: true,
+      // The default triggerOn, mousemove|click, also opens it on a tap. The chart column is
+      // narrow on a phone, so the tooltip is kept in the viewport, not in the chart.
+      extraCssText: 'width: max-content; max-width: calc(100vw - 32px); white-space: normal;',
+      position: (point, _params, el, _rect, size) => {
+        const left = (el as HTMLElement).parentElement?.getBoundingClientRect().left ?? 0;
+        const x = Math.min(point[0] + 12, window.innerWidth - 16 - left - size.contentSize[0]);
+        return [Math.max(x, 16 - left), point[1] + 12];
+      },
       formatter: (params) => tip([params].flat()[0]?.dataIndex ?? 0),
     },
     series: [
       {
         type: 'bar',
         barWidth: 24,
-        data: props.bars.map((bar) => ({ value: Math.abs(bar.value), itemStyle: { color: bar.missing ? missing : fill } })),
+        data: props.bars.map((bar) => ({ value: bar.value, itemStyle: { color: bar.missing ? missing : fill } })),
         label: {
           show: true,
           position: 'right',
