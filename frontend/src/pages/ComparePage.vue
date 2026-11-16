@@ -3,6 +3,25 @@
        element by element, material class by material class. -->
   <q-page class="sheet-page">
     <article class="sheet">
+      <!-- Under the bar, at the top of the page: what the figures cover, and the other choice one click away. -->
+      <p v-if="comparison?.case === 'different_stages'" class="compare__banner" role="status">
+        <template v-if="comparison.applied_scope === 'common'">
+          Compared on the stages both cover: {{ comparison.common_stages.join(', ') }}.
+          <template v-for="out in comparison.left_out" :key="out.stage">
+            {{ out.stage }} is left out: {{ named(comparison[out.not_covered_by]) }} does not cover it.
+          </template>
+        </template>
+        <template v-else>Each building on its own scope: the totals do not cover the same stages.</template>
+        <q-btn
+          flat
+          dense
+          no-caps
+          color="primary"
+          class="compare__switch"
+          :label="comparison.applied_scope === 'common' ? 'Show each on its own scope' : 'Compare on the stages both cover'"
+          @click="scope = comparison.applied_scope === 'common' ? 'own' : 'common'"
+        />
+      </p>
       <header class="sheet__title compare__head">
         <h1 v-if="comparison">
           {{ named(comparison.a) }} and {{ named(comparison.b) }}<br />
@@ -27,6 +46,32 @@
             @update:model-value="(id: number) => pick(side, id)"
           />
         </div>
+        <!-- Case 3 only: the building bar holds the choice, beside the pickers; the
+             standalone page has no bar and keeps it here. -->
+        <Teleport v-if="comparison?.case === 'different_stages'" defer to="#basis-control" :disabled="!inBuilding">
+          <div class="compare__scope" role="group" aria-labelledby="compare-scope-label">
+            <span id="compare-scope-label" class="compare__scope-label">Totals on</span>
+            <q-btn-toggle
+              v-model="scope"
+              :options="SCOPES"
+              no-caps
+              unelevated
+              dense
+              toggle-color="primary"
+              color="white"
+              text-color="dark"
+              class="compare__scope-toggle"
+            />
+          </div>
+        </Teleport>
+        <!-- Below 600 px the choice folds behind the bar's Display button, which still
+             names it; the banner below says it too. -->
+        <Teleport
+          v-if="$q.screen.lt.sm && inBuilding && comparison?.case === 'different_stages'"
+          defer
+          to="#display-summary"
+          >{{ `: ${SCOPES.find((o) => o.value === scope)?.short}` }}</Teleport
+        >
       </header>
 
       <p v-if="error" class="sheet__panel" role="alert">The comparison could not be loaded. {{ error }}</p>
@@ -47,10 +92,16 @@
                 <DraftBadge :building-id="comparison[side].id" />
               </p>
               <p class="duel__figure">{{ figure(comparison[side].whole_life_per_m2, kg) }}</p>
-              <p>kg CO₂e per m², {{ comparison[side].scope }}.</p>
+              <p>
+                kg CO₂e per m²<template v-if="comparison.applied_scope === 'own'">, {{ comparison[side].scope }}</template>.
+              </p>
+              <!-- The stages this figure stands for, named on every headline number. -->
+              <ul class="duel__stages" :aria-label="`Stages in ${code(comparison[side])}'s figure`">
+                <li v-for="stage in comparison[`stages_${side}`]" :key="stage" class="duel__stage">{{ stage }}</li>
+              </ul>
               <dl class="duel__facts">
                 <div><dt>Gross floor area</dt><dd>{{ figure(comparison[side].gross_floor_area_m2, kg) }} m²</dd></div>
-                <div><dt>Upfront, A1–A5</dt><dd>{{ figure(comparison[side].upfront_per_m2, kg) }} kg/m²</dd></div>
+                <div><dt>Upfront, {{ comparison.upfront_stages.join(', ') || 'no stage' }}</dt><dd>{{ figure(comparison[side].upfront_per_m2, kg) }} kg/m²</dd></div>
                 <!-- No module D (no scope flag, no result): nothing, not 0. -->
                 <div v-if="comparison[side].has_module_d">
                   <dt>Module D, outside the total</dt>
@@ -63,26 +114,34 @@
               </dl>
             </article>
           </div>
-          <p v-if="comparison.ratio !== null" class="text-lead">
-            Per m², {{ named(comparison.b) }} emits {{ percent.format(comparison.ratio) }} of what
-            {{ named(comparison.a) }} emits, each over its own scope.
+          <!-- Only when both figures cover the same stages, and it names them. -->
+          <p v-if="comparison.ratio !== null && comparison.ratio_stages" class="text-lead">
+            On {{ comparison.ratio_stages.join(', ') }}, per m², {{ named(comparison.b) }} emits
+            {{ percent.format(comparison.ratio) }} of what {{ named(comparison.a) }} emits.
           </p>
         </section>
 
         <section class="sheet__panel">
           <h2 class="sheet__panel-title">Life-cycle stages</h2>
-          <PairedBars
+          <component
+            :is="bars"
             :rows="comparison.stages"
             :a="comparison.a"
             :b="comparison.b"
             unit="kg CO₂e per m²"
             caption="Below zero: carbon stored or credited, most often biogenic carbon in timber at A1–A3, released again at C3–C4."
           />
+          <p v-for="out in merged ? comparison.left_out : []" :key="out.stage" class="u-text-muted">
+            {{ out.stage }}: left out. {{ code(comparison[out.not_covered_by === 'a' ? 'b' : 'a']) }}
+            {{ out.value === null ? 'no floor area' : kg.format(out.value) }} kg/m²,
+            {{ code(comparison[out.not_covered_by]) }} not covered.
+          </p>
         </section>
 
         <section class="sheet__panel">
           <h2 class="sheet__panel-title">Building elements</h2>
-          <PairedBars
+          <component
+            :is="bars"
             :rows="comparison.elements"
             :a="comparison.a"
             :b="comparison.b"
@@ -97,14 +156,16 @@
             Custom material names never match across projects; the OpenBDF material class does. Carbon and mass rarely
             rank the same.
           </p>
-          <PairedBars
+          <component
+            :is="bars"
             :rows="comparison.material_carbon"
             :a="comparison.a"
             :b="comparison.b"
             unit="kg CO₂e per m²"
             caption="Carbon of each material class."
           />
-          <PairedBars
+          <component
+            :is="bars"
             :rows="comparison.material_mass"
             :a="comparison.a"
             :b="comparison.b"
@@ -121,13 +182,30 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { buildingPath } from '@/buildingLayouts';
-import { code, fetchBuildings, fetchComparison, noCarbon, type BuildingSummary, type ComparedBuilding, type Comparison } from '@/api/buildings';
+import {
+  code,
+  fetchBuildings,
+  fetchComparison,
+  noCarbon,
+  type BuildingSummary,
+  type ComparedBuilding,
+  type CompareScope,
+  type Comparison,
+} from '@/api/buildings';
 import DraftBadge from '@/components/DraftBadge.vue';
 import MethodNotice from '@/components/MethodNotice.vue';
+import GroupedBars from '@/components/GroupedBars.vue';
 import PairedBars from '@/components/PairedBars.vue';
 import { figure, kg, percent } from '@/format';
 
 const SIDES = ['a', 'b'] as const;
+// The backend says when both figures cover the same stages: one axis then, else one each.
+const merged = computed(() => comparison.value?.applied_scope === 'common');
+const bars = computed(() => (merged.value ? GroupedBars : PairedBars));
+const SCOPES: { value: CompareScope; label: string; short: string }[] = [
+  { value: 'common', label: 'Common stages', short: 'Common stages' },
+  { value: 'own', label: 'Each on its own scope', short: 'Own scope' },
+];
 // As every compare page: "Iewan (NL-23)" in words, the code alone in legends.
 const named = (x: ComparedBuilding) => `${x.project_name ?? 'Unnamed project'} (${code(x)})`;
 
@@ -141,6 +219,12 @@ const idOf = (value: unknown) => (typeof value === 'string' && value !== '' ? Nu
 const inBuilding = computed(() => route.params.id !== undefined);
 const a = computed(() => idOf(inBuilding.value ? route.params.id : route.query.a));
 const b = computed(() => idOf(inBuilding.value ? route.params.other : route.query.b));
+// ?scope=own, or the default: the stages both cover. The other query and the hash stay.
+const scope = computed<CompareScope>({
+  get: () => (route.query.scope === 'own' ? 'own' : 'common'),
+  set: (next) =>
+    void router.replace({ query: { ...route.query, scope: next === 'own' ? 'own' : undefined }, hash: route.hash }),
+});
 const options = computed(() =>
   buildings.value.filter((x) => !noCarbon(x)).map((x) => ({ id: x.id, label: `${code(x)}, ${x.project_name ?? 'unnamed'}` })),
 );
@@ -160,16 +244,21 @@ onMounted(async () => {
   }
 });
 
+// Another pair empties the page; another scope keeps it until the answer comes. Only
+// the last request's answer lands.
+let asked = 0;
 watch(
-  [a, b],
-  async ([ia, ib]) => {
-    comparison.value = null;
+  [a, b, scope],
+  async ([ia, ib, sc], old) => {
+    const n = ++asked;
+    if (old === undefined || ia !== old[0] || ib !== old[1]) comparison.value = null;
     error.value = null;
     if (ia === null || ib === null) return;
     try {
-      comparison.value = await fetchComparison(ia, ib);
+      const next = await fetchComparison(ia, ib, sc);
+      if (n === asked) comparison.value = next;
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : String(e);
+      if (n === asked) error.value = e instanceof Error ? e.message : String(e);
     }
   },
   { immediate: true },
@@ -200,13 +289,46 @@ watch(
 
 .compare__pickers {
   display: flex;
+  max-width: 100%;
   flex-wrap: wrap;
   align-items: center;
   gap: tokens.$spacing-md;
 }
 
+// 16rem where there is room; on a phone a long name is cut inside the field, not at the card.
 .compare__picker {
-  min-width: 16rem;
+  flex: 1 1 16rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.compare__scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: tokens.$spacing-sm;
+}
+
+.compare__scope-label {
+  font-size: tokens.$text-size-sm;
+  color: tokens.$color-text-muted;
+}
+
+.compare__scope-toggle {
+  border: tokens.$border-width solid tokens.$color-border;
+}
+
+.compare__banner {
+  margin: 0;
+  padding: tokens.$spacing-sm tokens.$spacing-lg;
+  border-left: 4px solid var(--gbdi-dataviz-blue-2);
+  background: tokens.$color-surface-highlight;
+  font-size: tokens.$text-size-sm;
+}
+
+.compare__switch {
+  margin-left: tokens.$spacing-xs;
+  text-decoration: underline;
 }
 
 .duel {
@@ -225,6 +347,22 @@ watch(
 
 .duel__side p {
   margin: 0;
+}
+
+.duel__stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$spacing-xs;
+  margin: 0 0 tokens.$spacing-md;
+  padding: 0;
+  list-style: none;
+}
+
+.duel__stage {
+  padding: 0 tokens.$spacing-sm;
+  border: tokens.$border-width solid tokens.$color-border;
+  border-radius: 999px;
+  font-size: tokens.$text-size-xs;
 }
 
 .duel__code {

@@ -308,16 +308,37 @@ def leftover(
     return [h for h in ranked if (h.material, h.epd_product) not in shown]
 
 
+def stage_sum(items: list[Stages]) -> Stages:
+    """Stage by stage, every stage key; a draft's rows carry no stages ({})."""
+    return {k: sum((s.get(k, ZERO) for s in items), ZERO) for k, _ in STAGES}
+
+
+def stage_diff(a: Stages, b: Stages) -> Stages:
+    return {k: a[k] - b[k] for k in a}
+
+
+def by_stage(stages: Stages) -> dict[str, float]:
+    return {k: float(v) for k, v in stages.items()}
+
+
 def class_rollup(rows: list[tuple[MaterialRow, Stages]]) -> list[MaterialClassTotal]:
     """Whole-life GWP and mass by OpenBDF material class: the names that compare
     across projects, where custom material names never match."""
     classes: dict[str, Stages] = defaultdict(lambda: {"gwp": ZERO, "mass": ZERO})
+    stages_of: dict[str, list[Stages]] = defaultdict(list)
     for row, stages in rows:
-        totals = classes[row.material_class or NOT_CLASSIFIED]
+        label = row.material_class or NOT_CLASSIFIED
+        totals = classes[label]
         totals["gwp"] += sum(stages.values(), ZERO)
         totals["mass"] += row.mass_kg * row.repetition
+        stages_of[label].append(stages)
     return [
-        MaterialClassTotal(label=label, gwp=float(t["gwp"]), mass_kg=float(t["mass"]))
+        MaterialClassTotal(
+            label=label,
+            gwp=float(t["gwp"]),
+            mass_kg=float(t["mass"]),
+            gwp_by_stage=by_stage(stage_sum(stages_of[label])),
+        )
         for label, t in sorted(classes.items())
     ]
 
@@ -547,24 +568,34 @@ def declared_scope(value: str | None) -> str | None:
     return " · ".join(part for part in BOUNDARIES[value] if part) or "unknown"
 
 
-def scope_label(checks: list[ModuleCheck], method: str | None = None) -> str:
+def scope_stages(checks: list[ModuleCheck]) -> tuple[str, ...]:
     """The stages a total covers: those with a module declared in General Information,
     or with a module result where it declares none. One module is enough, so B1–B3
-    counts as B. The total itself always adds every module with a result. The
-    declared boundary's method, when it names one, follows."""
+    counts as B. The total itself always adds every module with a result."""
     checks = [c for c in checks if c.module in FIELD_OF]  # D is no stage of A to C
     modules = [c.module for c in checks if c.declared] or [
         c.module for c in checks if c.has_result
     ]
     fields = {FIELD_OF[m] for m in modules}
-    stages = tuple(k for k, _ in STAGES if fields & set(STAGE_FIELDS[k]))
+    return tuple(k for k, _ in STAGES if fields & set(STAGE_FIELDS[k]))
+
+
+def scope_label(checks: list[ModuleCheck], method: str | None = None) -> str:
+    """The stages of scope_stages, then the declared boundary's method when it names
+    one."""
+    stages = scope_stages(checks)
     listed = ", ".join(label for k, label in STAGES if k in stages)
     label = SCOPES.get(stages, listed.replace("A1–A3, A4–A5", "A1–A5"))
     return f"{label} · {method}" if method else label
 
 
 def bucket(
-    name: str, gwp: Decimal, mass: Decimal, whole_life: Decimal, total_mass: Decimal
+    name: str,
+    gwp: Decimal,
+    mass: Decimal,
+    whole_life: Decimal,
+    total_mass: Decimal,
+    stages: Stages,
 ) -> ElementTotal:
     return ElementTotal(
         element=name,
@@ -572,6 +603,7 @@ def bucket(
         share=float(gwp / whole_life),
         mass_kg=float(mass),
         share_of_mass=float(mass / total_mass) if total_mass else None,
+        gwp_by_stage=by_stage(stages),
     )
 
 
@@ -655,12 +687,17 @@ def naming_view(
     def mass(items: list[tuple[str, Stages, Decimal]]) -> Decimal:
         return sum((m for _, _, m in items), ZERO)
 
+    def stages(items: list[tuple[str, Stages, Decimal]]) -> Stages:
+        return stage_sum([s for _, s, _ in items])
+
     material_hotspots, mass_hotspots, mass_other_share, materials = hotspots(
         material_rollup(rows, naming), whole_life
     )
     return NamingView(
         elements=[
-            bucket(name, sum(s.values(), ZERO), m, whole_life, total_mass)
+            bucket(
+                name, sum(s.values(), ZERO), m, whole_life, total_mass, stage_sum([s])
+            )
             for name, s, m in shown
         ],
         other_classified=bucket(
@@ -669,6 +706,7 @@ def naming_view(
             mass(elements) - mass(shown),
             whole_life,
             total_mass,
+            stage_diff(stages(elements), stages(shown)),
         ),
         not_classified=bucket(
             NOT_CLASSIFIED,
@@ -676,6 +714,7 @@ def naming_view(
             total_mass - mass(elements),
             whole_life,
             total_mass,
+            stage_diff(stage_sum([s for _, s in rows]), stages(elements)),
         ),
         # The dominant stage divides by the element's carbon: mass-only ones skip.
         element_stages=[
@@ -892,7 +931,13 @@ def on_basis(o: Overview, basis: Basis) -> Overview:
             **from_views(namings),
             "total_mass_kg": o.total_mass_kg / area,
             "material_classes": [
-                m.model_copy(update={"gwp": m.gwp / c, "mass_kg": m.mass_kg / area})
+                m.model_copy(
+                    update={
+                        "gwp": m.gwp / c,
+                        "mass_kg": m.mass_kg / area,
+                        "gwp_by_stage": {k: x / c for k, x in m.gwp_by_stage.items()},
+                    }
+                )
                 for m in o.material_classes
             ],
             "time": TimeFigures(
@@ -919,7 +964,13 @@ def view_on_basis(v: NamingView, c: float, area: float) -> NamingView:
         return {k: x / c for k, x in d.items()}
 
     def element(e: ElementTotal) -> ElementTotal:
-        return e.model_copy(update={"gwp": e.gwp / c, "mass_kg": e.mass_kg / area})
+        return e.model_copy(
+            update={
+                "gwp": e.gwp / c,
+                "mass_kg": e.mass_kg / area,
+                "gwp_by_stage": stages(e.gwp_by_stage),
+            }
+        )
 
     def hotspot(h: MaterialHotspot) -> MaterialHotspot:
         return h.model_copy(

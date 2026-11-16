@@ -10,7 +10,13 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.buildings import repo, service
 from app.buildings.ingest import RejectedWorkbook
-from app.buildings.schemas import BuildingSummary, Comparison, DraftView, Rejection
+from app.buildings.schemas import (
+    BuildingSummary,
+    CompareScope,
+    Comparison,
+    DraftView,
+    Rejection,
+)
 from app.db import get_session
 from app.overview.schemas import Basis, Overview
 from app.overview.service import BasisUnavailable
@@ -105,10 +111,13 @@ async def upload_building(
 
 
 @router.get("/compare")
-async def compare(a: int, b: int, session: Session) -> Comparison:
-    """Two buildings side by side, per m² of gross floor area."""
+async def compare(
+    a: int, b: int, session: Session, scope: CompareScope | None = None
+) -> Comparison:
+    """Two buildings side by side, per m² of gross floor area. scope=common sums the
+    stages both cover; without it, each figure covers its own building's scope."""
     try:
-        return await service.compare(session, a, b)
+        return await service.compare(session, a, b, scope)
     except repo.ProjectNotFound as missing:
         raise HTTPException(404, f"No building {missing}") from None
     except service.DraftBlocked as draft:

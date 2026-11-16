@@ -105,13 +105,35 @@ export interface Comparison {
   elements: ComparedRow[];
   material_carbon: ComparedRow[];
   material_mass: ComparedRow[];
+  // The owner's rule (org#94): which case, the stages each building covers, and the
+  // scope the figures above apply. Stage lists hold labels, "A1–A3".
+  case: CompareCase;
+  applied_scope: CompareScope; // common: every figure on the common stages, merged charts
+  covered_a: string[];
+  covered_b: string[];
+  common_stages: string[];
+  left_out: LeftOut[];
+  stages_a: string[]; // the stages a's whole-life figure stands for
+  stages_b: string[];
+  upfront_stages: string[];
+  ratio_stages: string[] | null; // null: the totals cover different stages, no ratio sentence
+}
+
+export type CompareCase = 'methods_differ' | 'no_common_stages' | 'same_stages' | 'different_stages';
+export type CompareScope = 'common' | 'own';
+
+export interface LeftOut {
+  stage: string;
+  not_covered_by: 'a' | 'b';
+  value: number | null; // kg CO₂e per m² of the building that covers it
 }
 
 export const fetchBuildings = () => getJson<BuildingSummary[]>('/buildings');
 export const fetchBuilding = (id: number) => getJson<BuildingSummary>(`/buildings/${id}`);
 export const deleteBuilding = (id: number) => deleteJson(`/buildings/${id}`);
 export const fetchDraft = (id: number) => getJson<DraftView>(`/buildings/${id}/draft`);
-export const fetchComparison = (a: number, b: number) => getJson<Comparison>(`/buildings/compare?a=${a}&b=${b}`);
+export const fetchComparison = (a: number, b: number, scope: CompareScope) =>
+  getJson<Comparison>(`/buildings/compare?a=${a}&b=${b}&scope=${scope}`);
 
 export function uploadBuilding(file: File, draft = false) {
   const form = new FormData();
