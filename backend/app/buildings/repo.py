@@ -5,6 +5,7 @@ so this module only adapts: OpenBDF records → the same field-code → text map
 the CSV export gives, and only the columns those formulas read.
 """
 
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 
@@ -120,6 +121,18 @@ async def get_upload(session: AsyncSession, project_id: int) -> Upload:
     if upload is None:
         raise ProjectNotFound(project_id)
     return upload
+
+
+async def uploaded_at(session: AsyncSession, project_id: int) -> datetime:
+    """When the project was uploaded: one column, read on every cached request."""
+    stamp = (
+        await session.exec(
+            select(Upload.uploaded_at).where(Upload.project_record_id == project_id)
+        )
+    ).first()
+    if stamp is None:
+        raise ProjectNotFound(project_id)
+    return stamp
 
 
 async def delete_project(session: AsyncSession, project_id: int) -> None:

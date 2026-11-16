@@ -1,12 +1,15 @@
 """Overviews of stored projects, the building list, and two buildings side by side.
 
 Uploads never change once stored, so each overview is computed once per process
-and kept; a delete evicts it. Every figure comes from build_overview, the formulas
-checked against the workbook: this module only divides by floor area and aligns.
+and kept under its upload time, read from the database on each request: a building
+replaced or deleted by another process is never served from here. Every figure
+comes from build_overview, the formulas checked against the workbook: this module
+only divides by floor area and aligns.
 """
 
 import asyncio
 import logging
+from datetime import datetime
 
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -49,11 +52,12 @@ from app.overview.service import (
     project_info,
 )
 
-# ponytail: per-process cache; ids are never reused, so a replica that missed a
-# delete still answers 404 from the database first. Bounded by the projects stored.
-_overviews: dict[int, Overview] = {}
+# ponytail: per-process cache, each entry with the uploaded_at it was computed from
+# and used only while the database still says so. A process that missed a delete
+# keeps the entry until restart: bounded by the uploads since boot.
+_overviews: dict[int, tuple[datetime, Overview]] = {}
 # Drafts whose rejects block carbon have no overview; their summary is kept instead.
-_drafts: dict[int, BuildingSummary] = {}
+_drafts: dict[int, tuple[datetime, BuildingSummary]] = {}
 log = logging.getLogger(__name__)
 
 
@@ -151,13 +155,24 @@ async def overview(
     session: AsyncSession, project_id: int, basis: Basis = "total"
 ) -> Overview:
     """The cached overview, its absolute figures divided by the basis."""
-    if project_id not in _overviews:
-        if "carbon" in blocked(await repo.get_upload(session, project_id)):
-            raise DraftBlocked(project_id)
-        data = await repo.read_project(session, project_id)
-        # In a thread: a large project takes seconds, and probes must still answer.
-        _overviews[project_id] = await asyncio.to_thread(build_overview, data)
-    return on_basis(_overviews[project_id], basis)
+    stamp = await repo.uploaded_at(session, project_id)
+    return on_basis(await overview_of(session, project_id, stamp), basis)
+
+
+async def overview_of(
+    session: AsyncSession, project_id: int, stamp: datetime
+) -> Overview:
+    """The overview of the upload made at `stamp`, from the cache when it has it."""
+    hit = _overviews.get(project_id)
+    if hit is not None and hit[0] == stamp:
+        return hit[1]
+    if "carbon" in blocked(await repo.get_upload(session, project_id)):
+        raise DraftBlocked(project_id)
+    data = await repo.read_project(session, project_id)
+    # In a thread: a large project takes seconds, and probes must still answer.
+    o = await asyncio.to_thread(build_overview, data)
+    _overviews[project_id] = (stamp, o)
+    return o
 
 
 def forget(project_id: int) -> None:
@@ -168,9 +183,9 @@ def forget(project_id: int) -> None:
 def remember(summary: BuildingSummary, o: Overview | None) -> None:
     """Keep what the upload process computed, so nothing is computed twice."""
     if o is not None:
-        _overviews[summary.id] = o
+        _overviews[summary.id] = (summary.uploaded_at, o)
     else:
-        _drafts[summary.id] = summary
+        _drafts[summary.id] = (summary.uploaded_at, summary)
 
 
 async def delete(session: AsyncSession, project_id: int) -> None:
@@ -249,12 +264,16 @@ def draft_summary(
 
 async def summary_of(session: AsyncSession, upload: Upload) -> BuildingSummary:
     project_id = upload.project_record_id
+    stamp = upload.uploaded_at
     if "carbon" in blocked(upload):
-        if project_id not in _drafts:  # uploads never change: read the lines once
-            data = await repo.read_project(session, project_id, results=False)
-            _drafts[project_id] = draft_summary(upload, data.general, len(data.rows))
-        return _drafts[project_id]
-    return summary(upload, await overview(session, project_id))
+        hit = _drafts.get(project_id)
+        if hit is not None and hit[0] == stamp:  # uploads never change: read once
+            return hit[1]
+        data = await repo.read_project(session, project_id, results=False)
+        s = draft_summary(upload, data.general, len(data.rows))
+        _drafts[project_id] = (stamp, s)
+        return s
+    return summary(upload, await overview_of(session, project_id, stamp))
 
 
 async def summaries(session: AsyncSession) -> list[BuildingSummary]:
@@ -314,7 +333,8 @@ async def _ingest(
             )
             summary = await building_summary(session, project_id)
             await session.commit()
-            return summary, _overviews.get(project_id)
+            hit = _overviews.get(project_id)
+            return summary, None if hit is None else hit[1]
     finally:
         await own.dispose()
 
@@ -383,7 +403,8 @@ def comparability(a: str | None, b: str | None) -> Comparability:
 
 async def compare(session: AsyncSession, a_id: int, b_id: int) -> Comparison:
     ua, ub = await repo.get_upload(session, a_id), await repo.get_upload(session, b_id)
-    oa, ob = await overview(session, a_id), await overview(session, b_id)
+    oa = await overview_of(session, a_id, ua.uploaded_at)
+    ob = await overview_of(session, b_id, ub.uploaded_at)
     ea, eb = element_totals(oa), element_totals(ob)
     element_order = [name for _, name in BEC_TIER2]
     element_order += ["Other classified elements", "Not classified"]

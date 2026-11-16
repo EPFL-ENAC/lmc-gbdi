@@ -530,3 +530,62 @@ def test_the_what_to_do_table_holds_the_agreed_texts():
         "workbook has results after stage A, and the per-year figures need the "
         "period.",
     }
+
+
+@pytest.fixture
+def stored_db(monkeypatch, tmp_path):
+    """A fake database, project id → (uploaded_at, ProjectData), read the way the
+    service reads it, and an empty cache: the state of a second process."""
+    from dataclasses import replace
+
+    from app.buildings import repo, service
+
+    data = read_project(write_project(tmp_path))
+    db = {1: (datetime(2026, 11, 1, tzinfo=UTC), data)}
+
+    def row(project_id):
+        if project_id not in db:
+            raise repo.ProjectNotFound(project_id)
+        return db[project_id]
+
+    async def get_upload(_session, project_id):
+        stamp = row(project_id)[0]
+        return Upload(
+            project_record_id=project_id,
+            file_name="T.xlsx",
+            uploaded_at=stamp,
+            findings=[],
+        )
+
+    async def uploaded_at(_session, project_id):
+        return row(project_id)[0]
+
+    async def read(_session, project_id, results=True):
+        return row(project_id)[1]
+
+    monkeypatch.setattr(repo, "get_upload", get_upload)
+    monkeypatch.setattr(repo, "uploaded_at", uploaded_at, raising=False)
+    monkeypatch.setattr(repo, "read_project", read)
+    monkeypatch.setattr(service, "_overviews", {})
+    monkeypatch.setattr(service, "_drafts", {})
+    db["fewer rows"] = replace(data, rows=data.rows[:1])
+    return db
+
+
+def test_a_building_replaced_in_another_process_is_never_served(client, stored_db):
+    """This process cached building 1; another process replaced it (new id, the old
+    one deleted). The overview reads the database first: 404, not the old figures."""
+    assert client.get("/api/buildings/1/overview").status_code == 200
+    stored_db[2] = (datetime(2026, 11, 2, tzinfo=UTC), stored_db.pop(1)[1])
+    assert client.get("/api/buildings/1/overview").status_code == 404
+    assert client.get("/api/buildings/2/overview").status_code == 200
+
+
+def test_a_new_upload_under_a_cached_id_is_read_again(stored_db):
+    """A reset database gives an id again: the entry of the old upload is not used."""
+    from app.buildings import service
+
+    first = asyncio.run(service.overview(None, 1))
+    stored_db[1] = (datetime(2026, 11, 2, tzinfo=UTC), stored_db["fewer rows"])
+    again = asyncio.run(service.overview(None, 1))
+    assert (first.rows_read, again.rows_read) == (len(ROWS), 1)
