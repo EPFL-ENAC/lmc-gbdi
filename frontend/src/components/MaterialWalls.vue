@@ -202,7 +202,7 @@ const rest = computed(() => {
 // leaves with the wrapper, at the end of the materials part.
 .passport__bar {
   position: sticky;
-  top: var(--sheet-header-h);
+  top: var(--sheet-header-h, 9rem); // the fallback of the sections' scroll margin
   z-index: tokens.$z-index-sticky;
   display: flex;
   flex-wrap: nowrap;

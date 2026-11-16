@@ -230,3 +230,37 @@ def test_a_basis_divides_every_figure_of_both_views(tmp_path, basis, carbon, mas
     }
     got = flat(on_basis(overview, basis).model_dump()["namings"])
     assert got == pytest.approx(expected)
+
+
+def test_the_rest_lists_hold_what_each_top_10_leaves_out(tmp_path):
+    """Twelve materials: Mat n weighs 10 n kg and emits 13 - n, so the two rankings
+    run in opposite orders and each leaves two materials out."""
+    rows = [
+        (
+            f"Y{n}",
+            "",
+            "2.1",
+            f"Mat {n}",
+            "",
+            str(10 * n),
+            {"gwp_total_a1_a3": str(13 - n)},
+        )
+        for n in range(1, 13)
+    ]
+    view = build_overview(read_project(write_project(tmp_path, rows=rows))).namings[
+        "custom"
+    ]
+
+    def names(items):
+        return [m.material for m in items]
+
+    assert names(view.mass_hotspots) == [f"Mat {n}" for n in range(12, 2, -1)]
+    assert names(view.mass_rest) == ["Mat 2", "Mat 1"]
+    assert [m.mass_kg for m in view.mass_rest] == [20, 10]
+    assert names(view.material_hotspots) == [f"Mat {n}" for n in range(1, 11)]
+    assert names(view.carbon_rest) == ["Mat 11", "Mat 12"]
+    assert [m.gwp for m in view.carbon_rest] == [2, 1]
+    # The mass top 10 carries what a card and the stage matrix read.
+    heaviest = view.mass_hotspots[0]
+    assert heaviest.gwp_per_kg == pytest.approx(1 / 120)
+    assert heaviest.gwp_by_stage["a1_a3"] == 1
