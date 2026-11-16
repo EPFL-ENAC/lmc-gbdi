@@ -143,6 +143,36 @@ def test_module_d_is_d1_plus_d2_outside_the_total(
     assert c.module_d1_per_m2 == (float(d1) * 3 / 200 if d1 else 0.0)
 
 
+def test_a_declared_module_d_with_d1_and_d2_at_zero_is_not_present(tmp_path):
+    # D declared, D1 and D2 written as 0 on M1: no module D on any page.
+    rows = [
+        (*r[:6], {**r[6], "gwp_total_d1": "0", "gwp_total_d2": "0"})
+        if r[0] == "M1"
+        else r
+        for r in with_module_d(None, None)
+    ]
+    general = {**GENERAL, "lca_d": "TRUE", "lca_d1": "TRUE", "lca_d2": "TRUE"}
+    (tmp_path / "d").mkdir()
+    (tmp_path / "plain").mkdir()
+    o = build_overview(
+        read_project(write_project(tmp_path / "d", general=general, rows=rows))
+    )
+    plain = build_overview(
+        read_project(write_project(tmp_path / "plain", general=GENERAL, rows=rows))
+    )
+    upload = Upload(
+        project_record_id=1, file_name="T.xlsx", uploaded_at=datetime.now(UTC)
+    )
+    c = compared(upload, o)
+    assert o.headline.module_d_present is False
+    assert (o.headline.module_d1, o.headline.module_d2) == (0.0, 0.0)
+    assert c.has_module_d is False
+    assert c.module_d_per_m2 is None
+    # The rule does not touch the data checks: the D flags leave them as they are.
+    assert o.module_checks == plain.module_checks
+    assert o.modules_declared_without_result == plain.modules_declared_without_result
+
+
 @pytest.mark.parametrize(
     ("a", "b", "verdict"),
     [
