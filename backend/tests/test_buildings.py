@@ -282,10 +282,10 @@ def test_a_draft_sums_up_its_rejects_one_line_per_code():
         stored("E001", "Field project_country is required and was not provided"),
         stored("W002", "Row 5 has no mass", severity="Warning"),
     ]
-    total = WHAT_TO_DO + TOTAL_NOTE
+    # E05 on the results sheet blocks the carbon, so no line says its figures stand.
     assert [tuple(r.model_dump().values()) for r in reject_summary(findings)] == [
-        ("E018", 370, module_d, total),
-        ("E019", 3, WORDING["E019"], total),
+        ("E018", 370, module_d, WHAT_TO_DO),
+        ("E019", 3, WORDING["E019"], WHAT_TO_DO),
         (
             "E05",
             2,
@@ -427,3 +427,27 @@ def test_a_replace_is_kept_when_the_client_leaves(client, monkeypatch, tmp_path)
     response = upload(client, 121)
     assert (response.status_code, response.json()["id"]) == (201, 200)
     assert calls == [("ingest", True, 121), ("forget", 121), ("remember",)]
+
+
+def test_the_total_checks_say_the_figures_stand_only_when_carbon_is_shown():
+    module_d = "Module D must not be added to the whole-life total"
+    findings = [
+        stored("E018", module_d),
+        stored("E019", "gwp_total_total is 1, the modules sum to 52.8"),
+    ]
+    stands = WHAT_TO_DO + TOTAL_NOTE
+    assert [r.what_to_do for r in reject_summary(findings)] == [stands, stands]
+    # One more reject on the results sheet blocks the carbon: the note goes.
+    blocked = [*findings, stored("E05", "Row 3: material_id a, b in the results")]
+    assert {r.what_to_do for r in reject_summary(blocked)} == {WHAT_TO_DO}
+
+
+def test_a_code_with_a_condensed_entry_takes_the_general_wording():
+    """The first 20 messages name field a; the 5 condensed ones are not stored and
+    may name another field, so one stored message cannot speak for all 25."""
+    findings = [
+        *(stored("E003", "Field a expects float") for _ in range(20)),
+        stored("E003", "5 more E003 findings on this sheet", 5),
+    ]
+    (line,) = reject_summary(findings)
+    assert (line.code, line.count, line.message) == ("E003", 25, WORDING["E003"])

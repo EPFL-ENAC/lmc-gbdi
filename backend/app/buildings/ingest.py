@@ -95,6 +95,7 @@ WORDING = {
     "E016": "Two bill of materials rows share a material_id, so their tall results "
     "collide",
     "E017": "An aggregate stage and its sub-modules carry values on one material",
+    "E018": "Module D must not be added to the whole-life total",
     "E019": "A declared indicator total differs from the sum over the modules A to C "
     "by 5 per cent or more",
 }
