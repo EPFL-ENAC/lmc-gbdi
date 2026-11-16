@@ -1,7 +1,7 @@
 <template>
   <p v-if="!points.length" class="u-text-muted">No material carbon in this project.</p>
   <figure v-else class="cumulative">
-    <svg :viewBox="`0 0 ${W} ${H}`" class="cumulative__plot" role="img" :aria-label="summary">
+    <svg :viewBox="`0 0 ${W} ${H}`" class="cumulative__plot" role="group" :aria-label="summary">
       <g class="cumulative__grid">
         <line v-for="t in yTicks" :key="`y${t}`" :x1="L" :x2="W - R" :y1="y(t)" :y2="y(t)" />
       </g>
@@ -15,10 +15,13 @@
         class="cumulative__point"
         :class="{ 'cumulative__point--active': active === p }"
         tabindex="0"
-        @pointerenter="active = p"
-        @pointerleave="active = null"
-        @focus="active = p"
-        @blur="active = null"
+        role="img"
+        :aria-label="tipText(p)"
+        @pointerenter="activeRank = p.rank"
+        @pointerleave="(e: PointerEvent) => e.pointerType !== 'touch' && (activeRank = null)"
+        @focus="activeRank = p.rank"
+        @blur="activeRank = null"
+        @keydown.esc="activeRank = null"
       >
         <circle class="cumulative__hit" :cx="x(p.rank)" :cy="y(p.value)" r="18" />
         <circle class="cumulative__dot" :cx="x(p.rank)" :cy="y(p.value)" r="5" />
@@ -36,7 +39,7 @@
     <div
       v-if="active"
       class="cumulative__tip"
-      :class="`cumulative__tip--${tipSide}`"
+      :class="[`cumulative__tip--${tipSide}`, { 'cumulative__tip--below': tipBelow }]"
       :style="{ left: `${(x(active.rank) / W) * 100}%`, top: `${(y(active.value) / H) * 100}%` }"
       aria-hidden="true"
     >
@@ -66,11 +69,19 @@ const points = computed(() => {
 const n = computed(() => points.value.length);
 
 // The point under the pointer, the finger or the keyboard focus.
-const active = ref<(typeof points.value)[number] | null>(null);
+// Held as a rank, so a new naming or basis shows the new figures and never a stale point.
+const activeRank = ref<number | null>(null);
+const active = computed(() => (activeRank.value === null ? null : (points.value[activeRank.value - 1] ?? null)));
+type Point = (typeof points.value)[number];
+const tipText = (p: Point) =>
+  `${p.rank}. ${p.name}: ${percent.format(p.share)} of the carbon` +
+  (p.rank > 1 ? `, ${percent.format(p.value)} with the ${p.rank - 1} larger` : '');
+// A dot near the top of the plot opens its tooltip below, clear of the headline.
+const tipBelow = computed(() => (active.value ? y(active.value.value) / H < 0.4 : false));
 // The tooltip opens toward the middle of the plot, so the first and last stay inside it.
 const tipSide = computed(() => {
   const at = active.value ? active.value.rank / n.value : 0.5;
-  return at > 0.75 ? 'left' : at < 0.25 ? 'right' : 'center';
+  return at > 0.6 ? 'left' : at < 0.4 ? 'right' : 'center';
 });
 
 // Shares can be negative (biogenic carbon), so the scale stretches past 0–100% when it must.
@@ -113,7 +124,7 @@ const summary = computed(
   display: flex;
   flex-direction: column;
   width: max-content;
-  max-width: 16rem;
+  max-width: 12rem;
   padding: tokens.$spacing-xs tokens.$spacing-sm;
   border: tokens.$border-width solid tokens.$color-border;
   border-radius: tokens.$radius-xs;
@@ -130,6 +141,18 @@ const summary = computed(
 
 .cumulative__tip--right {
   transform: translate(0, calc(-100% - #{tokens.$spacing-md}));
+}
+
+.cumulative__tip--below {
+  transform: translate(-50%, tokens.$spacing-md);
+}
+
+.cumulative__tip--below.cumulative__tip--left {
+  transform: translate(-100%, tokens.$spacing-md);
+}
+
+.cumulative__tip--below.cumulative__tip--right {
+  transform: translate(0, tokens.$spacing-md);
 }
 
 .cumulative__guide {
@@ -170,7 +193,12 @@ const summary = computed(
 
 .cumulative__point {
   cursor: help;
-  outline: none;
+  outline: none; // the ring below replaces it: an outline on an SVG group draws a box
+}
+
+.cumulative__point:focus-visible .cumulative__hit {
+  stroke: tokens.$color-text;
+  stroke-width: 2;
 }
 
 .cumulative__point--active .cumulative__dot {
