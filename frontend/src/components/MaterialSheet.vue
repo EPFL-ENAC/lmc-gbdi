@@ -11,7 +11,7 @@
     </header>
     <dl class="sheet-card__figures">
       <div>
-        <dt>{{ units.carbon }}, whole life</dt>
+        <dt>{{ units.carbon }}, total</dt>
         <dd>{{ num.format(hotspot.gwp) }}</dd>
       </div>
       <div>

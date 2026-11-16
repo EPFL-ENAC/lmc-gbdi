@@ -50,7 +50,7 @@
         </svg>
         <h2 class="gbdi-card__title">Better data</h2>
         <p class="gbdi-card__body">
-          Open, comparable building and whole-life carbon data, collected with one global methodology.
+          Open, comparable building and life-cycle carbon data, collected with one global methodology.
         </p>
       </article>
       <article class="gbdi-card">
@@ -84,7 +84,7 @@
     <footer class="u-text-muted">
       <ol>
         <li>
-          Live from the GBDI database: whole-life carbon per m² of gross floor area, over the modules each COLA
+          Live from the GBDI database: carbon per m² of gross floor area, over the modules each COLA
           workbook declares.
         </li>
       </ol>
@@ -159,7 +159,7 @@ const heroes = computed(() => {
     {
       tone: 'blue' as const,
       number: kg.format(median(rated.map((b) => b.whole_life_per_m2!))),
-      text: 'kg CO₂e per m², the median building over its whole life.',
+      text: 'kg CO₂e per m², the median building over the modules it declares.',
       to: '/buildings',
     },
     {

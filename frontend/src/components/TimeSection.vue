@@ -9,7 +9,7 @@
       workbook again.
     </p>
     <h2 class="time__statement">
-      {{ percent.format(overview.headline.upfront_share) }} of its whole-life carbon is emitted
+      {{ percent.format(overview.headline.upfront_share) }} of its carbon is emitted
       <span class="text-display-lead">before anyone moves in.</span>
     </h2>
 
