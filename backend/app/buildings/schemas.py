@@ -87,9 +87,13 @@ class ComparedBuilding(BaseModel):
     rows_read: int
     scope: str
     lcia_methodology: str | None
+    system_boundary: str | None  # as General Information declares it
     whole_life_per_m2: float | None
     upfront_per_m2: float | None
     module_d1_per_m2: float | None
+    # D1 + D2, outside the whole-life total; None when the building has no module D
+    # (no scope flag and no result) or no floor area.
+    module_d_per_m2: float | None
 
 
 class ComparedRow(BaseModel):

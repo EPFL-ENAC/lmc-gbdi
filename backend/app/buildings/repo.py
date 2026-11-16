@@ -122,6 +122,14 @@ async def get_upload(session: AsyncSession, project_id: int) -> Upload:
     return upload
 
 
+async def declares_module_d(session: AsyncSession, project_id: int) -> bool:
+    """General Information's scope flags for module D: lca_d, lca_d1 or lca_d2."""
+    record = await session.get(ProjectRecord, project_id)
+    if record is None:
+        raise ProjectNotFound(project_id)
+    return any(getattr(record, f) for f in ("lca_d", "lca_d1", "lca_d2"))
+
+
 async def delete_project(session: AsyncSession, project_id: int) -> None:
     """OpenBDF's foreign keys have no ON DELETE: remove children first."""
     await get_upload(session, project_id)
