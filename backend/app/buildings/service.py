@@ -271,6 +271,7 @@ def compared(upload: Upload, o: Overview, declares_d: bool) -> ComparedBuilding:
         whole_life_per_m2=o.headline.per_m2_gross,
         upfront_per_m2=per_m2(o.headline.upfront, o),
         module_d1_per_m2=per_m2(d1, o),
+        has_module_d=has_d,
         module_d_per_m2=per_m2(d1 + d2, o) if has_d else None,
     )
 

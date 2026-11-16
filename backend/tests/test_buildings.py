@@ -119,6 +119,8 @@ def with_module_d(d1: str | None, d2: str | None):
         ("-5", "2", False, (-5 + 2) * 3 / 200),  # results: D1 + D2, per m² GFA
         ("-5", "5", False, 0.0),  # they cancel, but the building has module D
         (None, None, True, 0.0),  # declared, no result
+        (None, "3", False, 3 * 3 / 200),  # D2 alone
+        ("-5", None, False, -5 * 3 / 200),  # D1 alone
         (None, None, False, None),  # no module D at all: nothing, not 0
     ],
 )
@@ -133,6 +135,7 @@ def test_module_d_is_d1_plus_d2_outside_the_total(
     )
     c = compared(upload, o, declares_d=declares_d)
     assert c.module_d_per_m2 == module_d
+    assert c.has_module_d is (module_d is not None)
     assert c.whole_life_per_m2 == 118 / 200  # never subtracted from A–C
     assert c.module_d1_per_m2 == (float(d1) * 3 / 200 if d1 else 0.0)
 

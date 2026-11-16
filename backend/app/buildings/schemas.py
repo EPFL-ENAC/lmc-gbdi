@@ -91,8 +91,11 @@ class ComparedBuilding(BaseModel):
     whole_life_per_m2: float | None
     upfront_per_m2: float | None
     module_d1_per_m2: float | None
-    # D1 + D2, outside the whole-life total; None when the building has no module D
-    # (no scope flag and no result) or no floor area.
+    # A scope flag for module D, or a D1 or D2 result.
+    # Without it the page shows no module D.
+    has_module_d: bool
+    # D1 + D2, outside the whole-life total.
+    # None without module D or without a floor area.
     module_d_per_m2: float | None
 
 

@@ -51,9 +51,9 @@
                 <div><dt>Gross floor area</dt><dd>{{ figure(comparison[side].gross_floor_area_m2, kg) }} m²</dd></div>
                 <div><dt>Upfront, A1–A5</dt><dd>{{ figure(comparison[side].upfront_per_m2, kg) }} kg/m²</dd></div>
                 <!-- No module D (no scope flag, no result): nothing, not 0. -->
-                <div v-if="comparison[side].module_d_per_m2 !== null">
+                <div v-if="comparison[side].has_module_d">
                   <dt>Module D, outside the total</dt>
-                  <dd>{{ kg.format(comparison[side].module_d_per_m2) }} kg/m²</dd>
+                  <dd>{{ figure(comparison[side].module_d_per_m2, kg) }} kg/m²</dd>
                 </div>
                 <!-- Declared, apart from the computed scope above: a reader sees when two columns differ. -->
                 <div><dt>System boundary</dt><dd>{{ comparison[side].system_boundary ?? 'not declared' }}</dd></div>
