@@ -17,6 +17,7 @@ from openbdf.model.tables import ProjectRecord
 from app.buildings.ingest import (
     TOTAL_NOTE,
     WHAT_TO_DO,
+    WHAT_TO_DO_BY_CODE,
     WORDING,
     Finding,
     RejectedWorkbook,
@@ -284,8 +285,8 @@ def test_a_draft_sums_up_its_rejects_one_line_per_code():
     ]
     # E05 on the results sheet blocks the carbon, so no line says its figures stand.
     assert [tuple(r.model_dump().values()) for r in reject_summary(findings)] == [
-        ("E018", 370, module_d, WHAT_TO_DO),
-        ("E019", 3, WORDING["E019"], WHAT_TO_DO),
+        ("E018", 370, module_d, WHAT_TO_DO_BY_CODE["E018"]),
+        ("E019", 3, WORDING["E019"], WHAT_TO_DO_BY_CODE["E019"]),
         (
             "E05",
             2,
@@ -296,7 +297,7 @@ def test_a_draft_sums_up_its_rejects_one_line_per_code():
             "E001",
             1,
             "Field project_country is required and was not provided",
-            WHAT_TO_DO,
+            WHAT_TO_DO_BY_CODE["E001"],
         ),
     ]
     upload = Upload(
@@ -435,11 +436,51 @@ def test_the_total_checks_say_the_figures_stand_only_when_carbon_is_shown():
         stored("E018", module_d),
         stored("E019", "gwp_total_total is 1, the modules sum to 52.8"),
     ]
-    stands = WHAT_TO_DO + TOTAL_NOTE
-    assert [r.what_to_do for r in reject_summary(findings)] == [stands, stands]
+    own = [WHAT_TO_DO_BY_CODE["E018"], WHAT_TO_DO_BY_CODE["E019"]]
+    assert [r.what_to_do for r in reject_summary(findings)] == [
+        t + TOTAL_NOTE for t in own
+    ]
     # One more reject on the results sheet blocks the carbon: the note goes.
     blocked = [*findings, stored("E05", "Row 3: material_id a, b in the results")]
-    assert {r.what_to_do for r in reject_summary(blocked)} == {WHAT_TO_DO}
+    assert [r.what_to_do for r in reject_summary(blocked)] == [*own, WHAT_TO_DO]
+
+
+def test_each_code_says_what_to_do():
+    def todo(*findings):
+        return {r.code: r.what_to_do for r in reject_summary(list(findings))}
+
+    assert todo(reject("E001", "General Information"))["E001"] == (
+        "Fill the field that the message names in General Information. Then "
+        "upload the workbook again with replace."
+    )
+    e004 = (
+        "Give each bill of materials row one row in LCA Result (Wide), in the "
+        "same order."
+    )
+    assert todo(reject("E004", "LCA Result (Wide)"))["E004"] == e004 + (
+        " The dashboard cannot pair the rows, so it shows no carbon for this draft."
+    )
+    assert todo(reject("E004", "General Information"))["E004"] == e004
+    e018 = (
+        "Take module D out of the declared total: the total covers the modules "
+        "A to C only."
+    )
+    assert todo(reject("E018", "LCA Result (Wide)"))["E018"] == e018 + (
+        " The dashboard adds the modules itself, so the figures shown stand."
+    )
+    assert (
+        todo(reject("E018", "LCA Result (Wide)"), reject("E005", "LCA Result (Wide)"))[
+            "E018"
+        ]
+        == e018
+    )
+    assert todo(reject("E020", "General Information"))["E020"] == (
+        "Declare the reference study period in General Information. The workbook "
+        "has results after stage A, and the per-year figures need the period."
+    )
+    assert todo(reject("E05", "LCA Result (Wide)"))["E05"] == (
+        "Correct the workbook and upload it again with replace."
+    )
 
 
 def test_a_code_with_a_condensed_entry_takes_the_general_wording():

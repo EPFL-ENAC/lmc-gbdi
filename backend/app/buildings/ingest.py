@@ -100,8 +100,36 @@ WORDING = {
     "by 5 per cent or more",
 }
 WHAT_TO_DO = "Correct the workbook and upload it again with replace."
-TOTAL_NOTE = (
-    " The dashboard does not read the declared total, so the figures shown stand."
+# The texts the owner approved, per code of openbdf 0.1.4. A code missing here (one of
+# an older openbdf, such as "E05") keeps WHAT_TO_DO.
+_DATABASE_LINE = (
+    "Give each bill of materials material exactly one line in the project material "
+    "database, with the same material_ref_id."
+)
+WHAT_TO_DO_BY_CODE = {
+    "E001": "Fill the field that the message names in General Information. Then "
+    "upload the workbook again with replace.",
+    "E002": "Choose one of the listed values for the field that the message names.",
+    "E003": "Give the field that the message names a value of the right type, for "
+    "example a number without a unit.",
+    "E004": "Give each bill of materials row one row in LCA Result (Wide), in the "
+    "same order.",
+    "E005": "Give the bill of materials row and its results row the same material_id.",
+    "E006": "Give the share a value from 0 to 100.",
+    "E010": "Set the declared flag of the indicator to true, or remove its results.",
+    **dict.fromkeys(("E011", "E012", "E013", "E014", "E015"), _DATABASE_LINE),
+    "E016": "Give each bill of materials row its own material_id.",
+    "E017": "Fill the aggregate stage or its sub-modules, not both. Example: A1–A3, "
+    "or A1, A2 and A3.",
+    "E018": "Take module D out of the declared total: the total covers the modules "
+    "A to C only.",
+    "E019": "Correct the declared total, or correct the module values that it adds.",
+    "E020": "Declare the reference study period in General Information. The "
+    "workbook has results after stage A, and the per-year figures need the period.",
+}
+TOTAL_NOTE = " The dashboard adds the modules itself, so the figures shown stand."
+NO_CARBON_NOTE = (
+    " The dashboard cannot pair the rows, so it shows no carbon for this draft."
 )
 
 
