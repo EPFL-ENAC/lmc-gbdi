@@ -2,8 +2,8 @@
   <p v-if="!points.length" class="u-text-muted">No material carbon in this project.</p>
   <figure v-else class="cumulative">
     <figcaption class="cumulative__note">{{ headline }}</figcaption>
-    <div :style="{ minHeight: height }">
-      <EChart :option="option" :ariaLabel="summary" :height="height" />
+    <div role="img" :aria-label="summary" :style="{ minHeight: height }">
+      <EChart :option="option" :height="height" />
     </div>
   </figure>
 </template>
@@ -58,7 +58,7 @@ const headline = computed(() => `Top ${n.value} ≈ ${Math.round(last.value * 10
 const summary = computed(
   () =>
     `Cumulative share of carbon over the ${n.value} largest materials: ${headline.value}. ` +
-    points.value.map((p) => `${p.rank}. ${p.name}, ${percent.format(p.value)}`).join('; '),
+    points.value.map((p) => `${p.rank}. ${p.name}, own share ${percent.format(p.share)}, running share ${percent.format(p.value)}`).join('; '),
 );
 
 // Material names come from uploaded workbooks: the tooltip is built with

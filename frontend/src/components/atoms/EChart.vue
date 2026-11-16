@@ -1,5 +1,7 @@
 <template>
-  <div ref="root" class="echart" role="img" :aria-label="ariaLabel" :style="{ height }" />
+  <!-- The text for screen readers lives on the caller's own element, outside this async
+       chunk, so it stays when the chunk is slow or fails to load. -->
+  <div ref="root" class="echart" aria-hidden="true" :style="{ height }" />
 </template>
 
 <script setup lang="ts">
@@ -14,7 +16,7 @@ import { SVGRenderer } from 'echarts/renderers';
 
 use([LineChart, GridComponent, TooltipComponent, SVGRenderer]);
 
-const props = defineProps<{ option: EChartsCoreOption; ariaLabel: string; height: string }>();
+const props = defineProps<{ option: EChartsCoreOption; height: string }>();
 
 const root = ref<HTMLDivElement>();
 let chart: ECharts | undefined;
@@ -57,7 +59,9 @@ function theme(el: HTMLElement) {
 
 function render() {
   const { option } = props;
-  const still = { ...option, animation: false, tooltip: { ...(option.tooltip as object), transitionDuration: 0 } };
+  // A chart without a tooltip must not gain one, so the key is added only where it exists.
+  const tooltip = option.tooltip && !Array.isArray(option.tooltip) ? { tooltip: { ...option.tooltip, transitionDuration: 0 } } : {};
+  const still = { ...option, animation: false, ...tooltip };
   chart?.setOption(reduceMotion.matches ? still : option, true);
 }
 
@@ -76,6 +80,7 @@ onBeforeUnmount(() => {
   reduceMotion.removeEventListener('change', render);
   resize?.disconnect();
   chart?.dispose();
+  chart = undefined; // a late render must not reach a disposed chart
 });
 </script>
 
