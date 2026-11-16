@@ -28,9 +28,12 @@
         </div>
         <q-checkbox v-model="openbdfNames" label="Common OpenBDF names" dense />
       </Teleport>
+      <Teleport defer to="#sheet-toc">
+        <SheetToc />
+      </Teleport>
 
       <!-- Project info -->
-      <header class="sheet__title">
+      <header id="project-info" class="sheet__title">
         <div>
           <h1 class="sheet__name">{{ overview.project.project_name ?? 'Unnamed project' }}</h1>
           <p class="sheet__subtitle">Building carbon overview</p>
@@ -83,7 +86,7 @@
       </section>
 
       <!-- Mass -->
-      <section class="sheet__panel">
+      <section id="mass" class="sheet__panel">
         <div class="sheet__panel-head">
           <h2 class="sheet__panel-title">Building elements</h2>
           <q-btn-toggle
@@ -123,7 +126,7 @@
       </section>
 
       <!-- Emissions: the stages as a strip, then the same stages on a timeline. -->
-      <section class="sheet__panel">
+      <section id="emissions" class="sheet__panel">
         <h2 class="sheet__panel-title">Life-cycle stages</h2>
         <LifeCycleStrip
           :stages="overview.stages"
@@ -153,7 +156,8 @@
         </p>
       </section>
 
-      <!-- Materials -->
+      <!-- Materials. The anchor sits before the component, whose root starts with comments. -->
+      <span id="materials" class="sheet__anchor" />
       <MaterialWalls :overview="view!" />
 
       <section class="sheet__panel">
@@ -168,7 +172,7 @@
       </section>
 
       <!-- Data quality -->
-      <section class="sheet__panel">
+      <section id="data-quality" class="sheet__panel">
         <h2 class="sheet__panel-title">Data type profile</h2>
         <RankedBars :bars="dataTypeBars" :caption="WEIGHTING[overview.data_type_weighting]" empty-label="Not computed." />
       </section>
@@ -206,6 +210,7 @@ import MaterialWalls from '@/components/MaterialWalls.vue';
 import ModuleChecks from '@/components/ModuleChecks.vue';
 import BigNumber from '@/components/molecules/BigNumber.vue';
 import ProjectFieldsTable from '@/components/ProjectFieldsTable.vue';
+import SheetToc from '@/components/SheetToc.vue';
 import RankedBars, { type Bar } from '@/components/RankedBars.vue';
 import StageMatrix from '@/components/StageMatrix.vue';
 import TimeSection from '@/components/TimeSection.vue';
@@ -284,6 +289,16 @@ const dataTypeBars = computed<Bar[]>(() =>
 
 <style scoped lang="scss">
 @use '@/css/02-tokens' as tokens;
+
+// org#101: a table of contents stop lands below the sticky header. SheetToc keeps the
+// variable at the header's height; without script the fallback applies.
+.sheet [id] {
+  scroll-margin-top: calc(var(--sheet-header-h, 9rem) + #{tokens.$spacing-sm});
+}
+
+.sheet__anchor {
+  display: block;
+}
 
 .sheet__name {
   margin: 0;

@@ -45,6 +45,8 @@
             @click="router.push({ path: buildingPath(other, id), query: route.query })"
           />
         </div>
+        <!-- The page's table of contents, the bar's second line (org#101). -->
+        <div id="sheet-toc" class="building-bar__toc" />
       </nav>
     </Teleport>
     <DraftPage v-if="draftOnly" :id="id" />
@@ -117,6 +119,15 @@ onMounted(async () => {
   align-items: center;
   gap: tokens.$spacing-md;
   min-width: 0;
+}
+
+.building-bar__toc {
+  flex-basis: 100%;
+  min-width: 0;
+}
+
+.building-bar__toc:empty {
+  display: none;
 }
 
 .building-bar__compare {
