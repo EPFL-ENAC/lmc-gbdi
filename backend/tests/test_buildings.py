@@ -79,7 +79,7 @@ def test_summary_and_compared_build_from_an_overview(tmp_path):
     )
     s = summary(upload, o)
     assert (s.useful_floor_area_m2, s.study_period_years) == (100, 50)
-    assert compared(upload, o, declares_d=False).gross_floor_area_m2 == 200
+    assert compared(upload, o).gross_floor_area_m2 == 200
 
 
 def test_a_compared_building_carries_its_declared_boundary_and_method(tmp_path):
@@ -93,7 +93,7 @@ def test_a_compared_building_carries_its_declared_boundary_and_method(tmp_path):
     upload = Upload(
         project_record_id=1, file_name="T.xlsx", uploaded_at=datetime.now(UTC)
     )
-    c = compared(upload, o, declares_d=False)
+    c = compared(upload, o)
     assert (c.system_boundary, c.lcia_methodology) == (
         "Cradle to Grave + Module D",
         "EN 15804:2012+A2:2019",
@@ -127,13 +127,16 @@ def with_module_d(d1: str | None, d2: str | None):
 def test_module_d_is_d1_plus_d2_outside_the_total(
     tmp_path, d1, d2, declares_d, module_d
 ):
+    general = {**GENERAL, "lca_d": "TRUE"} if declares_d else GENERAL
     o = build_overview(
-        read_project(write_project(tmp_path, rows=with_module_d(d1, d2)))
+        read_project(
+            write_project(tmp_path, general=general, rows=with_module_d(d1, d2))
+        )
     )
     upload = Upload(
         project_record_id=1, file_name="T.xlsx", uploaded_at=datetime.now(UTC)
     )
-    c = compared(upload, o, declares_d=declares_d)
+    c = compared(upload, o)
     assert c.module_d_per_m2 == module_d
     assert c.has_module_d is (module_d is not None)
     assert c.whole_life_per_m2 == 118 / 200  # never subtracted from A–C
