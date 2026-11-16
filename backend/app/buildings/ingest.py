@@ -23,6 +23,7 @@ from openbdf.lib.validation import (
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.buildings import repo
+from app.buildings.gbdi_id import country_code, format_id
 from app.buildings.models import ProjectRecord, Upload
 
 
@@ -216,7 +217,18 @@ async def store(
     replace: int | None = None,
 ) -> int:
     """Add the project graph and its upload row, and delete the project it replaces;
-    the caller commits, so a failed upload keeps the old one."""
+    the caller commits, so a failed upload keeps the old one.
+
+    The generated id: a replace in the same country keeps the old number, one version
+    up; otherwise, a replace that changes the country included, the country's next
+    number, version 1.
+    """
+    country = country_code(project.project_country)
+    old = None if replace is None else await repo.locked_upload(session, replace)
+    if old is not None and old.gbdi_country == country:
+        number, version = old.gbdi_number, old.gbdi_version + 1
+    else:
+        number, version = await repo.next_number(session, country), 1
     session.add(project)
     await session.flush()
     assert project.id is not None
@@ -227,6 +239,17 @@ async def store(
             uploaded_at=datetime.now(UTC),
             findings=[f.__dict__ for f in findings],
             draft=draft,
+            gbdi_id=format_id(
+                country,
+                project.building_construction_start_date,
+                project.building_construction_end_date,
+                project.building_use_type,
+                number,
+                version,
+            ),
+            gbdi_country=country,
+            gbdi_number=number,
+            gbdi_version=version,
         )
     )
     await session.flush()

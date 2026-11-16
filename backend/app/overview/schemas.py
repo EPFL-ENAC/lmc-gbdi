@@ -192,6 +192,7 @@ class TimeFigures(BaseModel):
 
 class Overview(BaseModel):
     project: ProjectInfo
+    gbdi_id: str | None = None  # the generated project id (org#108), not cached
     project_fields: list[ProjectField]  # the sheet's Project table, in its order
     title_block: list[TitleField]  # the 14 the Overview heads with, in #97's order
     rows_read: int

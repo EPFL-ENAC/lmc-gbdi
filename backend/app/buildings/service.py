@@ -160,8 +160,10 @@ async def overview(
     session: AsyncSession, project_id: int, basis: Basis = "total"
 ) -> Overview:
     """The cached overview, its absolute figures divided by the basis."""
-    stamp = await repo.uploaded_at(session, project_id)
-    return on_basis(await overview_of(session, project_id, stamp), basis)
+    stamp, gbdi_id = await repo.stamp(session, project_id)
+    o = on_basis(await overview_of(session, project_id, stamp), basis)
+    # After the cache: the backfill sets the id without changing uploaded_at.
+    return o.model_copy(update={"gbdi_id": gbdi_id})
 
 
 async def overview_of(
@@ -222,6 +224,7 @@ def summary(upload: Upload, o: Overview) -> BuildingSummary:
         id=upload.project_record_id,
         file_name=upload.file_name,
         uploaded_at=upload.uploaded_at,
+        gbdi_id=upload.gbdi_id,
         findings=findings_count(upload.findings),
         project_name=o.project.project_name,
         country=o.project.country,
@@ -249,6 +252,7 @@ def draft_summary(
         id=upload.project_record_id,
         file_name=upload.file_name,
         uploaded_at=upload.uploaded_at,
+        gbdi_id=upload.gbdi_id,
         findings=findings_count(upload.findings),
         project_name=project.project_name,
         country=project.country,
@@ -273,7 +277,8 @@ async def summary_of(session: AsyncSession, upload: Upload) -> BuildingSummary:
     if "carbon" in blocked(upload):
         hit = _drafts.get(project_id)
         if hit is not None and hit[0] == stamp:  # uploads never change: read once
-            return hit[1]
+            # but for the id the backfill sets
+            return hit[1].model_copy(update={"gbdi_id": upload.gbdi_id})
         data = await repo.read_project(session, project_id, results=False)
         s = draft_summary(upload, data.general, len(data.rows))
         _drafts[project_id] = (stamp, s)

@@ -18,7 +18,7 @@ from openbdf.model.tables import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
-__all__ = ["ProjectRecord", "Upload"]
+__all__ = ["GbdiCounter", "ProjectRecord", "Upload"]
 
 # OpenBDF's foreign keys carry no index: reading one project, or deleting it (each
 # line checks the result tables that point at it), would scan whole tables.
@@ -40,6 +40,14 @@ for name, column in (
 class Upload(SQLModel, table=True):
     """Where a project came from: the workbook, when, and what openbdf found in it."""
 
+    # One number per country and version: the parts of gbdi_id, so no id is stored
+    # twice. With the version: a replace stores v2 before it deletes v1.
+    __table_args__ = (
+        sa.UniqueConstraint(
+            "gbdi_country", "gbdi_number", "gbdi_version", name="uq_upload_gbdi_number"
+        ),
+    )
+
     id: int | None = Field(default=None, primary_key=True)
     project_record_id: int = Field(
         foreign_key="project_record.id", unique=True, ondelete="CASCADE"
@@ -57,3 +65,19 @@ class Upload(SQLModel, table=True):
         default=False,
         sa_column=sa.Column(sa.Boolean, nullable=False, server_default=sa.false()),
     )
+    # The project id the dashboard gives (app/buildings/gbdi_id.py), and its parts:
+    # a replace keeps the country's number and raises the version.
+    gbdi_id: str
+    gbdi_country: str = Field(max_length=3)
+    gbdi_number: int
+    gbdi_version: int
+
+
+class GbdiCounter(SQLModel, table=True):
+    """The last number given in each country, `xxx` included. It never goes back, so
+    a deleted building leaves a gap and its number is never given again."""
+
+    __tablename__ = "gbdi_counter"
+
+    country: str = Field(primary_key=True, max_length=3)
+    last_number: int

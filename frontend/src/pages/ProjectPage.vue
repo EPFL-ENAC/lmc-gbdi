@@ -46,6 +46,11 @@
         <!-- org#106: one cell per field. The five method fields decide whether two
              projects compare, so they are tinted and tagged. -->
         <dl class="info-grid">
+          <!-- org#108: the id the dashboard gives, beside the Project ID the workbook declares. -->
+          <div class="info-cell">
+            <dt class="info-cell__label">GBDI ID</dt>
+            <dd class="info-cell__value">{{ overview.gbdi_id ?? 'Not assigned' }}</dd>
+          </div>
           <div
             v-for="field in overview.title_block"
             :key="field.code"

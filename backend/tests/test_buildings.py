@@ -256,6 +256,7 @@ def test_a_carbon_blocked_draft_lists_without_figures():
         None,
         None,
     )
+    assert s.gbdi_id is None  # an upload before the migration ran
 
 
 def stored(code, message, count=1, severity="Reject"):
@@ -555,16 +556,18 @@ def stored_db(monkeypatch, tmp_path):
             file_name="T.xlsx",
             uploaded_at=stamp,
             findings=[],
+            gbdi_id=f"aut_2024_mfh_{project_id:04d}_v1",
         )
 
-    async def uploaded_at(_session, project_id):
-        return row(project_id)[0]
+    # repo.uploaded_at became repo.stamp, which also reads the gbdi_id.
+    async def stamp(_session, project_id):
+        return row(project_id)[0], f"aut_2024_mfh_{project_id:04d}_v1"
 
     async def read(_session, project_id, results=True):
         return row(project_id)[1]
 
     monkeypatch.setattr(repo, "get_upload", get_upload)
-    monkeypatch.setattr(repo, "uploaded_at", uploaded_at, raising=False)
+    monkeypatch.setattr(repo, "stamp", stamp)
     monkeypatch.setattr(repo, "read_project", read)
     monkeypatch.setattr(service, "_overviews", {})
     monkeypatch.setattr(service, "_drafts", {})
@@ -589,3 +592,27 @@ def test_a_new_upload_under_a_cached_id_is_read_again(stored_db):
     stored_db[1] = (datetime(2026, 11, 2, tzinfo=UTC), stored_db["fewer rows"])
     again = asyncio.run(service.overview(None, 1))
     assert (first.rows_read, again.rows_read) == (len(ROWS), 1)
+
+
+def test_the_overview_carries_the_generated_id(client, stored_db):
+    body = client.get("/api/buildings/1/overview?basis=gfa").json()
+    assert body["gbdi_id"] == "aut_2024_mfh_0001_v1"
+
+
+def test_a_cached_draft_takes_the_id_the_backfill_set(stored_db):
+    """The migration sets gbdi_id without changing uploaded_at: the cache entry
+    stays, the id is the row's."""
+    from app.buildings import service
+
+    upload = Upload(
+        project_record_id=1,
+        file_name="X (DRAFT).xlsx",
+        uploaded_at=stored_db[1][0],
+        findings=[reject("E05", "LCA Result (Wide)")],
+        draft=True,
+    )
+    assert asyncio.run(service.summary_of(None, upload)).gbdi_id is None
+    upload.gbdi_id = "che_xxx_xxx_0001_v1"
+    s = asyncio.run(service.summary_of(None, upload))
+    assert (s.gbdi_id, s.draft) == ("che_xxx_xxx_0001_v1", True)
+    assert len(service._drafts) == 1

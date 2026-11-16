@@ -19,7 +19,7 @@ from openbdf.model.tables import (
 from openbdf.model.tables import (
     LCAResultsWideFullRecord as Wide,
 )
-from sqlalchemy import delete
+from sqlalchemy import delete, text
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -123,21 +123,56 @@ async def get_upload(session: AsyncSession, project_id: int) -> Upload:
     return upload
 
 
-async def uploaded_at(session: AsyncSession, project_id: int) -> datetime:
-    """When the project was uploaded: one column, read on every cached request."""
-    stamp = (
+async def locked_upload(session: AsyncSession, project_id: int) -> Upload:
+    """The upload a replace takes its number from, locked until the commit: a second
+    replace of the same building waits, then finds it gone (ProjectNotFound)."""
+    upload = (
         await session.exec(
-            select(Upload.uploaded_at).where(Upload.project_record_id == project_id)
+            select(Upload)
+            .where(Upload.project_record_id == project_id)
+            .with_for_update()
         )
     ).first()
-    if stamp is None:
+    if upload is None:
         raise ProjectNotFound(project_id)
-    return stamp
+    return upload
+
+
+NEXT_NUMBER = text(
+    "INSERT INTO gbdi_counter (country, last_number) VALUES (:country, 1) "
+    "ON CONFLICT (country) DO UPDATE SET last_number = gbdi_counter.last_number + 1 "
+    "RETURNING last_number"
+)
+
+
+async def next_number(session: AsyncSession, country: str) -> int:
+    """The country's next number. One statement: its row stays locked until the
+    upload commits, so two uploads of one country never take the same number, and a
+    rolled back upload gives its number back."""
+    result = await session.exec(NEXT_NUMBER, params={"country": country})
+    return result.scalar_one()
+
+
+async def stamp(session: AsyncSession, project_id: int) -> tuple[datetime, str]:
+    """When the project was uploaded, and its gbdi_id: two columns, read on every
+    cached request."""
+    row = (
+        await session.exec(
+            select(Upload.uploaded_at, Upload.gbdi_id).where(
+                Upload.project_record_id == project_id
+            )
+        )
+    ).first()
+    if row is None:
+        raise ProjectNotFound(project_id)
+    return row[0], row[1]
 
 
 async def delete_project(session: AsyncSession, project_id: int) -> None:
-    """OpenBDF's foreign keys have no ON DELETE: remove children first."""
-    await get_upload(session, project_id)
+    """OpenBDF's foreign keys have no ON DELETE: remove children first. The upload
+    row is locked first, as a replace does: a delete and a replace of one building at
+    the same time then wait for each other, and the second finds the building gone."""
+    await locked_upload(session, project_id)
     lines = select(Line.id).where(Line.project_id == project_id)
     for table in (Wide, LCAResultsTallFullRecord):
         await session.exec(

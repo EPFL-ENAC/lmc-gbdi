@@ -9,14 +9,17 @@ without it.
 
 import asyncio
 import os
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
+from openbdf.model.enums.buildings import BuildingTypology
+from openbdf.model.enums.countries import Country
 
 from app.buildings import ingest, repo, service
 from app.buildings.ingest import EXAMPLES, Finding, RejectedWorkbook, condense
-from app.buildings.models import ProjectRecord
+from app.buildings.models import ProjectRecord, Upload
 from app.overview.repo import GWP_FIELDS, MaterialRow
 from app.overview.service import stage_gwp
 
@@ -96,6 +99,8 @@ def test_a_replace_deletes_the_old_building_after_storing_the_new_one(monkeypatc
     async def delete_project(_session, project_id):
         session.calls.append(f"delete {project_id}")
 
+    # store now reads the old upload and the counter, which the fake session lacks.
+    numbers(monkeypatch, old_upload("xxx", 7, 1))
     monkeypatch.setattr(repo, "delete_project", delete_project)
     stored = asyncio.run(ingest.store(session, project, "AT-09.xlsx", [], True, 121))
     assert stored == 200
@@ -106,6 +111,74 @@ def test_a_replace_deletes_the_old_building_after_storing_the_new_one(monkeypatc
         "flush",
         "delete 121",
     ]
+
+
+def old_upload(country: str, number: int, version: int) -> Upload:
+    return Upload(
+        project_record_id=121,
+        file_name="AT-09.xlsx",
+        uploaded_at=datetime(2026, 1, 1, tzinfo=UTC),
+        findings=[],
+        gbdi_id="old",
+        gbdi_country=country,
+        gbdi_number=number,
+        gbdi_version=version,
+    )
+
+
+def numbers(monkeypatch, old: Upload | None = None) -> dict[str, int]:
+    """A counter per country, as gbdi_counter keeps them, the locked old upload, and
+    a delete that does nothing."""
+    counters: dict[str, int] = {"aut": 52}
+
+    async def next_number(_session, country):
+        counters[country] = counters.get(country, 0) + 1
+        return counters[country]
+
+    async def locked_upload(_session, _project_id):
+        assert old is not None
+        return old
+
+    async def delete_project(_session, _project_id):
+        pass
+
+    monkeypatch.setattr(repo, "next_number", next_number)
+    monkeypatch.setattr(repo, "locked_upload", locked_upload)
+    monkeypatch.setattr(repo, "delete_project", delete_project)
+    return counters
+
+
+def stored_id(country: Country | None, replace: int | None = None) -> str:
+    session = Session()
+    project = ProjectRecord(
+        project_country=country,
+        building_construction_start_date=date(2024, 3, 1),
+        building_use_type=BuildingTypology.MFH,
+    )
+    asyncio.run(ingest.store(session, project, "x.xlsx", [], False, replace))
+    upload = session.added[1]
+    assert upload.gbdi_id.endswith(f"_{upload.gbdi_number:04d}_v{upload.gbdi_version}")
+    return upload.gbdi_id
+
+
+def test_each_new_building_takes_its_countrys_next_number(monkeypatch):
+    counters = numbers(monkeypatch)
+    assert stored_id(Country.AUT) == "aut_2024_mfh_0053_v1"
+    assert stored_id(Country.AUT) == "aut_2024_mfh_0054_v1"
+    assert stored_id(None) == "xxx_2024_mfh_0001_v1"
+    assert counters == {"aut": 54, "xxx": 1}
+
+
+def test_a_replace_in_the_same_country_keeps_the_number_one_version_up(monkeypatch):
+    counters = numbers(monkeypatch, old_upload("aut", 53, 1))
+    assert stored_id(Country.AUT, replace=121) == "aut_2024_mfh_0053_v2"
+    assert counters == {"aut": 52}  # the counter is not called
+
+
+def test_a_replace_to_another_country_takes_that_countrys_number(monkeypatch):
+    counters = numbers(monkeypatch, old_upload("aut", 53, 3))
+    assert stored_id(Country.CHE, replace=121) == "che_2024_mfh_0001_v1"
+    assert counters == {"aut": 52, "che": 1}
 
 
 def test_a_rejected_replace_deletes_nothing(monkeypatch):
