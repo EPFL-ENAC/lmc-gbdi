@@ -74,7 +74,7 @@
             {{ units.carbon }} before the building is used, A1–A5:
             {{ percent.format(overview.headline.upfront_share) }} of the total.
           </BigNumber>
-          <BigNumber :value="num.format(overview.headline.module_d)" tone="purple">
+          <BigNumber v-if="showModuleD(overview.headline)" :value="num.format(overview.headline.module_d)" tone="purple">
             {{ units.carbon }}, module D, outside the total: D1, material recovery (reuse, recycling, energy
             recovery), {{ num.format(overview.headline.module_d1) }}; D2, exported utilities,
             {{ num.format(overview.headline.module_d2) }}.
@@ -135,7 +135,7 @@
           :stages="overview.stages"
           :whole-life="overview.headline.whole_life"
           :scope="overview.headline.scope"
-          :module-d="overview.headline"
+          :module-d="showModuleD(overview.headline) ? overview.headline : null"
           :units="units"
         />
       </section>
@@ -216,6 +216,7 @@ import RankedBars, { type Bar } from '@/components/RankedBars.vue';
 import StageMatrix from '@/components/StageMatrix.vue';
 import TimeSection from '@/components/TimeSection.vue';
 import { useOverview } from '@/composables/useOverview';
+import { showModuleD } from '@/dataviz';
 import { amount, fieldText, kg, NOT_DECLARED, percent, WEIGHTING } from '@/format';
 
 const { overview, error, basis } = useOverview();

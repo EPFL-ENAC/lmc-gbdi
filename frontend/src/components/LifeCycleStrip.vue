@@ -3,21 +3,23 @@
     <!-- The life cycle in order, A to C; module D sits beyond the boundary, on the same scale -->
     <div class="life-strip__track">
       <div
-        v-for="(stage, i) in stages"
+        v-for="stage in shown"
         :key="stage.key"
         class="life-strip__stage"
-        :style="{ flexGrow: Math.max(stage.gwp, 0), background: STAGE_COLORS[i] }"
+        :style="{ flexGrow: Math.max(stage.gwp, 0), background: stageColor(stage.key) }"
       />
-      <div class="life-strip__boundary" aria-hidden="true" />
-      <div class="life-strip__beyond" :style="{ flexGrow: Math.abs(moduleD.module_d) }" />
+      <template v-if="moduleD">
+        <div class="life-strip__boundary" aria-hidden="true" />
+        <div class="life-strip__beyond" :style="{ flexGrow: Math.abs(moduleD.module_d) }" />
+      </template>
     </div>
     <ol class="life-strip__legend">
-      <li v-for="(stage, i) in stages" :key="stage.key">
-        <span class="life-strip__swatch" :style="{ background: STAGE_COLORS[i] }" />
+      <li v-for="stage in shown" :key="stage.key">
+        <span class="life-strip__swatch" :style="{ background: stageColor(stage.key) }" />
         <span class="life-strip__name"><Term :name="stage.label" /></span>
         <span class="life-strip__value">{{ num.format(stage.gwp) }} {{ units.carbon }}, {{ percent.format(stage.share) }}</span>
       </li>
-      <li class="life-strip__outside">
+      <li v-if="moduleD" class="life-strip__outside">
         <span class="life-strip__swatch life-strip__swatch--beyond" />
         <span class="life-strip__name">Module D, outside the total</span>
         <span class="life-strip__value">
@@ -35,16 +37,17 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import Term from '@/components/atoms/Term.vue';
-import { STAGE_COLORS } from '@/dataviz';
+import { shownStages, stageColor } from '@/dataviz';
 import type { ModuleD, StageTotal, Units } from '@/api/overview';
 import { amount, percent } from '@/format';
 
-const props = defineProps<{ stages: StageTotal[]; wholeLife: number; scope: string; moduleD: ModuleD; units: Units }>();
+const props = defineProps<{ stages: StageTotal[]; wholeLife: number; scope: string; moduleD: ModuleD | null; units: Units }>();
 const num = computed(() => amount(props.units));
 
 // Shares of a whole only draw positive parts; a negative stage (biogenic carbon
 // stored at A1–A3) is named instead of silently missing.
-const negative = computed(() => props.stages.filter((s) => s.gwp < 0).map((s) => s.label));
+const shown = computed(() => shownStages(props.stages));
+const negative = computed(() => shown.value.filter((s) => s.gwp < 0).map((s) => s.label));
 
 </script>
 

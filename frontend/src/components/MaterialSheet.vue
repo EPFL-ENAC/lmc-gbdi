@@ -34,12 +34,12 @@
     <table class="sheet-card__modules">
       <caption>{{ units.carbon }} by life-cycle stage</caption>
       <tbody>
-        <tr v-for="(stage, i) in stages" :key="stage.key">
+        <tr v-for="stage in shown" :key="stage.key">
           <th scope="row"><Term :name="stage.label" /></th>
           <td class="sheet-card__bar-cell">
             <span
               class="sheet-card__bar"
-              :style="{ width: `${barWidth(hotspot.gwp_by_stage[stage.key])}%`, background: STAGE_COLORS[i] }"
+              :style="{ width: `${barWidth(hotspot.gwp_by_stage[stage.key])}%`, background: stageColor(stage.key) }"
             />
           </td>
           <td class="num">{{ num.format(hotspot.gwp_by_stage[stage.key]) }}</td>
@@ -53,7 +53,7 @@
 import { computed } from 'vue';
 import type { MaterialHotspot, StageTotal, Units } from '@/api/overview';
 import Term from '@/components/atoms/Term.vue';
-import { STAGE_COLORS } from '@/dataviz';
+import { shownStages, stageColor } from '@/dataviz';
 import { amount, figure, percent, three } from '@/format';
 
 // `largest`: the largest positive stage across every card, so the cards share one scale.
@@ -65,6 +65,7 @@ const props = defineProps<{
   largest: number;
 }>();
 const num = computed(() => amount(props.units));
+const shown = computed(() => shownStages(props.stages));
 
 // Bar geometry only: a negative stage keeps its signed figure and draws no bar.
 const barWidth = (value: number) => (value > 0 && props.largest > 0 ? (value / props.largest) * 100 : 0);
