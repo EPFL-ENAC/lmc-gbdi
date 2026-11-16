@@ -42,8 +42,9 @@ class Headline(BaseModel):
     per_m2_gross_per_year: (
         float | None
     )  # the basis the workbooks declare (1 m2 GFA / year)
-    module_d1: float
-    module_d2: float
+    module_d1: float  # material recovery: reuse, recycling, energy recovery
+    module_d2: float  # exported utilities
+    module_d: float  # D1 + D2, each with its sign, outside the total
 
 
 class StageTotal(BaseModel):
@@ -175,6 +176,8 @@ class TimeFigures(BaseModel):
     upfront: float  # A1–A5
     use_per_year: float | None  # B1–B8 spread evenly over the study period
     module_d1: float
+    module_d2: float
+    module_d: float  # D1 + D2, outside the total
 
 
 class Overview(BaseModel):

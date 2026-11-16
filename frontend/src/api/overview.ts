@@ -24,9 +24,13 @@ export interface Headline {
   per_m2_gross: number | null;
   per_m2_useful_per_year: number | null; // as the COLA sheet
   per_m2_gross_per_year: number | null; // the declared basis, 1 m² GFA / year
-  module_d1: number;
-  module_d2: number;
+  module_d1: number; // material recovery: reuse, recycling, energy recovery
+  module_d2: number; // exported utilities
+  module_d: number; // D1 + D2, each with its sign, outside the total
 }
+
+// Module D and its two parts, as the headline and the Time section both send them.
+export type ModuleD = Pick<Headline, 'module_d' | 'module_d1' | 'module_d2'>;
 
 export interface StageTotal {
   key: string;
@@ -142,6 +146,8 @@ export interface TimeFigures {
   upfront: number;
   use_per_year: number | null; // B1–B8 spread evenly over the study period
   module_d1: number;
+  module_d2: number;
+  module_d: number; // D1 + D2, outside the total
 }
 
 // The names the element and material figures go by (backend `Naming`).

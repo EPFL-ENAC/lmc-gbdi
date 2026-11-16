@@ -421,6 +421,7 @@ def headline(data: ProjectData, totals: Stages, scope: str) -> Headline:
         per_m2_gross_per_year=per(whole_life, gross, period),
         module_d1=float(module_d["gwp_total_d1"]),
         module_d2=float(module_d["gwp_total_d2"]),
+        module_d=float(module_d["gwp_total_d1"] + module_d["gwp_total_d2"]),
     )
 
 
@@ -708,6 +709,8 @@ def build_overview(data: ProjectData) -> Overview:
             upfront=summary.upfront,
             use_per_year=per(totals["b1_b8"], period),
             module_d1=summary.module_d1,
+            module_d2=summary.module_d2,
+            module_d=summary.module_d,
         ),
         units=units("total"),
         bases=basis_options(project),
@@ -800,6 +803,7 @@ def on_basis(o: Overview, basis: Basis) -> Overview:
                     "upfront": h.upfront / c,
                     "module_d1": h.module_d1 / c,
                     "module_d2": h.module_d2 / c,
+                    "module_d": h.module_d / c,
                 }
             ),
             "stages": [stage(s, c) for s in o.stages],
@@ -814,6 +818,8 @@ def on_basis(o: Overview, basis: Basis) -> Overview:
                 upfront=t.upfront / area,
                 use_per_year=None if t.use_per_year is None else t.use_per_year / area,
                 module_d1=t.module_d1 / area,
+                module_d2=t.module_d2 / area,
+                module_d=t.module_d / area,
             ),
             "units": units(basis),
         }

@@ -103,6 +103,19 @@ def test_whole_life_excludes_module_d_and_b_submodules(overview):
     assert overview.total_mass_kg == 350 + 20 + 5
 
 
+def test_module_d_is_d1_plus_d2_with_their_signs_outside_the_total(tmp_path):
+    # M3 exports utilities: D2 = +4, against D1 = -5 × 3 on M1.
+    rows = [
+        (*r[:6], {**r[6], "gwp_total_d2": "4"}) if r[0] == "M3" else r for r in ROWS
+    ]
+    o = build_overview(read_project(write_project(tmp_path, rows=rows)))
+    assert o.headline.module_d1 == -15
+    assert o.headline.module_d2 == 4
+    assert o.headline.module_d == -11
+    assert o.headline.whole_life == 118
+    assert (o.time.module_d1, o.time.module_d2, o.time.module_d) == (-15, 4, -11)
+
+
 def test_per_m2_figures_divide_by_floor_area_then_period(overview):
     assert overview.headline.per_m2_useful == pytest.approx(1.18)
     assert overview.headline.per_m2_gross == pytest.approx(0.59)
@@ -356,6 +369,8 @@ def test_a_basis_divides_carbon_and_mass(overview, basis, carbon, mass, unit):
     assert o.units.basis == basis and o.units.carbon == unit
     assert o.headline.whole_life == pytest.approx(118 / carbon)
     assert o.headline.module_d1 == pytest.approx(overview.headline.module_d1 / carbon)
+    assert o.headline.module_d == pytest.approx(overview.headline.module_d / carbon)
+    assert o.time.module_d == pytest.approx(overview.time.module_d / mass)
     for kind in ("stages", "elements", "material_hotspots", "materials"):
         for got, total in zip(getattr(o, kind), getattr(overview, kind), strict=True):
             assert got.gwp == pytest.approx(total.gwp / carbon)
