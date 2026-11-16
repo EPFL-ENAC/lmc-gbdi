@@ -28,9 +28,11 @@ export const WEIGHTING: Record<'gwp_fossil_a1_a3' | 'mass' | 'not_computed', str
 };
 
 // A General Information value as a reader should see it: numbers in the reader's locale
-// ("2865.0000" reads 2,865), blanks as not declared.
-export const fieldText = (value: string | null) => {
+// ("2865.0000" reads 2,865), blanks as not declared. A unit follows a number only, so
+// a declared "60 years" stays as it is.
+export const fieldText = (value: string | null, unit?: string | null) => {
   if (value === null || value.trim() === '') return NOT_DECLARED;
   const n = Number(value);
-  return Number.isFinite(n) ? kg.format(n) : value;
+  if (!Number.isFinite(n)) return value;
+  return unit ? `${kg.format(n)} ${unit}` : kg.format(n);
 };
