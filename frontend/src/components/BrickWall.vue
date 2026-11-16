@@ -1,7 +1,8 @@
 <template>
   <!-- 100 bricks, each one per cent of the total, laid from the bottom course up in the
        order of `parts`; what no part claims is Green-Grey, every other material. A hover
-       or a tap on a brick names its material and lights every brick of that material. -->
+       or a tap on a brick names its material and lights every brick of that material;
+       a second tap on the same brick closes it. -->
   <div class="wall" role="img" :aria-label="label" @pointerleave="active = null">
     <span
       v-for="(brick, i) in bricks"
@@ -9,8 +10,8 @@
       class="wall__brick"
       :class="{ 'wall__brick--dim': active !== null && bricks[active]!.part !== brick.part }"
       :style="{ background: brick.color, gridRow: 10 - Math.floor(i / 10), gridColumn: (i % 10) + 1 }"
-      @pointerenter="active = i"
-      @click="active = i"
+      @pointerenter="(e: PointerEvent) => e.pointerType === 'mouse' && (active = i)"
+      @click="active = active === i ? null : i"
     />
     <!-- The tooltip sits over the hovered brick, in its row and column of the grid. -->
     <div
@@ -74,7 +75,7 @@ const tip = computed(() => {
     detail: brick.detail,
     row: 10 - Math.floor(active.value / 10),
     column,
-    side: column <= 3 ? 'right' : column >= 8 ? 'left' : 'center',
+    side: column <= 4 ? 'right' : column >= 7 ? 'left' : 'center',
   };
 });
 </script>
