@@ -26,7 +26,7 @@ import type { MaterialHotspot } from '@/api/overview';
 import { materialName, percent } from '@/format';
 import { materialLabel } from '@/materials';
 
-const props = defineProps<{ hotspots: MaterialHotspot[] }>(); // the top 10, by whole-life carbon
+const props = defineProps<{ hotspots: MaterialHotspot[] }>(); // the top 10, by carbon
 
 const W = 1100;
 const H = 360;
@@ -56,10 +56,10 @@ const line = computed(() => points.value.map((p) => `${x(p.rank)},${y(p.value)}`
 const area = computed(() => `M${x(0)},${y(0)} L${line.value} L${x(n.value)},${y(0)} Z`);
 
 const last = computed(() => points.value[n.value - 1]?.value ?? 0);
-const headline = computed(() => `Top ${n.value} ≈ ${Math.round(last.value * 100)}% of whole-life`);
+const headline = computed(() => `Top ${n.value} ≈ ${Math.round(last.value * 100)}% of total carbon`);
 const summary = computed(
   () =>
-    `Cumulative share of whole-life carbon over the ${n.value} largest materials: ${headline.value}. ` +
+    `Cumulative share of carbon over the ${n.value} largest materials: ${headline.value}. ` +
     points.value.map((p) => `${p.rank}. ${p.name}, ${percent.format(p.value)}`).join('; '),
 );
 </script>
