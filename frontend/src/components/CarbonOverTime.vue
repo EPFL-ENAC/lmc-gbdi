@@ -17,7 +17,7 @@
       <template v-if="has('b1_b8')">
         B1–B8 is spread evenly over the {{ period }} years, a simplification: replacements really happen in steps.
       </template>
-      <template v-if="moduleD">Past the dashed boundary: module D, outside the total.</template>
+      <template v-if="moduleD">Past the dashed system boundary: module D, outside the total.</template>
     </figcaption>
   </figure>
 </template>
@@ -128,11 +128,13 @@ const option = computed((): ComposeOption<CustomSeriesOption | GridComponentOpti
   const ink = cssColor('var(--gbdi-color-text)');
   const axisText = cssColor('var(--gbdi-dataviz-axis-text)');
   const f = num.value;
+  const fontFamily = getComputedStyle(document.body).fontFamily;
   const fills = parts.value.map((part) => (part.key === 'd' ? 'none' : cssColor(stageColor(part.key))));
   const text = (x: number, y: number, value: string, align: 'left' | 'center' | 'right', fill = ink, fontSize = 14) => ({
     type: 'text' as const,
     silent: true,
-    style: { x, y, text: value, align, verticalAlign: (fontSize === 12 ? 'top' : 'middle') as 'top' | 'middle', fill, fontSize },
+    // The theme styles axis and tooltip text only: a custom series names its font itself.
+    style: { x, y, text: value, align, verticalAlign: (fontSize === 12 ? 'top' : 'middle') as 'top' | 'middle', fill, fontSize, fontFamily },
   });
   return {
     grid: { left: 8, right: 16, top: 24, bottom: phone.value ? 40 : 32 },
@@ -198,6 +200,8 @@ const option = computed((): ComposeOption<CustomSeriesOption | GridComponentOpti
             notes && has('c1_c4') && text(c.xEnd - 8, y(endOfLife.value), `C1–C4: ${f.format(endOfLife.value)}`, 'right'),
             props.moduleD && text(c.xD + c.bar / 2, below, 'Beyond', 'center', axisText, 12),
             notes && props.moduleD && text(c.xD - 8, y(d.value), `Module D: ${f.format(d.value)}`, 'right'),
+            // The line has a name, so a reader does not have to guess what it marks.
+            props.moduleD && text(c.xBoundary - 6, box.y - 18, 'System boundary', 'right', axisText, 12),
             props.moduleD && {
               type: 'line' as const,
               silent: true,

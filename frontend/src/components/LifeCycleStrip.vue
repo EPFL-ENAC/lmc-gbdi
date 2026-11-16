@@ -1,7 +1,7 @@
 <template>
   <figure class="life-strip" :aria-label="`Carbon by life-cycle stage, ${scope}, ${num.format(wholeLife)} ${units.carbon}`">
     <!-- The life cycle in order, A to C; module D sits beyond the boundary, on the same scale -->
-    <div class="life-strip__track">
+    <div class="life-strip__track" :class="{ 'life-strip__track--bounded': moduleD }">
       <div
         v-for="stage in shown"
         :key="stage.key"
@@ -9,7 +9,7 @@
         :style="{ flexGrow: Math.max(stage.gwp, 0), background: stageColor(stage.key) }"
       />
       <template v-if="moduleD">
-        <div class="life-strip__boundary" aria-hidden="true" />
+        <div class="life-strip__boundary"><span class="life-strip__boundary-label">System boundary</span></div>
         <div class="life-strip__beyond" :style="{ flexGrow: Math.abs(moduleD.module_d) }" />
       </template>
     </div>
@@ -21,7 +21,7 @@
       </li>
       <li v-if="moduleD" class="life-strip__outside">
         <span class="life-strip__swatch life-strip__swatch--beyond" />
-        <span class="life-strip__name">Module D, outside the total</span>
+        <span class="life-strip__name">Module D, outside the total, beyond the system boundary</span>
         <span class="life-strip__value">
           {{ num.format(moduleD.module_d) }} {{ units.carbon }}: D1 {{ num.format(moduleD.module_d1) }}, D2
           {{ num.format(moduleD.module_d2) }}
@@ -79,10 +79,27 @@ const negative = computed(() => shown.value.filter((s) => s.gwp < 0).map((s) => 
 }
 
 .life-strip__boundary {
+  position: relative;
   flex: none;
   width: tokens.$spacing-lg;
   margin: 0 tokens.$spacing-sm;
   border-left: tokens.$border-width dashed tokens.$color-text-muted;
+}
+
+// The name of the dashed line, above the track and to the left of the line, so it
+// never leaves the strip on the right.
+.life-strip__track--bounded {
+  margin-top: tokens.$spacing-lg;
+}
+
+.life-strip__boundary-label {
+  position: absolute;
+  right: 100%;
+  bottom: 100%;
+  padding: 0 tokens.$spacing-xs tokens.$spacing-xxs 0;
+  font-size: tokens.$text-size-xs;
+  color: tokens.$color-text-muted;
+  white-space: nowrap;
 }
 
 .life-strip__beyond {
