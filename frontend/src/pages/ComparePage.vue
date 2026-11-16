@@ -27,6 +27,32 @@
             @update:model-value="(id: number) => pick(side, id)"
           />
         </div>
+        <!-- Case 3 only: the building bar holds the choice, beside the pickers; the
+             standalone page has no bar and keeps it here. -->
+        <Teleport v-if="comparison?.case === 'different_stages'" defer to="#basis-control" :disabled="!inBuilding">
+          <div class="compare__scope" role="group" aria-labelledby="compare-scope-label">
+            <span id="compare-scope-label" class="compare__scope-label">Totals on</span>
+            <q-btn-toggle
+              v-model="scope"
+              :options="SCOPES"
+              no-caps
+              unelevated
+              dense
+              toggle-color="primary"
+              color="white"
+              text-color="dark"
+              class="compare__scope-toggle"
+            />
+          </div>
+        </Teleport>
+        <!-- Below 600 px the choice folds behind the bar's Display button, which still
+             names it; the banner below says it too. -->
+        <Teleport
+          v-if="$q.screen.lt.sm && inBuilding && comparison?.case === 'different_stages'"
+          defer
+          to="#display-summary"
+          >{{ `: ${SCOPES.find((o) => o.value === scope)?.short}` }}</Teleport
+        >
       </header>
 
       <p v-if="error" class="sheet__panel" role="alert">The comparison could not be loaded. {{ error }}</p>
@@ -34,6 +60,25 @@
       <p v-else-if="comparison === null" class="sheet__panel u-text-muted">Loading the comparison…</p>
 
       <template v-else>
+        <!-- What the figures below cover, and the other choice one click away. -->
+        <p v-if="comparison.case === 'different_stages'" class="compare__banner" role="status">
+          <template v-if="comparison.applied_scope === 'common'">
+            Compared on the stages both cover: {{ comparison.common_stages.join(', ') }}.
+            <template v-for="out in comparison.left_out" :key="out.stage">
+              {{ out.stage }} is left out: {{ named(comparison[out.not_covered_by]) }} does not cover it.
+            </template>
+          </template>
+          <template v-else>Each building on its own scope: the totals do not cover the same stages.</template>
+          <q-btn
+            flat
+            dense
+            no-caps
+            color="primary"
+            class="compare__switch"
+            :label="comparison.applied_scope === 'common' ? 'Show each on its own scope' : 'Compare on the stages both cover'"
+            @click="scope = comparison.applied_scope === 'common' ? 'own' : 'common'"
+          />
+        </p>
         <MethodNotice :comparison="comparison" />
         <section class="sheet__panel" aria-label="Carbon per m²">
           <div class="duel">
@@ -121,13 +166,26 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { buildingPath } from '@/buildingLayouts';
-import { code, fetchBuildings, fetchComparison, noCarbon, type BuildingSummary, type ComparedBuilding, type Comparison } from '@/api/buildings';
+import {
+  code,
+  fetchBuildings,
+  fetchComparison,
+  noCarbon,
+  type BuildingSummary,
+  type ComparedBuilding,
+  type CompareScope,
+  type Comparison,
+} from '@/api/buildings';
 import DraftBadge from '@/components/DraftBadge.vue';
 import MethodNotice from '@/components/MethodNotice.vue';
 import PairedBars from '@/components/PairedBars.vue';
 import { figure, kg, percent } from '@/format';
 
 const SIDES = ['a', 'b'] as const;
+const SCOPES: { value: CompareScope; label: string; short: string }[] = [
+  { value: 'common', label: 'Common stages', short: 'Common stages' },
+  { value: 'own', label: 'Each on its own scope', short: 'Own scope' },
+];
 // As every compare page: "Iewan (NL-23)" in words, the code alone in legends.
 const named = (x: ComparedBuilding) => `${x.project_name ?? 'Unnamed project'} (${code(x)})`;
 
@@ -141,6 +199,12 @@ const idOf = (value: unknown) => (typeof value === 'string' && value !== '' ? Nu
 const inBuilding = computed(() => route.params.id !== undefined);
 const a = computed(() => idOf(inBuilding.value ? route.params.id : route.query.a));
 const b = computed(() => idOf(inBuilding.value ? route.params.other : route.query.b));
+// ?scope=own, or the default: the stages both cover. The other query and the hash stay.
+const scope = computed<CompareScope>({
+  get: () => (route.query.scope === 'own' ? 'own' : 'common'),
+  set: (next) =>
+    void router.replace({ query: { ...route.query, scope: next === 'own' ? 'own' : undefined }, hash: route.hash }),
+});
 const options = computed(() =>
   buildings.value.filter((x) => !noCarbon(x)).map((x) => ({ id: x.id, label: `${code(x)}, ${x.project_name ?? 'unnamed'}` })),
 );
@@ -160,16 +224,21 @@ onMounted(async () => {
   }
 });
 
+// Another pair empties the page; another scope keeps it until the answer comes. Only
+// the last request's answer lands.
+let asked = 0;
 watch(
-  [a, b],
-  async ([ia, ib]) => {
-    comparison.value = null;
+  [a, b, scope],
+  async ([ia, ib, sc], old) => {
+    const n = ++asked;
+    if (old === undefined || ia !== old[0] || ib !== old[1]) comparison.value = null;
     error.value = null;
     if (ia === null || ib === null) return;
     try {
-      comparison.value = await fetchComparison(ia, ib);
+      const next = await fetchComparison(ia, ib, sc);
+      if (n === asked) comparison.value = next;
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : String(e);
+      if (n === asked) error.value = e instanceof Error ? e.message : String(e);
     }
   },
   { immediate: true },
@@ -207,6 +276,35 @@ watch(
 
 .compare__picker {
   min-width: 16rem;
+}
+
+.compare__scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: tokens.$spacing-sm;
+}
+
+.compare__scope-label {
+  font-size: tokens.$text-size-sm;
+  color: tokens.$color-text-muted;
+}
+
+.compare__scope-toggle {
+  border: tokens.$border-width solid tokens.$color-border;
+}
+
+.compare__banner {
+  margin: 0;
+  padding: tokens.$spacing-sm tokens.$spacing-lg;
+  border-left: 4px solid var(--gbdi-dataviz-blue-2);
+  background: tokens.$color-surface-highlight;
+  font-size: tokens.$text-size-sm;
+}
+
+.compare__switch {
+  margin-left: tokens.$spacing-xs;
+  text-decoration: underline;
 }
 
 .duel {

@@ -9,6 +9,10 @@
     At least one of the two buildings does not declare its LCIA method, so whether their carbon figures compare is
     unknown.
   </p>
+  <p v-else-if="comparison.case === 'no_common_stages'" class="method-notice method-notice--differ" role="note">
+    The two buildings cover no stage in common, {{ comparison.covered_a.join(', ') || 'none' }} against
+    {{ comparison.covered_b.join(', ') || 'none' }}: their totals do not compare.
+  </p>
 </template>
 
 <script setup lang="ts">
