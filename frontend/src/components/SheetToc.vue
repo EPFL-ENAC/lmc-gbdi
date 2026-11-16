@@ -60,6 +60,12 @@ function update() {
   frame = 0;
   // The stops land one spacing step under the header (scroll-margin-top); allow a few px more.
   const line = (header?.offsetHeight ?? 0) + 16;
+  // At the end of the page the last stop is current, even when its sections are too
+  // short to reach the line on a tall screen.
+  if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 1) {
+    current.value = STOPS[STOPS.length - 1].id;
+    return;
+  }
   current.value =
     [...STOPS].reverse().find((s) => (document.getElementById(s.id)?.getBoundingClientRect().top ?? Infinity) <= line)
       ?.id ?? STOPS[0].id;

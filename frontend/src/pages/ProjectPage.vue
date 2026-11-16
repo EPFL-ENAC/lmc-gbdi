@@ -298,6 +298,7 @@ const dataTypeBars = computed<Bar[]>(() =>
 
 .sheet__anchor {
   display: block;
+  border-top: 0; // not a panel: no rule of its own above the materials
 }
 
 .sheet__name {
