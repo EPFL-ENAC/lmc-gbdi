@@ -10,29 +10,23 @@
       <!-- Every absolute figure of the page on one basis, and every element and material
            under one naming, both chosen in the building bar. -->
       <Teleport defer to="#basis-control">
-        <q-btn-toggle
-          v-model="basis"
-          :options="basisOptions"
-          aria-label="Figures per"
-          no-caps
-          unelevated
-          dense
-          toggle-color="primary"
-          color="white"
-          text-color="dark"
-        />
-        <q-btn-toggle
-          v-model="naming"
-          :options="NAMINGS"
-          aria-label="Element and material names"
-          no-caps
-          unelevated
-          dense
-          toggle-color="primary"
-          color="white"
-          text-color="dark"
-          class="sheet__naming"
-        />
+        <!-- org#102: the basis is the main choice, labelled and boxed; the naming is a
+             secondary checkbox beside it. -->
+        <div class="sheet__show" role="group" aria-labelledby="sheet-show-label">
+          <span id="sheet-show-label" class="sheet__show-label">Show</span>
+          <q-btn-toggle
+            v-model="basis"
+            :options="basisOptions"
+            no-caps
+            unelevated
+            dense
+            toggle-color="primary"
+            color="white"
+            text-color="dark"
+            class="sheet__basis"
+          />
+        </div>
+        <q-checkbox v-model="openbdfNames" label="Common OpenBDF names" dense />
       </Teleport>
 
       <!-- Project info -->
@@ -232,17 +226,18 @@ const basisOptions = computed(() =>
   })),
 );
 
-// The backend sends every element and material figure under both namings; the toggle
+// The backend sends every element and material figure under both namings; the checkbox
 // only picks one, so it needs no new request. A view has the top-level field names.
-const NAMINGS: { label: string; value: Naming }[] = [
-  { label: 'OpenBDF classification', value: 'openbdf' },
-  { label: 'Custom names', value: 'custom' },
-];
 const ELEMENTS_BY: Record<Naming, string> = {
   openbdf: 'OpenBDF element, Tier 2, in classification order',
   custom: "the project's own element class, in label order",
 };
 const naming = ref<Naming>('openbdf');
+// Checked is the OpenBDF classification, unchecked the project's custom names.
+const openbdfNames = computed({
+  get: () => naming.value === 'openbdf',
+  set: (on: boolean) => (naming.value = on ? 'openbdf' : 'custom'),
+});
 const view = computed(() => (overview.value === null ? null : { ...overview.value, ...overview.value.namings[naming.value] }));
 
 // Chart and table read the same backend rows, in the backend's order.
@@ -295,8 +290,25 @@ const dataTypeBars = computed<Bar[]>(() =>
   font-size: tokens.$text-size-display-md;
 }
 
-.sheet__naming {
-  margin-left: tokens.$spacing-md;
+.sheet__show {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: tokens.$spacing-sm;
+}
+
+.sheet__show-label {
+  font-size: tokens.$text-size-xs;
+  font-weight: 700;
+  letter-spacing: tokens.$text-letter-spacing-label;
+  text-transform: uppercase;
+  color: tokens.$color-text-muted;
+}
+
+.sheet__basis {
+  flex-wrap: wrap;
+  border: tokens.$border-width solid tokens.$color-border-control;
+  border-radius: tokens.$radius-default;
 }
 
 .sheet__panel-head {
