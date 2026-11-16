@@ -354,6 +354,24 @@ def test_data_types_weigh_by_gwp_fossil_when_every_row_declares_it(tmp_path):
     assert shares["undeclared"] == pytest.approx(30 / 57)
 
 
+def test_a_fossil_sum_below_zero_weighs_by_mass(tmp_path):
+    # Every row declares fossil: M1 -20×3 = -60, M3 30, M2 and M4 0, so -30 in all.
+    # A negative sum cannot weigh a profile, so mass does: 350 generic, 25 undeclared.
+    rows = with_fossil(
+        {
+            "M1": {"gwp_f_a1_a3": "-20"},
+            "M2": {"gwp_f_a2": "0"},
+            "M4": {"gwp_f_a1_a3": "0"},
+        }
+    )
+    o = build_overview(read_project(write_project(tmp_path, rows, GENERIC)))
+    shares = {d.key: d.share for d in o.data_types}
+    assert o.data_type_weighting == "mass"
+    assert o.data_type_rows_without_fossil is None and o.data_type_rows is None
+    assert shares["generic"] == pytest.approx(350 / 375)
+    assert shares["undeclared"] == pytest.approx(25 / 375)
+
+
 def test_data_types_weigh_by_mass_when_some_rows_declare_no_fossil(overview):
     # M2 and M4 are blank. Mass: M1 300 + M2 50 generic, M3 20 + M4 5 undeclared.
     shares = {d.key: d.share for d in overview.data_types}

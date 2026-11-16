@@ -338,7 +338,8 @@ def data_type_profile(
     rows = int(sum((p["rows"] for p in pairs.values()), ZERO))
     blank = int(sum((p["no_fossil"] for p in pairs.values()), ZERO))
     counts = None
-    if mass > ZERO and (blank or fossil == ZERO):
+    # A fossil sum of zero or below cannot weigh a profile: mass does, as before.
+    if mass > ZERO and (blank or fossil <= ZERO):
         weighting = "mass"
         if 0 < blank < rows:
             counts = (blank, rows)
