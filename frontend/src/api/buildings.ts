@@ -72,9 +72,12 @@ export interface ComparedBuilding {
   rows_read: number;
   scope: string;
   lcia_methodology: string | null;
+  system_boundary: string | null; // as General Information declares it
   whole_life_per_m2: number | null;
   upfront_per_m2: number | null;
   module_d1_per_m2: number | null;
+  has_module_d: boolean; // a scope flag for module D, or a D1 or D2 result
+  module_d_per_m2: number | null; // D1 + D2, outside the total; null without module D or without a floor area
 }
 
 export interface ComparedRow {

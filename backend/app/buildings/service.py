@@ -254,7 +254,10 @@ async def _ingest(
         await own.dispose()
 
 
-def compared(upload: Upload, o: Overview) -> ComparedBuilding:
+def compared(upload: Upload, o: Overview, declares_d: bool) -> ComparedBuilding:
+    d1, d2 = o.headline.module_d1, o.headline.module_d2
+    # Each alone, as module_checks does: a D1 credit and a D2 burden can cancel.
+    has_d = declares_d or round(d1, 6) != 0 or round(d2, 6) != 0
     return ComparedBuilding(
         id=upload.project_record_id,
         file_name=upload.file_name,
@@ -264,9 +267,12 @@ def compared(upload: Upload, o: Overview) -> ComparedBuilding:
         rows_read=o.rows_read,
         scope=o.headline.scope,
         lcia_methodology=o.project.lcia_methodology,
+        system_boundary=o.project.system_boundary,
         whole_life_per_m2=o.headline.per_m2_gross,
         upfront_per_m2=per_m2(o.headline.upfront, o),
-        module_d1_per_m2=per_m2(o.headline.module_d1, o),
+        module_d1_per_m2=per_m2(d1, o),
+        has_module_d=has_d,
+        module_d_per_m2=per_m2(d1 + d2, o) if has_d else None,
     )
 
 
@@ -323,8 +329,8 @@ async def compare(session: AsyncSession, a_id: int, b_id: int) -> Comparison:
     classes = sorted(ca.keys() | cb.keys())
     wa, wb = oa.headline.per_m2_gross, ob.headline.per_m2_gross
     return Comparison(
-        a=compared(ua, oa),
-        b=compared(ub, ob),
+        a=compared(ua, oa, await repo.declares_module_d(session, a_id)),
+        b=compared(ub, ob, await repo.declares_module_d(session, b_id)),
         comparability=comparability(
             oa.project.lcia_methodology, ob.project.lcia_methodology
         ),

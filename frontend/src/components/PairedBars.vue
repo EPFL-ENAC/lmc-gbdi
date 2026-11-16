@@ -1,28 +1,43 @@
 <template>
-  <!-- Two buildings, row by row, on one scale around zero: a value below zero (biogenic
-       carbon, benefits) runs left of the axis instead of disappearing. -->
+  <!-- Two buildings, row by row, side by side: each building on its own scale around zero
+       (org#94), so no graph mixes the two. A value below zero (biogenic carbon, benefits)
+       runs left of its axis instead of disappearing. -->
   <figure class="paired">
     <table class="paired__table">
       <thead>
         <tr>
           <th scope="col" class="paired__label">{{ unit }}</th>
-          <th scope="col" aria-hidden="true" />
-          <th scope="col" class="num"><span class="paired__swatch paired__swatch--a" />{{ aLabel }}</th>
-          <th scope="col" class="num"><span class="paired__swatch paired__swatch--b" />{{ bLabel }}</th>
+          <template v-for="side in SIDES" :key="side">
+            <th scope="col" colspan="2" class="paired__head" :class="`paired__side--${side}`">
+              <span class="paired__swatch" :class="`paired__swatch--${side}`" />{{ code(buildings[side]) }}
+              <span class="paired__covers">{{ covers(buildings[side]) }}</span>
+            </th>
+          </template>
         </tr>
       </thead>
       <tbody>
         <tr v-for="row in rows" :key="row.label">
           <th scope="row" class="paired__label"><Term :name="row.label" /></th>
-          <td class="paired__plot" aria-hidden="true">
-            <span class="paired__zero" :style="{ left: `${at(0)}%` }" />
-            <span class="paired__bar paired__bar--a" :style="bar(row.a)" />
-            <span class="paired__bar paired__bar--b" :style="bar(row.b)" />
-          </td>
-          <td class="num">{{ show(row.a) }}</td>
-          <td class="num">{{ show(row.b) }}</td>
+          <template v-for="side in SIDES" :key="side">
+            <td class="paired__plot" :class="`paired__side--${side}`" aria-hidden="true">
+              <span class="paired__zero" :style="{ left: `${at(side, 0)}%` }" />
+              <span class="paired__bar" :class="`paired__bar--${side}`" :style="bar(side, row[side])" />
+            </td>
+            <td class="num">{{ show(row[side]) }}</td>
+          </template>
         </tr>
       </tbody>
+      <tfoot>
+        <tr>
+          <th scope="row" class="paired__label">Scale</th>
+          <template v-for="side in SIDES" :key="side">
+            <td class="paired__ends" :class="`paired__side--${side}`">
+              <span>{{ format.format(domains[side][0]) }}</span><span>{{ format.format(domains[side][1]) }}</span>
+            </td>
+            <td />
+          </template>
+        </tr>
+      </tfoot>
     </table>
     <figcaption class="paired__caption">{{ caption }}</figcaption>
   </figure>
@@ -30,15 +45,18 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { ComparedRow } from '@/api/buildings';
+import { code, type ComparedBuilding, type ComparedRow } from '@/api/buildings';
 import Term from '@/components/atoms/Term.vue';
 import { kg } from '@/format';
+
+type Side = 'a' | 'b';
+const SIDES = ['a', 'b'] as const;
 
 const props = withDefaults(
   defineProps<{
     rows: ComparedRow[];
-    aLabel: string;
-    bLabel: string;
+    a: ComparedBuilding;
+    b: ComparedBuilding;
     unit: string;
     caption: string;
     format?: Intl.NumberFormat;
@@ -46,18 +64,23 @@ const props = withDefaults(
   { format: () => kg },
 );
 
-// Chart geometry only: one domain for every row, zero always inside it.
-const domain = computed(() => {
-  const values = props.rows.flatMap((r) => [r.a ?? 0, r.b ?? 0]);
+const buildings = computed(() => ({ a: props.a, b: props.b }));
+const covers = (x: ComparedBuilding) =>
+  `${x.system_boundary ?? 'boundary not declared'} · ${x.lcia_methodology ?? 'method not declared'}`;
+
+// Chart geometry only: one domain per building, from its own values, zero always inside.
+const domainOf = (side: Side) => {
+  const values = props.rows.map((r) => r[side] ?? 0);
   return [Math.min(0, ...values), Math.max(0, ...values)] as const;
-});
-const at = (value: number) => {
-  const [lo, hi] = domain.value;
+};
+const domains = computed(() => ({ a: domainOf('a'), b: domainOf('b') }));
+const at = (side: Side, value: number) => {
+  const [lo, hi] = domains.value[side];
   return hi === lo ? 0 : ((value - lo) / (hi - lo)) * 100;
 };
-const bar = (value: number | null) => {
+const bar = (side: Side, value: number | null) => {
   const v = value ?? 0;
-  return { left: `${at(Math.min(0, v))}%`, width: `${Math.abs(at(v) - at(0))}%` };
+  return { left: `${at(side, Math.min(0, v))}%`, width: `${Math.abs(at(side, v) - at(side, 0))}%` };
 };
 const show = (value: number | null) => (value === null ? 'no area' : props.format.format(value));
 </script>
@@ -67,6 +90,12 @@ const show = (value: number | null) => (value === null ? 'no area' : props.forma
 
 .paired {
   margin: 0;
+  overflow-x: auto; // a phone scrolls the table inside the panel, the page stays still
+}
+
+// The boundary and method line is long: it wraps under the building name.
+.paired__table thead th.paired__head {
+  white-space: normal;
 }
 
 .paired__table {
@@ -90,15 +119,39 @@ const show = (value: number | null) => (value === null ? 'no area' : props.forma
 }
 
 .paired__label {
-  width: 30%;
+  width: 20%;
   text-align: left;
   font-weight: tokens.$text-weight-regular;
 }
 
 .paired__plot {
   position: relative;
-  width: 50%;
+  width: 25%;
   height: 2.25rem;
+}
+
+// The B part starts after a rule, so the two buildings never read as one graph.
+.paired__side--b {
+  border-left: tokens.$border-width solid tokens.$color-border;
+}
+
+.paired__head {
+  text-align: left;
+}
+
+.paired__covers {
+  display: block;
+  font-size: tokens.$text-size-xs;
+  white-space: normal;
+}
+
+.paired__ends {
+  font-size: tokens.$text-size-xs;
+  color: tokens.$color-text-muted;
+}
+
+.paired__ends span + span {
+  float: right;
 }
 
 .paired__zero {
@@ -114,12 +167,12 @@ const show = (value: number | null) => (value === null ? 'no area' : props.forma
 }
 
 .paired__bar--a {
-  top: calc(50% - 0.65rem);
+  top: calc(50% - 0.3rem);
   background: var(--gbdi-dataviz-green-1);
 }
 
 .paired__bar--b {
-  top: calc(50% + 0.05rem);
+  top: calc(50% - 0.3rem);
   background: var(--gbdi-dataviz-blue-2);
 }
 
