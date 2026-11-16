@@ -216,4 +216,8 @@ class Overview(BaseModel):
     units: Units
     bases: list[BasisOption]  # every basis, with whether this building can serve it
     data_type_weighting: str  # gwp_fossil_a1_a3 | mass | not_computed
+    # Set when some rows with mass, not all, declare no GWP fossil A1–A3: they force
+    # the mass weighting. N of M rows.
+    data_type_rows_without_fossil: int | None = None
+    data_type_rows: int | None = None
     data_types: list[DataTypeShare]  # the seven EU 2026/52 types, then "undeclared"

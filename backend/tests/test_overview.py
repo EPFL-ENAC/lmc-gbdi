@@ -330,11 +330,58 @@ def test_each_top_10_comes_with_the_materials_it_leaves_out(overview):
     assert masses == sorted(masses, reverse=True)
 
 
-def test_data_types_weigh_by_gwp_fossil_and_report_the_undeclared(overview):
-    shares = {d.key: d.share for d in overview.data_types}
-    assert overview.data_type_weighting == "gwp_fossil_a1_a3"
+def with_fossil(fossil: dict[str, dict[str, str]], strip: bool = False) -> list:
+    """ROWS with fossil fields added by id; strip drops every fossil field first."""
+    rows = []
+    for r in ROWS:
+        gwp = {k: v for k, v in r[6].items() if not (strip and k.startswith("gwp_f_"))}
+        rows.append((*r[:6], gwp | fossil.get(r[0], {})))
+    return rows
+
+
+GENERIC = {("Concrete", "C25/30"): "Generic (generic data from a database)"}
+
+
+def test_data_types_weigh_by_gwp_fossil_when_every_row_declares_it(tmp_path):
+    # M2 declares 0 through a part, M4 through the total: same numbers as with blanks
+    # weighing 0. Fossil: M1 9×3=27 generic, M3 30 undeclared, of 57.
+    rows = with_fossil({"M2": {"gwp_f_a2": "0"}, "M4": {"gwp_f_a1_a3": "0"}})
+    o = build_overview(read_project(write_project(tmp_path, rows, GENERIC)))
+    shares = {d.key: d.share for d in o.data_types}
+    assert o.data_type_weighting == "gwp_fossil_a1_a3"
+    assert o.data_type_rows_without_fossil is None and o.data_type_rows is None
     assert shares["generic"] == pytest.approx(27 / 57)
     assert shares["undeclared"] == pytest.approx(30 / 57)
+
+
+def test_data_types_weigh_by_mass_when_some_rows_declare_no_fossil(overview):
+    # M2 and M4 are blank. Mass: M1 300 + M2 50 generic, M3 20 + M4 5 undeclared.
+    shares = {d.key: d.share for d in overview.data_types}
+    assert overview.data_type_weighting == "mass"
+    assert overview.data_type_rows_without_fossil == 2
+    assert overview.data_type_rows == 4
+    assert shares["generic"] == pytest.approx(350 / 375)
+    assert shares["undeclared"] == pytest.approx(25 / 375)
+
+
+def test_a_declared_fossil_zero_is_a_value_not_a_blank(tmp_path):
+    # M4 declares 0; only M2 stays blank: 1 of 4 rows.
+    rows = with_fossil({"M4": {"gwp_f_a1_a3": "0"}})
+    o = build_overview(read_project(write_project(tmp_path, rows, GENERIC)))
+    assert o.data_type_weighting == "mass"
+    assert (o.data_type_rows_without_fossil, o.data_type_rows) == (1, 4)
+
+
+def test_data_types_weigh_by_mass_without_counts_when_no_row_declares_fossil(
+    tmp_path,
+):
+    rows = with_fossil({}, strip=True)
+    o = build_overview(read_project(write_project(tmp_path, rows, GENERIC)))
+    shares = {d.key: d.share for d in o.data_types}
+    assert o.data_type_weighting == "mass"
+    assert o.data_type_rows_without_fossil is None and o.data_type_rows is None
+    assert shares["generic"] == pytest.approx(350 / 375)
+    assert shares["undeclared"] == pytest.approx(25 / 375)
 
 
 def test_unmatched_results_fail_loudly(tmp_path):
