@@ -235,7 +235,7 @@ const caption = computed(
   align-items: start;
 }
 
-@container (min-width: 1120px) {
+@container (min-width: 1100px) {
   .intensity__body {
     grid-template-columns: 560px minmax(0, 1fr);
     gap: tokens.$spacing-xl;
