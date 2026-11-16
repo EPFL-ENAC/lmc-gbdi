@@ -12,6 +12,8 @@ from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 
+from openbdf.model.enums.lca import LifeCycleSystemBoundary as Boundary
+
 from app.overview.repo import MaterialPair, MaterialRow, ProjectData, read_project
 from app.overview.schemas import (
     Basis,
@@ -33,6 +35,7 @@ from app.overview.schemas import (
     ProjectInfo,
     StageTotal,
     TimeFigures,
+    TitleField,
     Units,
 )
 
@@ -94,21 +97,21 @@ PROJECT_FIELDS = (
 )
 # The Overview's title block, in the order of globalbuildingdatainitiative/org#97: what
 # the project is, then the five attributes that decide whether two results compare.
-TITLE_BLOCK = (
-    "project_id",
-    "project_country",
-    "building_use_type",
-    "building_structure_type",
-    "building_gross_floor_area",
-    "building_gross_floor_area_standard",
-    "lca_reference_study_period",
-    "project_assessment_type",
-    "project_phase_common",
-    "lca_cycle_system_boundary",
-    "lcia_methodology",
-    "lca_biogenic_method",
-    "lca_temporal_approach",
-    "lca_lci_modeling_approach",
+TITLE_BLOCK = (  # (code, label, unit, scope)
+    ("project_id", "Project ID", None, False),
+    ("project_country", "Country", None, False),
+    ("building_use_type", "Building typology", None, False),
+    ("building_structure_type", "Building structure type", None, False),
+    ("building_gross_floor_area", "Gross floor area", "m²", False),
+    ("building_gross_floor_area_standard", "GFA standard", None, False),
+    ("lca_reference_study_period", "Reference study period", "years", False),
+    ("project_assessment_type", "Assessment type", None, False),
+    ("project_phase_common", "Project phase, common definition", None, False),
+    ("lca_cycle_system_boundary", "Life cycle system boundary", None, True),
+    ("lcia_methodology", "LCIA methodology", None, True),
+    ("lca_biogenic_method", "Biogenic carbon accounting", None, True),
+    ("lca_temporal_approach", "LCA temporal approach", None, True),
+    ("lca_lci_modeling_approach", "LCI modelling approach", None, True),
 )
 # Module scope flags of General Information and their Wide result column.
 MODULES = (
@@ -394,6 +397,7 @@ def project_info(general: dict[str, str]) -> ProjectInfo:
         or text(general, "lca_database_name"),
         lcia_methodology=text(general, "lcia_methodology"),
         system_boundary=text(general, "lca_cycle_system_boundary"),
+        declared_scope=declared_scope(text(general, "lca_cycle_system_boundary")),
     )
 
 
@@ -417,6 +421,11 @@ def headline(data: ProjectData, totals: Stages, scope: str) -> Headline:
         per_m2_gross_per_year=per(whole_life, gross, period),
         module_d1=float(module_d["gwp_total_d1"]),
         module_d2=float(module_d["gwp_total_d2"]),
+        module_d=float(module_d["gwp_total_d1"] + module_d["gwp_total_d2"]),
+        module_d_present=any(
+            declared(data.general, f) for f in ("lca_d", "lca_d1", "lca_d2")
+        )
+        or any(round(v, 6) != ZERO for v in module_d.values()),
     )
 
 
@@ -458,23 +467,47 @@ def module_checks(data: ProjectData) -> list[ModuleCheck]:
 
 FIELD_OF = {name: field for name, _, field in MODULES}
 SCOPES = {
-    ("a1_a3",): "A1–A3 · cradle to gate",
-    ("a1_a3", "a4_a5"): "A1–A5 · upfront",
-    ("a1_a3", "a4_a5", "b1_b8", "c1_c4"): "A–C · whole life",
+    ("a1_a3",): "A1–A3",
+    ("a1_a3", "a4_a5"): "A1–A5",
+    ("a1_a3", "a4_a5", "b1_b8", "c1_c4"): "A1–C",
+}
+# The declared life cycle system boundary: (modules, method), None where it names none.
+BOUNDARIES = {
+    Boundary.CRADLE_TO_GATE.display_name: ("A1–A3", "cradle to gate"),
+    Boundary.CRADLE_TO_GATE_WITH_OPTIONS.display_name: (
+        "A1–A3 + options",
+        "cradle to gate with options",
+    ),
+    Boundary.CRADLE_TO_GRAVE.display_name: ("A1–C", "cradle to grave"),
+    Boundary.CRADLE_TO_GRAVE_MODULE_D.display_name: ("A1–C + D", "cradle to grave"),
+    Boundary.GATE_TO_GATE.display_name: (None, "gate to gate"),
+    Boundary.UNKNOWN.display_name: (None, None),
 }
 
 
-def scope_label(checks: list[ModuleCheck]) -> str:
+def declared_scope(value: str | None) -> str | None:
+    """The declared boundary as "modules · method"; a value OpenBDF does not list
+    comes back as declared, a blank one as None."""
+    if not value:
+        return None
+    if value not in BOUNDARIES:
+        return value
+    return " · ".join(part for part in BOUNDARIES[value] if part) or "unknown"
+
+
+def scope_label(checks: list[ModuleCheck], method: str | None = None) -> str:
     """The stages a total covers: those with a module declared in General Information,
     or with a module result where it declares none. One module is enough, so B1–B3
-    counts as B. The total itself always adds every module with a result."""
+    counts as B. The total itself always adds every module with a result. The
+    declared boundary's method, when it names one, follows."""
     modules = [c.module for c in checks if c.declared] or [
         c.module for c in checks if c.has_result
     ]
     fields = {FIELD_OF[m] for m in modules}
     stages = tuple(k for k, _ in STAGES if fields & set(STAGE_FIELDS[k]))
     listed = ", ".join(label for k, label in STAGES if k in stages)
-    return SCOPES.get(stages, listed.replace("A1–A3, A4–A5", "A1–A5"))
+    label = SCOPES.get(stages, listed.replace("A1–A3, A4–A5", "A1–A5"))
+    return f"{label} · {method}" if method else label
 
 
 def bucket(
@@ -622,6 +655,16 @@ def from_views(namings: dict[Naming, NamingView]) -> dict:
     }
 
 
+def stage_present(key: str, checks: list[ModuleCheck], held: bool) -> bool:
+    """A module of the stage is declared or has a result. A stage that holds carbon
+    on any row is present whatever its modules say, so no figure is ever hidden:
+    a credit on one row and a burden on another can cancel in the total."""
+    return held or any(
+        FIELD_OF[c.module] in STAGE_FIELDS[key] and (c.declared or c.has_result)
+        for c in checks
+    )
+
+
 def build_overview(data: ProjectData) -> Overview:
     rows = [(row, stage_gwp(row)) for row in data.rows]
     totals = {key: sum((stages[key] for _, stages in rows), ZERO) for key, _ in STAGES}
@@ -634,7 +677,15 @@ def build_overview(data: ProjectData) -> Overview:
     pairs = material_rollup(rows)
     period = study_period(data.general)
     checks = module_checks(data)
-    summary = headline(data, totals, scope_label(checks))
+    boundary = text(data.general, "lca_cycle_system_boundary")
+    modules, method = BOUNDARIES.get(boundary or "", (None, None))
+    # The method follows only where the declared boundary covers the same modules as
+    # the total: "A1–C · cradle to gate" would contradict itself. "With options" names
+    # no fixed modules, so it always follows.
+    if modules and "options" not in modules:
+        if modules.removesuffix(" + D") != scope_label(checks):
+            method = None
+    summary = headline(data, totals, scope_label(checks, method))
     weighting, data_types = data_type_profile(pairs, data.data_types)
     fields = project_fields(data.general)
     by_code = {f.code: f for f in fields}
@@ -645,13 +696,24 @@ def build_overview(data: ProjectData) -> Overview:
             label=label,
             gwp=float(totals[k]),
             share=float(totals[k] / whole_life),
+            present=stage_present(
+                k, checks, any(round(stages[k], 6) != ZERO for _, stages in rows)
+            ),
         )
         for k, label in STAGES
     ]
     return Overview(
         project=project,
         project_fields=fields,
-        title_block=[by_code[code] for code in TITLE_BLOCK],
+        title_block=[
+            TitleField(
+                **by_code[code].model_dump(exclude={"label"}),
+                label=label,
+                unit=unit,
+                scope=scope,
+            )
+            for code, label, unit, scope in TITLE_BLOCK
+        ],
         rows_read=len(data.rows),
         module_checks=checks,
         modules_declared_without_result=sum(
@@ -670,6 +732,8 @@ def build_overview(data: ProjectData) -> Overview:
             upfront=summary.upfront,
             use_per_year=per(totals["b1_b8"], period),
             module_d1=summary.module_d1,
+            module_d2=summary.module_d2,
+            module_d=summary.module_d,
         ),
         units=units("total"),
         bases=basis_options(project),
@@ -762,6 +826,7 @@ def on_basis(o: Overview, basis: Basis) -> Overview:
                     "upfront": h.upfront / c,
                     "module_d1": h.module_d1 / c,
                     "module_d2": h.module_d2 / c,
+                    "module_d": h.module_d / c,
                 }
             ),
             "stages": [stage(s, c) for s in o.stages],
@@ -776,6 +841,8 @@ def on_basis(o: Overview, basis: Basis) -> Overview:
                 upfront=t.upfront / area,
                 use_per_year=None if t.use_per_year is None else t.use_per_year / area,
                 module_d1=t.module_d1 / area,
+                module_d2=t.module_d2 / area,
+                module_d=t.module_d / area,
             ),
             "units": units(basis),
         }

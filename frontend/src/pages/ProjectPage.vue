@@ -41,10 +41,26 @@
           <h1 class="sheet__name">{{ overview.project.project_name ?? 'Unnamed project' }}</h1>
           <p class="sheet__subtitle">Building carbon overview</p>
         </div>
-        <dl class="sheet__block">
-          <div v-for="field in overview.title_block" :key="field.code">
-            <dt>{{ field.label }}</dt>
-            <dd>{{ fieldText(field.value) }}</dd>
+        <!-- org#106: one cell per field. The five method fields decide whether two
+             projects compare, so they are tinted and tagged. -->
+        <dl class="info-grid">
+          <div
+            v-for="field in overview.title_block"
+            :key="field.code"
+            class="info-cell"
+            :class="{ 'info-cell--scope': field.scope }"
+          >
+            <dt class="info-cell__label">
+              {{ field.label }}
+              <span v-if="field.scope" class="info-cell__tag">Scope</span>
+            </dt>
+            <dd class="info-cell__value">
+              {{
+                field.code === 'lca_cycle_system_boundary'
+                  ? (overview.project.declared_scope ?? NOT_DECLARED)
+                  : fieldText(field.value, field.unit)
+              }}
+            </dd>
           </div>
         </dl>
       </header>
@@ -52,16 +68,20 @@
       <section class="sheet__panel" aria-label="Headline results">
         <div class="grid-3-col">
           <BigNumber :value="num.format(overview.headline.whole_life)" tone="green">
-            {{ units.carbon }}, {{ overview.headline.scope }}.
+            {{ units.carbon }}, total {{ overview.headline.scope }}.
           </BigNumber>
           <BigNumber :value="num.format(overview.headline.upfront)" tone="blue">
             {{ units.carbon }} before the building is used, A1–A5:
-            {{ percent.format(overview.headline.upfront_share) }} of the whole life.
+            {{ percent.format(overview.headline.upfront_share) }} of the total.
           </BigNumber>
-          <BigNumber :value="num.format(overview.headline.module_d1)" tone="purple">
-            {{ units.carbon }} of benefits from reuse and recycling, module D1, outside the total.
+          <BigNumber v-if="showModuleD(overview.headline)" :value="num.format(overview.headline.module_d)" tone="purple">
+            {{ units.carbon }}, module D, outside the total: D1, material recovery (reuse, recycling, energy
+            recovery), {{ num.format(overview.headline.module_d1) }}; D2, exported utilities,
+            {{ num.format(overview.headline.module_d2) }}.
           </BigNumber>
         </div>
+        <!-- org#107: the boundary the workbook declares, next to the modules it computes. -->
+        <p class="scope-chip">Scope {{ overview.project.declared_scope ?? NOT_DECLARED }}</p>
         <p class="sheet__note">
           Computed from the OpenBDF workbook, {{ kg.format(overview.rows_read) }} bill of materials rows, data from
           {{ overview.project.lca_database ?? 'an undeclared database' }}.
@@ -114,7 +134,8 @@
         <LifeCycleStrip
           :stages="overview.stages"
           :whole-life="overview.headline.whole_life"
-          :module-d="overview.headline.module_d1"
+          :scope="overview.headline.scope"
+          :module-d="showModuleD(overview.headline) ? overview.headline : null"
           :units="units"
         />
       </section>
@@ -195,7 +216,8 @@ import RankedBars, { type Bar } from '@/components/RankedBars.vue';
 import StageMatrix from '@/components/StageMatrix.vue';
 import TimeSection from '@/components/TimeSection.vue';
 import { useOverview } from '@/composables/useOverview';
-import { amount, fieldText, kg, percent, WEIGHTING } from '@/format';
+import { showModuleD } from '@/dataviz';
+import { amount, fieldText, kg, NOT_DECLARED, percent, WEIGHTING } from '@/format';
 
 const { overview, error, basis } = useOverview();
 // Read only where the overview is loaded.
@@ -287,6 +309,60 @@ const dataTypeBars = computed<Bar[]>(() =>
 
 .sheet__switch {
   border: tokens.$border-width solid tokens.$color-border;
+}
+
+// A grid of labelled cells; the gap on the border colour draws the rules and fills
+// the empty end of the last row.
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: tokens.$border-width;
+  margin: 0;
+  background: tokens.$color-border;
+  border: tokens.$border-width solid tokens.$color-border;
+}
+
+.info-cell {
+  padding: tokens.$spacing-sm tokens.$spacing-md;
+  background: tokens.$color-surface;
+}
+
+.info-cell--scope {
+  background: tokens.$color-surface-highlight;
+}
+
+.info-cell__label {
+  display: flex;
+  align-items: center;
+  gap: tokens.$spacing-sm;
+  font-size: tokens.$text-size-xs;
+  letter-spacing: tokens.$text-letter-spacing-label;
+  text-transform: uppercase;
+  color: tokens.$color-text-muted;
+}
+
+.info-cell__tag {
+  padding: 0 tokens.$spacing-xs;
+  border-radius: tokens.$radius-xs;
+  background: tokens.$color-data-present;
+  color: tokens.$color-primary-strong;
+  font-weight: 600;
+}
+
+.info-cell__value {
+  margin: 0;
+}
+
+.scope-chip {
+  align-self: flex-start;
+  width: fit-content;
+  margin: tokens.$spacing-md 0 0;
+  padding: tokens.$spacing-xs tokens.$spacing-md;
+  border-radius: tokens.$radius-pill;
+  background: tokens.$color-surface-highlight;
+  color: tokens.$color-primary-strong;
+  font-size: tokens.$text-size-sm;
+  font-weight: 600;
 }
 
 .sheet__subtitle {

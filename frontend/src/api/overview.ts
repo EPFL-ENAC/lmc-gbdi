@@ -12,26 +12,33 @@ export interface ProjectInfo {
   lca_database: string | null;
   lcia_methodology: string | null;
   system_boundary: string | null;
+  declared_scope: string | null; // the declared boundary as "modules · method"
 }
 
 export interface Headline {
   whole_life: number;
-  scope: string; // the stages the totals cover, e.g. "A–C · whole life"
+  scope: string; // the stages the totals cover, then the declared method: "A1–C · cradle to grave"
   upfront: number;
   upfront_share: number;
   per_m2_useful: number | null;
   per_m2_gross: number | null;
   per_m2_useful_per_year: number | null; // as the COLA sheet
   per_m2_gross_per_year: number | null; // the declared basis, 1 m² GFA / year
-  module_d1: number;
-  module_d2: number;
+  module_d1: number; // material recovery: reuse, recycling, energy recovery
+  module_d2: number; // exported utilities
+  module_d: number; // D1 + D2, each with its sign, outside the total
+  module_d_present: boolean; // a D flag declared, or a D1 or D2 result
 }
+
+// Module D and its two parts, as the headline and the Time section both send them.
+export type ModuleD = Pick<Headline, 'module_d' | 'module_d1' | 'module_d2'>;
 
 export interface StageTotal {
   key: string;
   label: string;
   gwp: number;
   share: number;
+  present: boolean; // a module of the stage declared or with a result
 }
 
 export interface ElementTotal {
@@ -103,6 +110,12 @@ export interface ProjectField {
   value: string | null; // null: General Information leaves it blank
 }
 
+// A cell of the Overview's title block, in the title block's own words.
+export interface TitleField extends ProjectField {
+  unit: string | null; // after a numeric value: "m²", "years"
+  scope: boolean; // one of the five method fields that decide whether two results compare
+}
+
 export interface ModuleCheck {
   module: string;
   declared: boolean;
@@ -135,6 +148,8 @@ export interface TimeFigures {
   upfront: number;
   use_per_year: number | null; // B1–B8 spread evenly over the study period
   module_d1: number;
+  module_d2: number;
+  module_d: number; // D1 + D2, outside the total
 }
 
 // The names the element and material figures go by (backend `Naming`).
@@ -156,7 +171,7 @@ export interface NamingView {
 export interface Overview {
   project: ProjectInfo;
   project_fields: ProjectField[];
-  title_block: ProjectField[]; // the 14 the Overview heads with, in #97's order
+  title_block: TitleField[]; // the 14 the Overview heads with, in #97's order
   rows_read: number;
   module_checks: ModuleCheck[];
   modules_declared_without_result: number;

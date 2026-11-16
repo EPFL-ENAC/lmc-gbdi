@@ -26,11 +26,14 @@ class ProjectInfo(BaseModel):
     lca_database: str | None
     lcia_methodology: str | None
     system_boundary: str | None
+    # The declared boundary as "modules · method", "A1–C + D · cradle to grave".
+    declared_scope: str | None
 
 
 class Headline(BaseModel):
     whole_life: float
-    scope: str  # the stages the totals cover, e.g. "A–C · whole life"
+    # The stages the totals cover, then the declared method: "A1–C · cradle to grave".
+    scope: str
     upfront: float  # A1–A5
     upfront_share: float  # of the whole life, emitted before the building is used
     per_m2_useful: float | None  # None when the floor area is not declared
@@ -39,8 +42,11 @@ class Headline(BaseModel):
     per_m2_gross_per_year: (
         float | None
     )  # the basis the workbooks declare (1 m2 GFA / year)
-    module_d1: float
-    module_d2: float
+    module_d1: float  # material recovery: reuse, recycling, energy recovery
+    module_d2: float  # exported utilities
+    module_d: float  # D1 + D2, each with its sign, outside the total
+    # The workbook has module D: a D flag declared, or a D1 or D2 result.
+    module_d_present: bool
 
 
 class StageTotal(BaseModel):
@@ -48,6 +54,9 @@ class StageTotal(BaseModel):
     label: str
     gwp: float
     share: float
+    # The workbook has the stage: a module of it declared or with a result. A
+    # declared stage without a result is present; the data checks flag it.
+    present: bool
 
 
 class ElementTotal(BaseModel):
@@ -134,6 +143,13 @@ class ProjectField(BaseModel):
     value: str | None  # as declared; None when General Information leaves it blank
 
 
+class TitleField(ProjectField):
+    """A cell of the Overview's title block, in the title block's own words."""
+
+    unit: str | None  # after a numeric value: "m²", "years"
+    scope: bool  # one of the five method fields that decide whether two results compare
+
+
 class ModuleCheck(BaseModel):
     module: str  # A1–A3, A1 … C4, in life-cycle order
     declared: bool  # the module's scope flag in General Information
@@ -165,12 +181,14 @@ class TimeFigures(BaseModel):
     upfront: float  # A1–A5
     use_per_year: float | None  # B1–B8 spread evenly over the study period
     module_d1: float
+    module_d2: float
+    module_d: float  # D1 + D2, outside the total
 
 
 class Overview(BaseModel):
     project: ProjectInfo
     project_fields: list[ProjectField]  # the sheet's Project table, in its order
-    title_block: list[ProjectField]  # the 14 the Overview heads with, in #97's order
+    title_block: list[TitleField]  # the 14 the Overview heads with, in #97's order
     rows_read: int
     module_checks: list[ModuleCheck]
     modules_declared_without_result: int

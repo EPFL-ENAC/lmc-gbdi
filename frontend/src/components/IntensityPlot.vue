@@ -40,7 +40,7 @@
       <ul class="intensity__keys">
         <li>
           <svg viewBox="0 0 16 16" class="intensity__key" aria-hidden="true"><circle cx="8" cy="8" r="7" /></svg>
-          One material, at its mass and its whole-life carbon. The number is its rank by carbon.
+          One material, at its mass and its carbon. The number is its rank by carbon.
         </li>
         <li>
           <svg viewBox="0 0 24 16" class="intensity__key intensity__key--iso" aria-hidden="true">
@@ -113,11 +113,11 @@ const points = computed(() =>
 
 const skipped = computed(() => props.hotspots.length - plotted.value.length);
 const summary = computed(
-  () => `${plotted.value.length} materials by mass and whole-life carbon; the same values are in the material tables.`,
+  () => `${plotted.value.length} materials by mass and carbon; the same values are in the material tables.`,
 );
 const caption = computed(
   () =>
-    `The top ${props.hotspots.length} materials by whole-life carbon.` +
+    `The top ${props.hotspots.length} materials by carbon.` +
     (skipped.value > 0 ? ` ${kg.format(skipped.value)} without a declared mass are not plotted.` : ''),
 );
 </script>

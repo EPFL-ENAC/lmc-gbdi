@@ -9,7 +9,7 @@
       workbook again.
     </p>
     <h2 class="time__statement">
-      {{ percent.format(overview.headline.upfront_share) }} of its whole-life carbon is emitted
+      {{ percent.format(overview.headline.upfront_share) }} of its carbon is emitted
       <span class="text-display-lead">before anyone moves in.</span>
     </h2>
 
@@ -18,33 +18,36 @@
         :stages="overview.time.stages"
         :upfront="overview.time.upfront"
         :use-per-year="overview.time.use_per_year"
-        :module-d="overview.time.module_d1"
+        :module-d="showModuleD(overview.headline) ? overview.time : null"
         :units="overview.units"
         :period="period"
       />
     </div>
 
     <!-- The life cycle is a sequence, so its moments are numbered by when they happen. -->
-    <div class="time__moments" role="group" aria-label="The four moments of the life cycle">
-      <article class="time__moment">
+    <div class="time__moments" role="group" aria-label="The moments of the life cycle">
+      <article v-if="has('a1_a3') || has('a4_a5')" class="time__moment">
         <p class="time__when">Year 0</p>
         <p class="time__figure">{{ num.format(overview.time.upfront) }}</p>
         <p class="time__what">{{ overview.units.time }} to make the materials and build (A1–A5).</p>
       </article>
-      <article class="time__moment">
+      <article v-if="has('b1_b8')" class="time__moment">
         <p class="time__when">{{ period === null ? 'Years of use' : `Years 1 to ${period}` }}</p>
         <p class="time__figure">{{ figure(overview.time.use_per_year, num) }}</p>
         <p class="time__what">{{ overview.units.time }} a year on average to maintain, repair and replace (B1–B8).</p>
       </article>
-      <article class="time__moment">
+      <article v-if="has('c1_c4')" class="time__moment">
         <p class="time__when">{{ period === null ? 'End of life' : `Year ${period}` }}</p>
         <p class="time__figure">{{ num.format(stageGwp('c1_c4')) }}</p>
         <p class="time__what">{{ overview.units.time }} to take the building down and process the waste (C1–C4).</p>
       </article>
-      <article class="time__moment time__moment--beyond">
+      <article v-if="showModuleD(overview.headline)" class="time__moment time__moment--beyond">
         <p class="time__when">Beyond</p>
-        <p class="time__figure">{{ num.format(overview.time.module_d1) }}</p>
-        <p class="time__what">{{ overview.units.time }} of benefits from reuse and recycling (D1), outside the total.</p>
+        <p class="time__figure">{{ num.format(overview.time.module_d) }}</p>
+        <p class="time__what">
+          {{ overview.units.time }}, module D, outside the total: D1, material recovery,
+          {{ num.format(overview.time.module_d1) }}; D2, exported utilities, {{ num.format(overview.time.module_d2) }}.
+        </p>
       </article>
     </div>
   </div>
@@ -54,12 +57,14 @@
 import { computed } from 'vue';
 import type { Overview } from '@/api/overview';
 import CarbonOverTime from '@/components/CarbonOverTime.vue';
+import { showModuleD, shownStages } from '@/dataviz';
 import { amount, figure, percent } from '@/format';
 
 const props = defineProps<{ overview: Overview }>();
 const num = computed(() => amount(props.overview.units));
 
 const period = computed(() => props.overview.project.reference_study_period_years);
+const has = (key: string) => shownStages(props.overview.time.stages).some((s) => s.key === key);
 const stageGwp = (key: string) => props.overview.time.stages.find((s) => s.key === key)?.gwp ?? 0;
 </script>
 

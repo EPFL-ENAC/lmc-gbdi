@@ -7,7 +7,7 @@
         <div>
           <h1>Buildings</h1>
           <p class="text-lead">
-            OpenBDF workbooks read by lmc-openbdf. Whole-life carbon over the modules each one declares, per m² of gross floor area:
+            OpenBDF workbooks read by lmc-openbdf. Carbon over the modules each one declares, per m² of gross floor area:
             the size of a building drops out, its design stays.
           </p>
         </div>
@@ -78,8 +78,8 @@
             <span class="portfolio__swatch" :style="{ background: STAGE_COLORS[i] }" /><Term :name="stage.label" />
           </li>
           <li>
-            <span class="portfolio__swatch portfolio__swatch--net" />Net whole life: emitted (right of zero) minus
-            stored (left), the Whole life column
+            <span class="portfolio__swatch portfolio__swatch--net" />Net total: emitted (right of zero) minus
+            stored (left), the Total column
           </li>
         </ul>
         <table class="portfolio__table">
@@ -249,7 +249,7 @@ const COLUMNS: { label: string; key?: SortKey; num?: boolean }[] = [
   { label: 'Building', key: 'code' },
   { label: 'm² gross', key: 'area', num: true },
   { label: 'kg CO₂e per m², by life-cycle stage' },
-  { label: 'Whole life, net', key: 'whole_life', num: true },
+  { label: 'Total, net', key: 'whole_life', num: true },
   { label: 'Scope' },
   { label: 'Method' },
 ];

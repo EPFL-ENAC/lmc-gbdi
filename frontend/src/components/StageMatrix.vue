@@ -13,7 +13,7 @@
     <thead>
       <tr>
         <th scope="col">{{ rowHeader }}</th>
-        <th v-for="stage in stages" :key="stage.key" scope="col" class="num"><Term :name="stage.label" /></th>
+        <th v-for="stage in shown" :key="stage.key" scope="col" class="num"><Term :name="stage.label" /></th>
         <th v-if="dominant" scope="col" class="num">Dominant</th>
       </tr>
     </thead>
@@ -21,7 +21,7 @@
       <tr v-for="row in rows" :key="row.key">
         <th scope="row">{{ row.label }}</th>
         <td
-          v-for="stage in stages"
+          v-for="stage in shown"
           :key="stage.key"
           class="num"
           :class="`matrix__cell--${shade(row.gwp_by_stage[stage.key])}`"
@@ -31,7 +31,7 @@
         <td v-if="dominant" class="num">{{ row.dominant_stage }} {{ percent.format(row.dominant_share ?? 0) }}</td>
       </tr>
       <tr v-if="rows.length === 0">
-        <td :colspan="stages.length + (dominant ? 2 : 1)" class="u-text-muted">{{ emptyLabel }}</td>
+        <td :colspan="shown.length + (dominant ? 2 : 1)" class="u-text-muted">{{ emptyLabel }}</td>
       </tr>
     </tbody>
   </table>
@@ -41,6 +41,7 @@
 import { computed } from 'vue';
 import type { StageTotal, Units } from '@/api/overview';
 import Term from '@/components/atoms/Term.vue';
+import { shownStages } from '@/dataviz';
 import { amount, percent } from '@/format';
 
 export interface StageRow {
@@ -59,6 +60,7 @@ const props = defineProps<{
   emptyLabel: string;
 }>();
 const num = computed(() => amount(props.units));
+const shown = computed(() => shownStages(props.stages));
 const dominant = computed(() => props.rows.some((row) => row.dominant_stage !== undefined));
 
 // Shading geometry only: three steps of the grey ramp, each with an AA text colour.

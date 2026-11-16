@@ -14,6 +14,7 @@ from app.overview.service import (
     MODULES,
     BasisUnavailable,
     build_overview,
+    declared_scope,
     in_element,
     on_basis,
     scope_label,
@@ -102,6 +103,55 @@ def test_whole_life_excludes_module_d_and_b_submodules(overview):
     assert overview.total_mass_kg == 350 + 20 + 5
 
 
+def test_module_d_is_d1_plus_d2_with_their_signs_outside_the_total(tmp_path):
+    # M3 exports utilities: D2 = +4, against D1 = -5 × 3 on M1.
+    rows = [
+        (*r[:6], {**r[6], "gwp_total_d2": "4"}) if r[0] == "M3" else r for r in ROWS
+    ]
+    o = build_overview(read_project(write_project(tmp_path, rows=rows)))
+    assert o.headline.module_d1 == -15
+    assert o.headline.module_d2 == 4
+    assert o.headline.module_d == -11
+    assert o.headline.whole_life == 118
+    assert (o.time.module_d1, o.time.module_d2, o.time.module_d) == (-15, 4, -11)
+
+
+def test_the_fixture_has_every_stage_and_module_d(overview):
+    assert [s.present for s in overview.stages] == [True] * 4
+    assert overview.headline.module_d_present  # a D1 result, no D flag
+
+
+NO_D = [(*r[:6], {k: v for k, v in r[6].items() if k != "gwp_total_d1"}) for r in ROWS]
+NO_B = [
+    (*r[:6], {k: v for k, v in r[6].items() if not k.startswith("gwp_total_b")})
+    for r in ROWS
+]
+
+
+def test_a_building_without_module_d_does_not_have_it(tmp_path):
+    o = build_overview(read_project(write_project(tmp_path, rows=NO_D)))
+    assert not o.headline.module_d_present
+    assert o.headline.module_d == 0
+
+
+def test_a_declared_module_d_without_result_is_present(tmp_path):
+    general = {**GENERAL, "lca_d1": "TRUE"}
+    o = build_overview(read_project(write_project(tmp_path, NO_D, general=general)))
+    assert o.headline.module_d_present
+
+
+def test_a_building_without_stage_b_does_not_have_it(tmp_path):
+    o = build_overview(read_project(write_project(tmp_path, rows=NO_B)))
+    present = {s.key: s.present for s in o.stages}
+    assert present == {"a1_a3": True, "a4_a5": True, "b1_b8": False, "c1_c4": True}
+
+
+def test_a_declared_stage_without_result_is_present(tmp_path):
+    general = {**GENERAL, "lca_b4": "TRUE"}
+    o = build_overview(read_project(write_project(tmp_path, NO_B, general=general)))
+    assert next(s for s in o.stages if s.key == "b1_b8").present
+
+
 def test_per_m2_figures_divide_by_floor_area_then_period(overview):
     assert overview.headline.per_m2_useful == pytest.approx(1.18)
     assert overview.headline.per_m2_gross == pytest.approx(0.59)
@@ -131,11 +181,11 @@ CHILE = ("A1–A3", "A1", "A2", "A3", "A4", "A5", "C1", "C2", "C3", "C4")
 @pytest.mark.parametrize(
     ("declared", "results", "label"),
     [
-        (AT_09, ("A1–A3", "A4", "A5", "B1", "C1"), "A–C · whole life"),
+        (AT_09, ("A1–A3", "A4", "A5", "B1", "C1"), "A1–C"),
         # 45 Chilean buildings: no B declared, yet their totals carry a B2 result.
         (CHILE, ("A1–A3", "A4", "A5", "B2", "C3"), "A1–A5, C1–C4"),
-        ((), ("A1", "A3"), "A1–A3 · cradle to gate"),  # nothing declared: the results
-        (("A1–A3", "A5.2"), ("B6",), "A1–A5 · upfront"),
+        ((), ("A1", "A3"), "A1–A3"),  # nothing declared: the results
+        (("A1–A3", "A5.2"), ("B6",), "A1–A5"),
         (("A4", "B6"), (), "A4–A5, B1–B8"),
     ],
 )
@@ -150,6 +200,71 @@ def test_the_scope_names_the_declared_stages(declared, results, label):
         for name, _, _ in MODULES
     ]
     assert scope_label(checks) == label
+    assert scope_label(checks, "cradle to grave") == f"{label} · cradle to grave"
+
+
+@pytest.mark.parametrize(
+    ("value", "scope"),
+    [
+        ("Cradle to Gate (A1–A3)", "A1–A3 · cradle to gate"),
+        (
+            "Cradle to Gate with Options (A1–A3 + others)",
+            "A1–A3 + options · cradle to gate with options",
+        ),
+        ("Cradle to Grave (A1–C4)", "A1–C · cradle to grave"),
+        ("Cradle to Grave + Module D", "A1–C + D · cradle to grave"),
+        ("Gate to Gate", "gate to gate"),
+        ("Unknown", "unknown"),
+        ("A1–A5 and B6", "A1–A5 and B6"),  # not an OpenBDF value: as declared
+        (None, None),
+    ],
+)
+def test_the_declared_boundary_reads_as_modules_and_method(value, scope):
+    assert declared_scope(value) == scope
+
+
+def test_the_headline_scope_adds_the_declared_method(tmp_path):
+    rows = [("M1", "", "2.1", "Concrete", "C25/30", "100", {"gwp_total_a1_a3": "10"})]
+    general = {**GENERAL, "lca_cycle_system_boundary": "Cradle to Gate (A1–A3)"}
+    o = build_overview(read_project(write_project(tmp_path, rows, general=general)))
+    assert o.headline.scope == "A1–A3 · cradle to gate"
+    assert o.project.declared_scope == "A1–A3 · cradle to gate"
+    assert "whole" not in o.headline.scope
+
+
+def test_a_stage_whose_rows_cancel_is_still_present(tmp_path):
+    rows = [
+        (
+            "M1",
+            "",
+            "2.1",
+            "Concrete",
+            "C25/30",
+            "100",
+            {"gwp_total_a1_a3": "10", "gwp_total_b4": "5"},
+        ),
+        (
+            "M2",
+            "",
+            "2.1",
+            "Steel",
+            "S235",
+            "100",
+            {"gwp_total_a1_a3": "10", "gwp_total_b4": "-5"},
+        ),
+    ]
+    o = build_overview(read_project(write_project(tmp_path, rows)))
+    present = {s.key: s.present for s in o.stages}
+    assert present["b1_b8"] is True  # the B total is 0, the rows are not
+
+
+def test_the_headline_scope_drops_a_method_the_modules_contradict(tmp_path):
+    gwp = {"gwp_total_a1_a3": "10", "gwp_total_c3": "5"}
+    rows = [("M1", "", "2.1", "Concrete", "C25/30", "100", gwp)]
+    general = {**GENERAL, "lca_cycle_system_boundary": "Cradle to Gate (A1–A3)"}
+    o = build_overview(read_project(write_project(tmp_path, rows, general=general)))
+    assert o.headline.scope == "A1–A3, C1–C4"  # not "… · cradle to gate"
+    assert o.project.declared_scope == "A1–A3 · cradle to gate"  # still as declared
 
 
 @pytest.mark.parametrize(
@@ -263,6 +378,24 @@ def test_title_block_lists_the_fourteen_fields_in_the_issue_order(overview):
     assert overview.title_block[0].value == "TEST-1"
 
 
+def test_title_block_tags_the_five_scope_fields_and_carries_units(overview):
+    block = {f.code: f for f in overview.title_block}
+    assert [f.code for f in overview.title_block if f.scope] == [
+        "lca_cycle_system_boundary",
+        "lcia_methodology",
+        "lca_biogenic_method",
+        "lca_temporal_approach",
+        "lca_lci_modeling_approach",
+    ]
+    assert block["building_gross_floor_area"].unit == "m²"
+    assert block["lca_reference_study_period"].unit == "years"
+    assert block["project_id"].unit is None
+    assert block["lca_cycle_system_boundary"].label == "Life cycle system boundary"
+    # The Project details table keeps its own labels.
+    fields = {f.code: f.label for f in overview.project_fields}
+    assert fields["lca_cycle_system_boundary"] == "System boundary"
+
+
 def test_material_hotspots_carry_their_stage_split(overview):
     concrete = overview.material_hotspots[0]
     assert concrete.gwp_by_stage == {"a1_a3": 36, "a4_a5": 11, "b1_b8": 6, "c1_c4": 12}
@@ -307,6 +440,8 @@ def test_a_basis_divides_carbon_and_mass(overview, basis, carbon, mass, unit):
     assert o.units.basis == basis and o.units.carbon == unit
     assert o.headline.whole_life == pytest.approx(118 / carbon)
     assert o.headline.module_d1 == pytest.approx(overview.headline.module_d1 / carbon)
+    assert o.headline.module_d == pytest.approx(overview.headline.module_d / carbon)
+    assert o.time.module_d == pytest.approx(overview.time.module_d / mass)
     for kind in ("stages", "elements", "material_hotspots", "materials"):
         for got, total in zip(getattr(o, kind), getattr(overview, kind), strict=True):
             assert got.gwp == pytest.approx(total.gwp / carbon)
