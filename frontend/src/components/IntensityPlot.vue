@@ -6,7 +6,7 @@
   <figure v-else class="intensity">
     <div class="intensity__body">
       <div role="img" :aria-label="summary" :style="{ minHeight: height }">
-        <EChart v-if="plotted.length" :option="option" :height="height" />
+        <EChart v-if="plotted.length" ref="chart" :option="option" :height="height" @hover="onHover" />
       </div>
       <table class="intensity__table">
         <thead>
@@ -19,9 +19,26 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="r in rows" :key="r.key">
+          <!-- Hover, focus or tap a row to light its dot; on a phone the tap also shows
+               the mass and the carbon, whose columns are left out. -->
+          <tr
+            v-for="r in rows"
+            :key="r.key"
+            tabindex="0"
+            :class="{ 'intensity__row--active': active === r.rank }"
+            @mouseenter="active = r.rank"
+            @mouseleave="active = null"
+            @focus="active = r.rank"
+            @blur="active = null"
+            @click="active = r.rank"
+          >
             <td class="num">{{ r.rank }}</td>
-            <th scope="row" class="intensity__name" :title="r.name">{{ r.name }}</th>
+            <th scope="row" class="intensity__name" :title="r.name">
+              {{ r.name }}
+              <span v-if="phone && active === r.rank" class="intensity__more">
+                {{ fmt.format(r.mass_kg) }} {{ units.mass }}, {{ fmt.format(r.gwp) }} {{ units.carbon }}
+              </span>
+            </th>
             <td v-if="!phone" class="num">{{ fmt.format(r.mass_kg) }}</td>
             <td v-if="!phone" class="num">{{ fmt.format(r.gwp) }}</td>
             <td class="intensity__per-kg">
@@ -37,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, h } from 'vue';
+import { computed, defineAsyncComponent, h, ref, useTemplateRef, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import type { ComposeOption } from 'echarts/core';
 import type { ScatterSeriesOption } from 'echarts/charts';
@@ -77,6 +94,16 @@ const rows = computed(() =>
 // A log axis cannot show zero or less: such a row keeps its figures in the table, without a dot.
 const plotted = computed(() => rows.value.filter((r) => r.mass_kg > 0 && r.gwp > 0));
 const skipped = computed(() => rows.value.length - plotted.value.length);
+
+// One active rank drives both sides: a row lights its dot, a dot lights its row. The
+// chart option never reads it, so a redraw does not depend on it.
+const active = ref<number | null>(null);
+const chart = useTemplateRef<{ highlight: (dataIndex: number | null) => void }>('chart');
+const onHover = (dataIndex: number | null) => (active.value = dataIndex === null ? null : plotted.value[dataIndex]!.rank);
+watch(active, (rank) => {
+  const index = plotted.value.findIndex((r) => r.rank === rank);
+  chart.value?.highlight(index < 0 ? null : index);
+});
 
 const maxPerKg = computed(() => Math.max(0, ...rows.value.map((r) => r.gwp_per_kg ?? 0)));
 const barWidth = (v: number | null) => (v && v > 0 && maxPerKg.value > 0 ? (v / maxPerKg.value) * BAR : 0);
@@ -227,6 +254,25 @@ const caption = computed(
 
 .intensity__table tbody th {
   font-weight: normal;
+}
+
+.intensity__table tbody tr {
+  cursor: default;
+}
+
+.intensity__table tbody tr:focus-visible {
+  outline: 2px solid tokens.$color-primary-strong;
+  outline-offset: -2px;
+}
+
+.intensity__row--active > * {
+  background: tokens.$color-surface-highlight;
+}
+
+.intensity__more {
+  display: block;
+  font-size: tokens.$text-size-xs;
+  color: tokens.$color-text-muted;
 }
 
 .intensity__table .num {
