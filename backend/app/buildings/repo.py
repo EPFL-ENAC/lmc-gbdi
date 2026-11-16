@@ -153,16 +153,19 @@ async def next_number(session: AsyncSession, country: str) -> int:
     return result.scalar_one()
 
 
-async def uploaded_at(session: AsyncSession, project_id: int) -> datetime:
-    """When the project was uploaded: one column, read on every cached request."""
-    stamp = (
+async def stamp(session: AsyncSession, project_id: int) -> tuple[datetime, str]:
+    """When the project was uploaded, and its gbdi_id: two columns, read on every
+    cached request."""
+    row = (
         await session.exec(
-            select(Upload.uploaded_at).where(Upload.project_record_id == project_id)
+            select(Upload.uploaded_at, Upload.gbdi_id).where(
+                Upload.project_record_id == project_id
+            )
         )
     ).first()
-    if stamp is None:
+    if row is None:
         raise ProjectNotFound(project_id)
-    return stamp
+    return row[0], row[1]
 
 
 async def delete_project(session: AsyncSession, project_id: int) -> None:

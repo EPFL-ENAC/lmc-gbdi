@@ -44,6 +44,7 @@ class BuildingSummary(BaseModel):
     id: int
     file_name: str
     uploaded_at: datetime
+    gbdi_id: str | None = None  # the generated project id (org#108)
     findings: int  # openbdf findings kept with the upload
     project_name: str | None
     country: str | None
