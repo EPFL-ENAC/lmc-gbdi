@@ -14,6 +14,7 @@ from app.overview.service import (
     MODULES,
     BasisUnavailable,
     build_overview,
+    declared_scope,
     in_element,
     on_basis,
     scope_label,
@@ -131,11 +132,11 @@ CHILE = ("A1–A3", "A1", "A2", "A3", "A4", "A5", "C1", "C2", "C3", "C4")
 @pytest.mark.parametrize(
     ("declared", "results", "label"),
     [
-        (AT_09, ("A1–A3", "A4", "A5", "B1", "C1"), "A–C · whole life"),
+        (AT_09, ("A1–A3", "A4", "A5", "B1", "C1"), "A1–C"),
         # 45 Chilean buildings: no B declared, yet their totals carry a B2 result.
         (CHILE, ("A1–A3", "A4", "A5", "B2", "C3"), "A1–A5, C1–C4"),
-        ((), ("A1", "A3"), "A1–A3 · cradle to gate"),  # nothing declared: the results
-        (("A1–A3", "A5.2"), ("B6",), "A1–A5 · upfront"),
+        ((), ("A1", "A3"), "A1–A3"),  # nothing declared: the results
+        (("A1–A3", "A5.2"), ("B6",), "A1–A5"),
         (("A4", "B6"), (), "A4–A5, B1–B8"),
     ],
 )
@@ -150,6 +151,36 @@ def test_the_scope_names_the_declared_stages(declared, results, label):
         for name, _, _ in MODULES
     ]
     assert scope_label(checks) == label
+    assert scope_label(checks, "cradle to grave") == f"{label} · cradle to grave"
+
+
+@pytest.mark.parametrize(
+    ("value", "scope"),
+    [
+        ("Cradle to Gate (A1–A3)", "A1–A3 · cradle to gate"),
+        (
+            "Cradle to Gate with Options (A1–A3 + others)",
+            "A1–A3 + options · cradle to gate with options",
+        ),
+        ("Cradle to Grave (A1–C4)", "A1–C · cradle to grave"),
+        ("Cradle to Grave + Module D", "A1–C + D · cradle to grave"),
+        ("Gate to Gate", "gate to gate"),
+        ("Unknown", "unknown"),
+        ("A1–A5 and B6", "A1–A5 and B6"),  # not an OpenBDF value: as declared
+        (None, None),
+    ],
+)
+def test_the_declared_boundary_reads_as_modules_and_method(value, scope):
+    assert declared_scope(value) == scope
+
+
+def test_the_headline_scope_adds_the_declared_method(tmp_path):
+    rows = [("M1", "", "2.1", "Concrete", "C25/30", "100", {"gwp_total_a1_a3": "10"})]
+    general = {**GENERAL, "lca_cycle_system_boundary": "Cradle to Gate (A1–A3)"}
+    o = build_overview(read_project(write_project(tmp_path, rows, general=general)))
+    assert o.headline.scope == "A1–A3 · cradle to gate"
+    assert o.project.declared_scope == "A1–A3 · cradle to gate"
+    assert "whole" not in o.headline.scope
 
 
 @pytest.mark.parametrize(

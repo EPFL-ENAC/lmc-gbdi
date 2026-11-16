@@ -12,6 +12,8 @@ from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 
+from openbdf.model.enums.lca import LifeCycleSystemBoundary as Boundary
+
 from app.overview.repo import MaterialPair, MaterialRow, ProjectData, read_project
 from app.overview.schemas import (
     Basis,
@@ -395,6 +397,7 @@ def project_info(general: dict[str, str]) -> ProjectInfo:
         or text(general, "lca_database_name"),
         lcia_methodology=text(general, "lcia_methodology"),
         system_boundary=text(general, "lca_cycle_system_boundary"),
+        declared_scope=declared_scope(text(general, "lca_cycle_system_boundary")),
     )
 
 
@@ -459,23 +462,47 @@ def module_checks(data: ProjectData) -> list[ModuleCheck]:
 
 FIELD_OF = {name: field for name, _, field in MODULES}
 SCOPES = {
-    ("a1_a3",): "A1–A3 · cradle to gate",
-    ("a1_a3", "a4_a5"): "A1–A5 · upfront",
-    ("a1_a3", "a4_a5", "b1_b8", "c1_c4"): "A–C · whole life",
+    ("a1_a3",): "A1–A3",
+    ("a1_a3", "a4_a5"): "A1–A5",
+    ("a1_a3", "a4_a5", "b1_b8", "c1_c4"): "A1–C",
+}
+# The declared life cycle system boundary: (modules, method), None where it names none.
+BOUNDARIES = {
+    Boundary.CRADLE_TO_GATE.display_name: ("A1–A3", "cradle to gate"),
+    Boundary.CRADLE_TO_GATE_WITH_OPTIONS.display_name: (
+        "A1–A3 + options",
+        "cradle to gate with options",
+    ),
+    Boundary.CRADLE_TO_GRAVE.display_name: ("A1–C", "cradle to grave"),
+    Boundary.CRADLE_TO_GRAVE_MODULE_D.display_name: ("A1–C + D", "cradle to grave"),
+    Boundary.GATE_TO_GATE.display_name: (None, "gate to gate"),
+    Boundary.UNKNOWN.display_name: (None, None),
 }
 
 
-def scope_label(checks: list[ModuleCheck]) -> str:
+def declared_scope(value: str | None) -> str | None:
+    """The declared boundary as "modules · method"; a value OpenBDF does not list
+    comes back as declared, a blank one as None."""
+    if not value:
+        return None
+    if value not in BOUNDARIES:
+        return value
+    return " · ".join(part for part in BOUNDARIES[value] if part) or "unknown"
+
+
+def scope_label(checks: list[ModuleCheck], method: str | None = None) -> str:
     """The stages a total covers: those with a module declared in General Information,
     or with a module result where it declares none. One module is enough, so B1–B3
-    counts as B. The total itself always adds every module with a result."""
+    counts as B. The total itself always adds every module with a result. The
+    declared boundary's method, when it names one, follows."""
     modules = [c.module for c in checks if c.declared] or [
         c.module for c in checks if c.has_result
     ]
     fields = {FIELD_OF[m] for m in modules}
     stages = tuple(k for k, _ in STAGES if fields & set(STAGE_FIELDS[k]))
     listed = ", ".join(label for k, label in STAGES if k in stages)
-    return SCOPES.get(stages, listed.replace("A1–A3, A4–A5", "A1–A5"))
+    label = SCOPES.get(stages, listed.replace("A1–A3, A4–A5", "A1–A5"))
+    return f"{label} · {method}" if method else label
 
 
 def bucket(
@@ -635,7 +662,9 @@ def build_overview(data: ProjectData) -> Overview:
     pairs = material_rollup(rows)
     period = study_period(data.general)
     checks = module_checks(data)
-    summary = headline(data, totals, scope_label(checks))
+    boundary = text(data.general, "lca_cycle_system_boundary")
+    method = BOUNDARIES.get(boundary or "", (None, None))[1]
+    summary = headline(data, totals, scope_label(checks, method))
     weighting, data_types = data_type_profile(pairs, data.data_types)
     fields = project_fields(data.general)
     by_code = {f.code: f for f in fields}

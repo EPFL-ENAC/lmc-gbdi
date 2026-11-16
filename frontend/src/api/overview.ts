@@ -12,11 +12,12 @@ export interface ProjectInfo {
   lca_database: string | null;
   lcia_methodology: string | null;
   system_boundary: string | null;
+  declared_scope: string | null; // the declared boundary as "modules · method"
 }
 
 export interface Headline {
   whole_life: number;
-  scope: string; // the stages the totals cover, e.g. "A–C · whole life"
+  scope: string; // the stages the totals cover, then the declared method: "A1–C · cradle to grave"
   upfront: number;
   upfront_share: number;
   per_m2_useful: number | null;

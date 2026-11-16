@@ -26,11 +26,14 @@ class ProjectInfo(BaseModel):
     lca_database: str | None
     lcia_methodology: str | None
     system_boundary: str | None
+    # The declared boundary as "modules · method", "A1–C + D · cradle to grave".
+    declared_scope: str | None
 
 
 class Headline(BaseModel):
     whole_life: float
-    scope: str  # the stages the totals cover, e.g. "A–C · whole life"
+    # The stages the totals cover, then the declared method: "A1–C · cradle to grave".
+    scope: str
     upfront: float  # A1–A5
     upfront_share: float  # of the whole life, emitted before the building is used
     per_m2_useful: float | None  # None when the floor area is not declared
