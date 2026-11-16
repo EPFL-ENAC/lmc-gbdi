@@ -160,6 +160,8 @@ export interface NamingView {
   material_hotspots: MaterialHotspot[];
   mass_hotspots: MassHotspot[];
   materials: MaterialHotspot[];
+  carbon_rest: MaterialHotspot[]; // every material the carbon top 10 leaves out, by carbon
+  mass_rest: MaterialHotspot[]; // every material the mass top 10 leaves out, by mass
   mass_other_share: number;
   element_materials: ElementMaterials[];
 }

@@ -124,12 +124,13 @@ import MaterialSheet from '@/components/MaterialSheet.vue';
 import StageMatrix from '@/components/StageMatrix.vue';
 import ShowMore from '@/components/atoms/ShowMore.vue';
 import Term from '@/components/atoms/Term.vue';
-import type { Overview } from '@/api/overview';
+import type { NamingView, Overview } from '@/api/overview';
 import { MATERIAL_COLORS, OTHER_COLOR } from '@/dataviz';
 import { amount, percent } from '@/format';
-import { materialLabel, pairKey, RANKINGS, remaining, type RankBy } from '@/materials';
+import { materialLabel, pairKey, RANKINGS, type RankBy } from '@/materials';
 
-const props = defineProps<{ overview: Overview }>();
+// The page's view: the overview with the chosen naming's fields on top.
+const props = defineProps<{ overview: Overview & NamingView }>();
 const num = computed(() => amount(props.overview.units));
 
 const rankBy = ref<RankBy>('mass');
@@ -165,10 +166,11 @@ const stageDomain = computed(() => {
   return [Math.min(0, ...values), Math.max(0, ...values)] as const;
 });
 
-// The materials the wall paints as "every other", in the same ranking.
+// The materials the wall paints as "every other", in the same ranking, from the backend.
 const open = ref(false);
 const rest = computed(() => {
-  return remaining(props.overview.materials, top.value, rankBy.value).map((m) => ({
+  const rows = rankBy.value === 'mass' ? props.overview.mass_rest : props.overview.carbon_rest;
+  return rows.map((m) => ({
     key: pairKey(m),
     label: materialLabel(m),
     epd_product: m.material ? m.epd_product : '',

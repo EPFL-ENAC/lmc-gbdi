@@ -125,6 +125,10 @@ class NamingView(BaseModel):
     material_hotspots: list[MaterialHotspot]  # top 10 by whole-life GWP
     mass_hotspots: list[MassHotspot]  # top 10 by mass
     materials: list[MaterialHotspot]  # every material, by whole-life GWP
+    # Every material each top 10 leaves out, in that top 10's ranking: the passport's
+    # "every other material" rows.
+    carbon_rest: list[MaterialHotspot]  # by whole-life GWP
+    mass_rest: list[MaterialHotspot]  # by mass
     mass_other_share: float  # of the mass, outside the top 10
     element_materials: list[ElementMaterials]  # one per element bar, in their order
 

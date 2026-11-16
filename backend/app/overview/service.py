@@ -294,6 +294,14 @@ def hotspots(
     return top_gwp, mass[:TOP_MATERIALS], other_share, every
 
 
+def leftover(
+    ranked: list[MaterialHotspot], top: list[MassHotspot] | list[MaterialHotspot]
+) -> list[MaterialHotspot]:
+    """The materials of `ranked` that `top` does not show, in the order of `ranked`."""
+    shown = {(h.material, h.epd_product) for h in top}
+    return [h for h in ranked if (h.material, h.epd_product) not in shown]
+
+
 def class_rollup(rows: list[tuple[MaterialRow, Stages]]) -> list[MaterialClassTotal]:
     """Whole-life GWP and mass by OpenBDF material class: the names that compare
     across projects, where custom material names never match."""
@@ -658,6 +666,10 @@ def naming_view(
         material_hotspots=material_hotspots,
         mass_hotspots=mass_hotspots,
         materials=materials,
+        carbon_rest=leftover(materials, material_hotspots),
+        mass_rest=leftover(
+            sorted(materials, key=lambda h: h.mass_kg, reverse=True), mass_hotspots
+        ),
         mass_other_share=float(mass_other_share),
         element_materials=element_materials(rows, naming, [n for n, _, _ in shown]),
     )
@@ -910,6 +922,8 @@ def view_on_basis(v: NamingView, c: float, area: float) -> NamingView:
             ],
             "material_hotspots": [hotspot(m) for m in v.material_hotspots],
             "materials": [hotspot(m) for m in v.materials],
+            "carbon_rest": [hotspot(m) for m in v.carbon_rest],
+            "mass_rest": [hotspot(m) for m in v.mass_rest],
             "mass_hotspots": [hotspot(m) for m in v.mass_hotspots],
             "element_materials": [
                 e.model_copy(

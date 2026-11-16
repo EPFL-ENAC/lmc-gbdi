@@ -310,6 +310,26 @@ def test_materials_list_every_material_the_top_tens_draw_from(overview):
     assert {(m.material, m.epd_product) for m in overview.mass_hotspots} <= set(every)
 
 
+def test_each_top_10_comes_with_the_materials_it_leaves_out(overview):
+    """The "every other material" rows, in the ranking of the top 10 they follow."""
+    view = overview.namings["custom"]
+
+    def keys(items):
+        return [(m.material, m.epd_product) for m in items]
+
+    every = keys(view.materials)
+    for top, rest in (
+        (view.material_hotspots, view.carbon_rest),
+        (view.mass_hotspots, view.mass_rest),
+    ):
+        assert sorted(keys(top) + keys(rest)) == sorted(every)
+    assert keys(view.carbon_rest) == [
+        m for m in every if m not in keys(view.material_hotspots)
+    ]
+    masses = [m.mass_kg for m in view.mass_rest]
+    assert masses == sorted(masses, reverse=True)
+
+
 def test_data_types_weigh_by_gwp_fossil_and_report_the_undeclared(overview):
     shares = {d.key: d.share for d in overview.data_types}
     assert overview.data_type_weighting == "gwp_fossil_a1_a3"
