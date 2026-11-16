@@ -7,9 +7,22 @@
       </g>
       <path class="cumulative__area" :d="area" />
       <polyline class="cumulative__line" :points="line" />
-      <circle v-for="p in points" :key="p.rank" class="cumulative__dot" :cx="x(p.rank)" :cy="y(p.value)" r="5">
-        <title>{{ p.rank }}. {{ p.name }}: {{ percent.format(p.value) }} cumulative</title>
-      </circle>
+      <!-- A dot is small: a wider, unseen circle takes the pointer, the finger and the focus. -->
+      <line v-if="active" class="cumulative__guide" :x1="x(active.rank)" :x2="x(active.rank)" :y1="y(active.value)" :y2="H - B" />
+      <g
+        v-for="p in points"
+        :key="p.rank"
+        class="cumulative__point"
+        :class="{ 'cumulative__point--active': active === p }"
+        tabindex="0"
+        @pointerenter="active = p"
+        @pointerleave="active = null"
+        @focus="active = p"
+        @blur="active = null"
+      >
+        <circle class="cumulative__hit" :cx="x(p.rank)" :cy="y(p.value)" r="18" />
+        <circle class="cumulative__dot" :cx="x(p.rank)" :cy="y(p.value)" r="5" />
+      </g>
       <g class="cumulative__axis">
         <text v-for="t in yTicks" :key="`yl${t}`" :x="L - 8" :y="y(t) + 4" text-anchor="end">{{ percent.format(t) }}</text>
         <text :x="x(1)" :y="H - B + 18" :text-anchor="n === 1 ? 'end' : 'middle'">1 material</text>
@@ -17,11 +30,25 @@
       </g>
       <text class="cumulative__note" :x="W - R" :y="T - 8" text-anchor="end">{{ headline }}</text>
     </svg>
+    <!-- The tooltip is HTML over the plot: it opens on hover, on a tap and on keyboard
+         focus, which a native SVG title does not. The summary above holds the same
+         figures for a screen reader. -->
+    <div
+      v-if="active"
+      class="cumulative__tip"
+      :class="`cumulative__tip--${tipSide}`"
+      :style="{ left: `${(x(active.rank) / W) * 100}%`, top: `${(y(active.value) / H) * 100}%` }"
+      aria-hidden="true"
+    >
+      <strong>{{ active.rank }}. {{ active.name }}</strong>
+      <span>{{ percent.format(active.share) }} of the carbon</span>
+      <span v-if="active.rank > 1">{{ percent.format(active.value) }} with the {{ active.rank - 1 }} larger</span>
+    </div>
   </figure>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { MaterialHotspot } from '@/api/overview';
 import { materialName, percent } from '@/format';
 import { materialLabel } from '@/materials';
@@ -34,9 +61,17 @@ const [L, R, T, B] = [64, 24, 32, 40];
 
 const points = computed(() => {
   let sum = 0;
-  return props.hotspots.map((h, i) => ({ rank: i + 1, name: materialName(materialLabel(h)), value: (sum += h.share) }));
+  return props.hotspots.map((h, i) => ({ rank: i + 1, name: materialName(materialLabel(h)), share: h.share, value: (sum += h.share) }));
 });
 const n = computed(() => points.value.length);
+
+// The point under the pointer, the finger or the keyboard focus.
+const active = ref<(typeof points.value)[number] | null>(null);
+// The tooltip opens toward the middle of the plot, so the first and last stay inside it.
+const tipSide = computed(() => {
+  const at = active.value ? active.value.rank / n.value : 0.5;
+  return at > 0.75 ? 'left' : at < 0.25 ? 'right' : 'center';
+});
 
 // Shares can be negative (biogenic carbon), so the scale stretches past 0–100% when it must.
 const yMax = computed(() => Math.max(1, ...points.value.map((p) => p.value)));
@@ -68,7 +103,38 @@ const summary = computed(
 @use '@/css/02-tokens' as tokens;
 
 .cumulative {
+  position: relative;
   margin: 0;
+}
+
+.cumulative__tip {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  max-width: 16rem;
+  padding: tokens.$spacing-xs tokens.$spacing-sm;
+  border: tokens.$border-width solid tokens.$color-border;
+  border-radius: tokens.$radius-xs;
+  background: tokens.$color-surface;
+  color: tokens.$color-text;
+  font-size: tokens.$text-size-xs;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - #{tokens.$spacing-md}));
+}
+
+.cumulative__tip--left {
+  transform: translate(-100%, calc(-100% - #{tokens.$spacing-md}));
+}
+
+.cumulative__tip--right {
+  transform: translate(0, calc(-100% - #{tokens.$spacing-md}));
+}
+
+.cumulative__guide {
+  stroke: tokens.$dataviz-axis-text;
+  stroke-dasharray: 3 3;
 }
 
 .cumulative__plot {
@@ -96,6 +162,21 @@ const summary = computed(
 
 .cumulative__dot {
   fill: var(--gbdi-dataviz-green-1);
+}
+
+.cumulative__hit {
+  fill: transparent;
+}
+
+.cumulative__point {
+  cursor: help;
+  outline: none;
+}
+
+.cumulative__point--active .cumulative__dot {
+  stroke: var(--gbdi-dataviz-green-1);
+  stroke-width: 6;
+  stroke-opacity: 0.3;
 }
 
 .cumulative__axis text {
