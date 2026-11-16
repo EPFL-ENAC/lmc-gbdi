@@ -547,17 +547,22 @@ def declared_scope(value: str | None) -> str | None:
     return " · ".join(part for part in BOUNDARIES[value] if part) or "unknown"
 
 
-def scope_label(checks: list[ModuleCheck], method: str | None = None) -> str:
+def scope_stages(checks: list[ModuleCheck]) -> tuple[str, ...]:
     """The stages a total covers: those with a module declared in General Information,
     or with a module result where it declares none. One module is enough, so B1–B3
-    counts as B. The total itself always adds every module with a result. The
-    declared boundary's method, when it names one, follows."""
+    counts as B. The total itself always adds every module with a result."""
     checks = [c for c in checks if c.module in FIELD_OF]  # D is no stage of A to C
     modules = [c.module for c in checks if c.declared] or [
         c.module for c in checks if c.has_result
     ]
     fields = {FIELD_OF[m] for m in modules}
-    stages = tuple(k for k, _ in STAGES if fields & set(STAGE_FIELDS[k]))
+    return tuple(k for k, _ in STAGES if fields & set(STAGE_FIELDS[k]))
+
+
+def scope_label(checks: list[ModuleCheck], method: str | None = None) -> str:
+    """The stages of scope_stages, then the declared boundary's method when it names
+    one."""
+    stages = scope_stages(checks)
     listed = ", ".join(label for k, label in STAGES if k in stages)
     label = SCOPES.get(stages, listed.replace("A1–A3, A4–A5", "A1–A5"))
     return f"{label} · {method}" if method else label

@@ -31,12 +31,15 @@ from app.buildings.models import Upload
 from app.buildings.schemas import (
     BuildingSummary,
     Comparability,
+    CompareCase,
     ComparedBuilding,
     ComparedRow,
+    CompareScope,
     Comparison,
     DraftView,
     Finding,
     FindingGroup,
+    LeftOut,
     MaterialMass,
     RejectSummary,
 )
@@ -45,11 +48,13 @@ from app.db import engine
 from app.overview.schemas import Basis, Overview
 from app.overview.service import (
     BEC_TIER2,
+    STAGES,
     build_overview,
     class_rollup,
     on_basis,
     project_fields,
     project_info,
+    scope_stages,
 )
 
 # ponytail: per-process cache, each entry with the uploaded_at it was computed from
@@ -401,7 +406,46 @@ def comparability(a: str | None, b: str | None) -> Comparability:
     return "same_method" if a == b else "methods_differ"
 
 
-async def compare(session: AsyncSession, a_id: int, b_id: int) -> Comparison:
+LABEL = dict(STAGES)
+
+
+def compare_case(
+    method: Comparability, covered_a: tuple[str, ...], covered_b: tuple[str, ...]
+) -> CompareCase:
+    if method != "same_method":
+        return "methods_differ"
+    if not set(covered_a) & set(covered_b):
+        return "no_common_stages"
+    return "same_stages" if covered_a == covered_b else "different_stages"
+
+
+def left_out(
+    covered_a: tuple[str, ...], covered_b: tuple[str, ...], oa: Overview, ob: Overview
+) -> list[LeftOut]:
+    gwp = {
+        "a": {s.key: s.gwp for s in oa.stages},
+        "b": {s.key: s.gwp for s in ob.stages},
+    }
+    rows = []
+    for key, label in STAGES:
+        if (key in covered_a) == (key in covered_b):
+            continue
+        side, o = ("a", oa) if key in covered_a else ("b", ob)
+        rows.append(
+            LeftOut(
+                stage=label,
+                not_covered_by="b" if side == "a" else "a",
+                value=per_m2(gwp[side][key], o),
+            )
+        )
+    return rows
+
+
+async def compare(
+    session: AsyncSession, a_id: int, b_id: int, scope: CompareScope | None = None
+) -> Comparison:
+    """Without a scope, the figures each cover their own building's scope, as before
+    the parameter existed; "common" sums only the stages both cover."""
     ua, ub = await repo.get_upload(session, a_id), await repo.get_upload(session, b_id)
     oa = await overview_of(session, a_id, ua.uploaded_at)
     ob = await overview_of(session, b_id, ub.uploaded_at)
@@ -412,12 +456,18 @@ async def compare(session: AsyncSession, a_id: int, b_id: int) -> Comparison:
     cb = {c.label: c for c in ob.material_classes}
     classes = sorted(ca.keys() | cb.keys())
     wa, wb = oa.headline.per_m2_gross, ob.headline.per_m2_gross
+    method = comparability(oa.project.lcia_methodology, ob.project.lcia_methodology)
+    covered_a, covered_b = (
+        scope_stages(oa.module_checks),
+        scope_stages(ob.module_checks),
+    )
+    common = tuple(k for k in covered_a if k in covered_b)
+    case = compare_case(method, covered_a, covered_b)
+    merged = case == "same_stages" or (case == "different_stages" and scope == "common")
     return Comparison(
         a=compared(ua, oa),
         b=compared(ub, ob),
-        comparability=comparability(
-            oa.project.lcia_methodology, ob.project.lcia_methodology
-        ),
+        comparability=method,
         method_note=METHOD_NOTE,
         ratio=wb / wa if wa and wb is not None else None,
         stages=aligned(
@@ -446,4 +496,10 @@ async def compare(session: AsyncSession, a_id: int, b_id: int) -> Comparison:
             oa,
             ob,
         ),
+        case=case,
+        applied_scope="common" if merged else "own",
+        covered_a=[LABEL[k] for k in covered_a],
+        covered_b=[LABEL[k] for k in covered_b],
+        common_stages=[LABEL[k] for k in common],
+        left_out=left_out(covered_a, covered_b, oa, ob),
     )
