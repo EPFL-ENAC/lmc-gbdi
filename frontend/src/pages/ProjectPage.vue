@@ -68,16 +68,18 @@
       <section class="sheet__panel" aria-label="Headline results">
         <div class="grid-3-col">
           <BigNumber :value="num.format(overview.headline.whole_life)" tone="green">
-            {{ units.carbon }}, {{ overview.headline.scope }}.
+            {{ units.carbon }}, total {{ overview.headline.scope }}.
           </BigNumber>
           <BigNumber :value="num.format(overview.headline.upfront)" tone="blue">
             {{ units.carbon }} before the building is used, A1–A5:
-            {{ percent.format(overview.headline.upfront_share) }} of the whole life.
+            {{ percent.format(overview.headline.upfront_share) }} of the total.
           </BigNumber>
           <BigNumber :value="num.format(overview.headline.module_d1)" tone="purple">
             {{ units.carbon }} of benefits from reuse and recycling, module D1, outside the total.
           </BigNumber>
         </div>
+        <!-- org#107: the boundary the workbook declares, next to the modules it computes. -->
+        <p class="scope-chip">Scope {{ overview.project.declared_scope ?? NOT_DECLARED }}</p>
         <p class="sheet__note">
           Computed from the OpenBDF workbook, {{ kg.format(overview.rows_read) }} bill of materials rows, data from
           {{ overview.project.lca_database ?? 'an undeclared database' }}.
@@ -130,6 +132,7 @@
         <LifeCycleStrip
           :stages="overview.stages"
           :whole-life="overview.headline.whole_life"
+          :scope="overview.headline.scope"
           :module-d="overview.headline.module_d1"
           :units="units"
         />
@@ -345,6 +348,18 @@ const dataTypeBars = computed<Bar[]>(() =>
 
 .info-cell__value {
   margin: 0;
+}
+
+.scope-chip {
+  align-self: flex-start;
+  width: fit-content;
+  margin: tokens.$spacing-md 0 0;
+  padding: tokens.$spacing-xs tokens.$spacing-md;
+  border-radius: tokens.$radius-pill;
+  background: tokens.$color-surface-highlight;
+  color: tokens.$color-primary-strong;
+  font-size: tokens.$text-size-sm;
+  font-weight: 600;
 }
 
 .sheet__subtitle {

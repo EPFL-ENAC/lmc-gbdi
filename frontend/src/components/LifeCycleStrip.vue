@@ -1,5 +1,5 @@
 <template>
-  <figure class="life-strip" :aria-label="`Whole-life carbon by life-cycle stage, ${num.format(wholeLife)} ${units.carbon}`">
+  <figure class="life-strip" :aria-label="`Carbon by life-cycle stage, ${scope}, ${num.format(wholeLife)} ${units.carbon}`">
     <!-- The life cycle in order, A to C; module D sits beyond the boundary, on the same scale -->
     <div class="life-strip__track">
       <div
@@ -36,7 +36,7 @@ import { STAGE_COLORS } from '@/dataviz';
 import type { StageTotal, Units } from '@/api/overview';
 import { amount, percent } from '@/format';
 
-const props = defineProps<{ stages: StageTotal[]; wholeLife: number; moduleD: number; units: Units }>();
+const props = defineProps<{ stages: StageTotal[]; wholeLife: number; scope: string; moduleD: number; units: Units }>();
 const num = computed(() => amount(props.units));
 
 // Shares of a whole only draw positive parts; a negative stage (biogenic carbon
