@@ -23,7 +23,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { MaterialHotspot } from '@/api/overview';
-import { percent } from '@/format';
+import { materialName, percent } from '@/format';
+import { materialLabel } from '@/materials';
 
 const props = defineProps<{ hotspots: MaterialHotspot[] }>(); // the top 10, by whole-life carbon
 
@@ -33,7 +34,7 @@ const [L, R, T, B] = [64, 24, 32, 40];
 
 const points = computed(() => {
   let sum = 0;
-  return props.hotspots.map((h, i) => ({ rank: i + 1, name: h.material || 'Unnamed material', value: (sum += h.share) }));
+  return props.hotspots.map((h, i) => ({ rank: i + 1, name: materialName(materialLabel(h)), value: (sum += h.share) }));
 });
 const n = computed(() => points.value.length);
 
@@ -41,8 +42,10 @@ const n = computed(() => points.value.length);
 const yMax = computed(() => Math.max(1, ...points.value.map((p) => p.value)));
 const yMin = computed(() => Math.min(0, ...points.value.map((p) => p.value)));
 const yTicks = computed(() => {
+  // Multiples of 25%, so 0% is always a tick; a wider step when the scale stretches far.
+  const step = 0.25 * Math.max(1, Math.ceil((yMax.value - yMin.value) / 2));
   const ticks = [];
-  for (let t = Math.ceil(yMin.value / 0.25) * 0.25; t <= yMax.value + 1e-9; t += 0.25) ticks.push(t);
+  for (let t = Math.ceil(yMin.value / step) * step; t <= yMax.value; t += step) ticks.push(t || 0);
   return ticks;
 });
 const y = (value: number) => T + ((yMax.value - value) / (yMax.value - yMin.value)) * (H - B - T);
@@ -55,7 +58,9 @@ const area = computed(() => `M${x(0)},${y(0)} L${line.value} L${x(n.value)},${y(
 const last = computed(() => points.value[n.value - 1]?.value ?? 0);
 const headline = computed(() => `Top ${n.value} ≈ ${Math.round(last.value * 100)}% of whole-life`);
 const summary = computed(
-  () => `Cumulative share of whole-life carbon over the ${n.value} largest materials: ${headline.value}.`,
+  () =>
+    `Cumulative share of whole-life carbon over the ${n.value} largest materials: ${headline.value}. ` +
+    points.value.map((p) => `${p.rank}. ${p.name}, ${percent.format(p.value)}`).join('; '),
 );
 </script>
 
