@@ -224,7 +224,7 @@ import { useOverview } from '@/composables/useOverview';
 import { showModuleD } from '@/dataviz';
 import { amount, fieldText, kg, NOT_DECLARED, percent, weightingCaption } from '@/format';
 
-const { overview, error, basis } = useOverview();
+const { overview, error, basis, naming } = useOverview();
 // Read only where the overview is loaded.
 const units = computed(() => overview.value!.units);
 const num = computed(() => amount(units.value));
@@ -243,7 +243,6 @@ const ELEMENTS_BY: Record<Naming, string> = {
   openbdf: 'OpenBDF element, Tier 2, in classification order',
   custom: "the project's own element class, in label order",
 };
-const naming = ref<Naming>('openbdf');
 // Checked is the OpenBDF classification, unchecked the project's custom names.
 const openbdfNames = computed({
   get: () => naming.value === 'openbdf',
