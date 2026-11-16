@@ -9,21 +9,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, h } from 'vue';
+import { computed } from 'vue';
 import { useQuasar } from 'quasar';
 import type { ComposeOption } from 'echarts/core';
 import type { LineSeriesOption } from 'echarts/charts';
 import type { GridComponentOption, TooltipComponentOption } from 'echarts/components';
 import type { MaterialHotspot } from '@/api/overview';
+import { asyncEChart } from '@/components/atoms/echarts';
 import { materialName, percent } from '@/format';
 import { materialLabel } from '@/materials';
 
 // ECharts loads with the chart only, in its own chunk. The empty state, the
 // headline and the summary stay here, outside that chunk.
-const EChart = defineAsyncComponent({
-  loader: () => import('@/components/atoms/EChart.vue'),
-  errorComponent: () => h('p', { class: 'u-text-muted' }, 'The chart failed to load.'),
-});
+const EChart = asyncEChart(() => import('@/components/atoms/echart-line'));
 
 const props = defineProps<{ hotspots: MaterialHotspot[] }>(); // the top 10, by carbon
 
