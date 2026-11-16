@@ -3,7 +3,7 @@
        identity, the declared figures, then the result module by module. -->
   <article class="sheet-card">
     <header class="sheet-card__head">
-      <span class="sheet-card__rank">{{ rank }}</span>
+      <span class="sheet-card__rank"><span class="sheet-card__key" :style="{ background: color }" />{{ rank }}</span>
       <div>
         <h3 class="sheet-card__name">{{ hotspot.material || 'No material name' }}</h3>
         <p class="sheet-card__product">{{ hotspot.epd_product }}</p>
@@ -64,6 +64,7 @@ const props = defineProps<{
   hotspot: MaterialHotspot;
   stages: StageTotal[];
   rank: number;
+  color: string; // the material's colour in the walls and the matrix
   units: Units;
   domain: readonly [number, number]; // lowest and highest stage of all cards, zero inside
 }>();
@@ -106,6 +107,15 @@ const bar = (value: number) => ({
   line-height: 1;
   color: tokens.$color-text-lead;
   font-variant-numeric: tabular-nums;
+}
+
+.sheet-card__key {
+  display: inline-block;
+  width: tokens.$spacing-lg;
+  height: tokens.$spacing-sm;
+  margin-right: tokens.$spacing-sm;
+  border-radius: tokens.$radius-xs;
+  vertical-align: middle;
 }
 
 .sheet-card__name {

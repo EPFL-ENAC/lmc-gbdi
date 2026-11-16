@@ -79,10 +79,10 @@
 
   <section class="sheet__panel passport__section">
     <h2 class="sheet__panel-title">Material by stage</h2>
-    <p class="u-text-muted">The ten materials with the most carbon, stage by stage.</p>
+    <p class="u-text-muted">{{ rankBy === 'mass' ? 'The ten heaviest materials' : 'The ten materials with the most carbon' }}, stage by stage.</p>
     <StageMatrix
       :stages="overview.stages"
-      :rows="overview.material_hotspots.map((h) => ({ key: pairKey(h), label: materialLabel(h), gwp_by_stage: h.gwp_by_stage }))"
+      :rows="ranked.map((r, i) => ({ key: r.key, label: r.label, gwp_by_stage: top[i].gwp_by_stage, color: r.color }))"
       :units="overview.units"
       row-header="Material"
       empty-label="No materials in this project."
@@ -92,14 +92,16 @@
   <section class="sheet__panel passport__section">
     <h2 class="sheet__panel-title">Material by material</h2>
     <p class="u-text-muted">
-      The ten materials with the most carbon. Heavy is not the same as intense: compare the mass with
-      the carbon per kg. The bars of every card share one scale.
+      {{ rankBy === 'mass' ? 'The ten heaviest materials.' : 'The ten materials with the most carbon.' }}
+      Heavy is not the same as intense: compare the mass with the carbon per kg. The bars of every
+      card share one scale, set by these ten.
     </p>
     <div class="grid-2-col">
       <MaterialSheet
-        v-for="(hotspot, i) in overview.material_hotspots"
-        :key="`${hotspot.material}|${hotspot.epd_product}`"
+        v-for="(hotspot, i) in top"
+        :key="pairKey(hotspot)"
         :hotspot="hotspot"
+        :color="MATERIAL_COLORS[i]"
         :stages="overview.stages"
         :units="overview.units"
         :rank="i + 1"
@@ -126,12 +128,13 @@ const num = computed(() => amount(props.overview.units));
 
 const rankBy = ref<RankBy>('mass');
 
-// One row per material of the chosen ranking, both measures from the backend; the
-// colour follows the rank, so a material has the same one in both walls.
-const ranked = computed(() => {
-  const o = props.overview;
-  const rows = rankBy.value === 'mass' ? o.mass_hotspots : o.material_hotspots;
-  return rows.map((h, i) => ({
+// The ten of the chosen ranking, as the backend sends them. All three panels read it.
+const top = computed(() => (rankBy.value === 'mass' ? props.overview.mass_hotspots : props.overview.material_hotspots));
+
+// One row per material of the ranking, both measures from the backend; the colour
+// follows the rank, so a material has the same one in the walls, the matrix and the cards.
+const ranked = computed(() =>
+  top.value.map((h, i) => ({
     key: pairKey(h),
     label: materialLabel(h),
     epd_product: h.material ? h.epd_product : '',
@@ -140,8 +143,8 @@ const ranked = computed(() => {
     gwp: h.gwp,
     share: h.share,
     color: MATERIAL_COLORS[i],
-  }));
-});
+  })),
+);
 
 // ponytail: the ten backend shares summed here, as the payload has no such total;
 // move it into the overview when a backend PR next touches it.
@@ -150,18 +153,16 @@ const cover = computed(() => ({
   mass: ranked.value.reduce((sum, r) => sum + (r.share_of_mass ?? 0), 0),
 }));
 
-// Bar geometry only: the lowest and highest stage of the ten, zero inside, one scale for every card.
+// Bar geometry only: the lowest and highest stage of the ten shown, zero inside, one scale for every card.
 const stageDomain = computed(() => {
-  const values = props.overview.material_hotspots.flatMap((h) => Object.values(h.gwp_by_stage));
+  const values = top.value.flatMap((h) => Object.values(h.gwp_by_stage));
   return [Math.min(0, ...values), Math.max(0, ...values)] as const;
 });
 
 // The materials the wall paints as "every other", in the same ranking.
 const open = ref(false);
 const rest = computed(() => {
-  const o = props.overview;
-  const top = rankBy.value === 'mass' ? o.mass_hotspots : o.material_hotspots;
-  return remaining(o.materials, top, rankBy.value).map((m) => ({
+  return remaining(props.overview.materials, top.value, rankBy.value).map((m) => ({
     key: pairKey(m),
     label: materialLabel(m),
     epd_product: m.material ? m.epd_product : '',
