@@ -142,6 +142,12 @@
       <MaterialWalls :overview="view!" />
 
       <section class="sheet__panel">
+        <h2 class="sheet__panel-title">Cumulative whole-life carbon — top 10 materials</h2>
+        <p class="u-text-muted">How much of the total the ten largest materials account for.</p>
+        <CumulativeShare :hotspots="view!.material_hotspots" />
+      </section>
+
+      <section class="sheet__panel">
         <h2 class="sheet__panel-title">Materials, mass against carbon</h2>
         <IntensityPlot :hotspots="view!.material_hotspots" :units="units" />
       </section>
@@ -177,6 +183,7 @@ import { computed, ref } from 'vue';
 import type { QTableColumn } from 'quasar';
 import type { ElementTotal, Naming } from '@/api/overview';
 import BarsWithTable from '@/components/BarsWithTable.vue';
+import CumulativeShare from '@/components/CumulativeShare.vue';
 import ElementMaterials from '@/components/ElementMaterials.vue';
 import IntensityPlot from '@/components/IntensityPlot.vue';
 import LifeCycleStrip from '@/components/LifeCycleStrip.vue';
