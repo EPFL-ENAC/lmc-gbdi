@@ -481,10 +481,14 @@ async def compare(
     covered_b = scope_stages(ob.module_checks)
     common = tuple(k for k in covered_a if k in covered_b)
     case = compare_case(method, covered_a, covered_b)
-    # Only "common" on different stages recomputes; every other answer keeps the
-    # sums of before the parameter, each building over its own stages.
-    keys = common if case == "different_stages" and scope == "common" else None
-    merged = case == "same_stages" or keys is not None
+    # Without the parameter, every answer keeps the sums of before it existed, each
+    # building over its own stages. With it, a merged answer sums the common stages
+    # only: on the same stages too, where a result in an undeclared module (a stray
+    # B2 under a declared A and C) would else sit inside a figure that names A and C.
+    same = case == "same_stages"
+    recompute = same or (case == "different_stages" and scope == "common")
+    keys = common if scope and recompute else None
+    merged = same or keys is not None
     ea, eb = element_totals(oa, keys), element_totals(ob, keys)
     element_order = [name for _, name in BEC_TIER2]
     element_order += ["Other classified elements", "Not classified"]
@@ -538,5 +542,6 @@ async def compare(
         stages_a=labels(common if merged else covered_a),
         stages_b=labels(common if merged else covered_b),
         upfront_stages=labels(tuple(k for k in keys or UPFRONT if k in UPFRONT)),
-        ratio_stages=labels(common) if merged else None,
+        # The ratio names its stages only where its two figures were summed on them.
+        ratio_stages=labels(common) if merged and (keys is not None) else None,
     )

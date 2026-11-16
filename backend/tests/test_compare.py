@@ -300,6 +300,29 @@ def test_the_example_pair_compares_on_the_stages_both_declare(client, db):
     ]
 
 
+def test_same_declared_stages_leave_a_stray_result_out_of_the_merged_figures(
+    client, db
+):
+    """Both declare A and C. b also carries a B2 result it does not declare: on one
+    axis its figures hold only the stages the labels name."""
+    area = {"building_gross_floor_area": "100"}
+    flags = {f"lca_{m}": "1" for m in ("a1_3", "a4", "a5", "c1", "c2", "c3", "c4")}
+    db(1, rows=one_per_stage("100", "10", "0", "50"), **area, **flags)
+    db(2, rows=one_per_stage("200", "20", "8", "30", "gwp_total_b2"), **area, **flags)
+    merged = compare(client, "&scope=common")
+    assert merged["case"] == "same_stages"
+    # a: (100 + 10 + 50) / 100; b: (200 + 20 + 30) / 100, without the stray 8.
+    assert merged["a"]["whole_life_per_m2"] == pytest.approx(1.6)
+    assert merged["b"]["whole_life_per_m2"] == pytest.approx(2.5)
+    assert merged["ratio"] == pytest.approx(2.5 / 1.6)
+    assert merged["ratio_stages"] == NO_B_STAGES
+    # Without the parameter the figures are those of before, the stray 8 inside,
+    # so the ratio names no stages.
+    before = compare(client)
+    assert before["b"]["whole_life_per_m2"] == pytest.approx(2.58)
+    assert before["ratio_stages"] is None
+
+
 def test_an_unknown_scope_is_refused(client, different):
     assert client.get("/api/buildings/compare?a=1&b=2&scope=all").status_code == 422
 
