@@ -109,6 +109,23 @@ onBeforeUnmount(() => {
   scrollbar-width: none;
 }
 
+// The Sections menu shares its line with the bar's Display button: a long section
+// name ends in an ellipsis instead of running past the screen.
+.sheet-toc :deep(.q-btn-dropdown) {
+  max-width: 100%;
+}
+
+.sheet-toc :deep(.q-btn-dropdown .q-btn__content),
+.sheet-toc :deep(.q-btn-dropdown .block) {
+  min-width: 0;
+}
+
+.sheet-toc :deep(.q-btn-dropdown .block) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sheet-toc__link {
   padding: tokens.$spacing-xs tokens.$spacing-sm;
   border-radius: tokens.$radius-panel;
