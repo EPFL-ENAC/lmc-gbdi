@@ -14,9 +14,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.buildings import repo
 from app.buildings.ingest import (
     EXAMPLES,
+    NO_CARBON_NOTE,
     TOTAL_CHECKS,
     TOTAL_NOTE,
     WHAT_TO_DO,
+    WHAT_TO_DO_BY_CODE,
     WORDING,
     blocked_parts,
     parse,
@@ -101,7 +103,8 @@ def reject_summary(findings: list[dict]) -> list[RejectSummary]:
     their messages are not stored. So a code with a condensed entry, or with messages
     that differ, takes the wording of openbdf 0.1.4; a code that has none (a code of
     an older openbdf) shows its first message as an example. The note on the declared
-    total goes only to a draft whose carbon is shown.
+    total goes only to a draft whose carbon is shown; the note on unpaired rows
+    only to an E004 that blocks the carbon.
     """
     counts: dict[str, int] = {}
     messages: dict[str, list[str]] = {}
@@ -123,13 +126,22 @@ def reject_summary(findings: list[dict]) -> list[RejectSummary]:
             return seen[0]
         return WORDING.get(code) or (f"For example: {seen[0]}" if seen else code)
 
+    def what_to_do(code: str) -> str:
+        text = WHAT_TO_DO_BY_CODE.get(code, WHAT_TO_DO)
+        if stands and code in TOTAL_CHECKS:
+            text += TOTAL_NOTE
+        # Only E004's own findings: the note says that this code blocks the carbon.
+        own = [f for f in findings if f["code"] == code]
+        if code == "E004" and "carbon" in blocked_parts(own):
+            text += NO_CARBON_NOTE
+        return text
+
     return [
         RejectSummary(
             code=code,
             count=counts[code],
             message=message(code),
-            what_to_do=WHAT_TO_DO
-            + (TOTAL_NOTE if stands and code in TOTAL_CHECKS else ""),
+            what_to_do=what_to_do(code),
         )
         for code in sorted(counts, key=lambda c: (-counts[c], c))
     ]

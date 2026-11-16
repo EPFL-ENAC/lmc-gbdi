@@ -100,8 +100,41 @@ WORDING = {
     "by 5 per cent or more",
 }
 WHAT_TO_DO = "Correct the workbook and upload it again with replace."
-TOTAL_NOTE = (
-    " The dashboard does not read the declared total, so the figures shown stand."
+# The texts the owner approved, per code of openbdf 0.1.4. A code missing here (one of
+# an older openbdf, such as "E05") keeps WHAT_TO_DO.
+_DATABASE_LINE = (
+    "Give each bill of materials material exactly one line in the project material "
+    "database, with the same material_ref_id."
+)
+WHAT_TO_DO_BY_CODE = {
+    # E001 comes from every sheet, so the text names no sheet. The E002 message gives
+    # the value and the type, not the field.
+    "E001": "Fill the field that the message names. Then upload the workbook again "
+    "with replace.",
+    "E002": "Replace the value with one of the values that the field allows.",
+    "E003": "Give the field that the message names a value of the right type, for "
+    "example a number without a unit.",
+    "E004": "Give each bill of materials row one row in LCA Result (Wide), in the "
+    "same order.",
+    "E005": "Give the bill of materials row and its results row the same material_id.",
+    "E006": "Give the share a value from 0 to 100.",
+    "E010": "Set the declared flag of the indicator to true, or remove its results.",
+    "E011": "Remove the project material database line that no bill of materials "
+    "material uses, or add the material.",
+    **dict.fromkeys(("E012", "E013", "E014"), _DATABASE_LINE),
+    "E015": "Give each project material database line its own material_ref_id.",
+    "E016": "Give each bill of materials row its own material_id.",
+    "E017": "Fill the aggregate stage or its sub-modules, not both. Example: A1–A3, "
+    "or A1, A2 and A3.",
+    "E018": "Take module D out of the declared total: the total covers the modules "
+    "A to C only.",
+    "E019": "Correct the declared total, or correct the module values that it adds.",
+    "E020": "Declare the reference study period in General Information. The "
+    "workbook has results after stage A, and the per-year figures need the period.",
+}
+TOTAL_NOTE = " The dashboard adds the modules itself, so the figures shown stand."
+NO_CARBON_NOTE = (
+    " The dashboard cannot pair the rows, so it shows no carbon for this draft."
 )
 
 
