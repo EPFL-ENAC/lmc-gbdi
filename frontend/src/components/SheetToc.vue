@@ -50,44 +50,34 @@ const current = ref<string>(STOPS[0].id);
 const currentLabel = computed(() => STOPS.find((s) => s.id === current.value)?.label ?? STOPS[0].label);
 
 let header: HTMLElement | null = null;
-let measure = () => {};
 let resize: ResizeObserver | null = null;
-let observer: IntersectionObserver | null = null;
-const above = new Set<string>();
+let frame = 0;
 
-// The stops whose top passed the line under the header; the last of them is current.
-function watchStops(headerHeight: number) {
-  observer?.disconnect();
-  above.clear();
-  observer = new IntersectionObserver(
-    (entries) => {
-      for (const e of entries) {
-        const passed = e.boundingClientRect.top < headerHeight + 1;
-        if (passed) above.add(e.target.id);
-        else above.delete(e.target.id);
-      }
-      current.value = [...STOPS].reverse().find((s) => above.has(s.id))?.id ?? STOPS[0].id;
-    },
-    // A band one pixel high just under the header: a stop crosses it on the way up or down.
-    { rootMargin: `-${headerHeight}px 0px -${Math.max(window.innerHeight - headerHeight - 1, 0)}px 0px` },
-  );
-  for (const s of STOPS) {
-    const el = document.getElementById(s.id);
-    if (el) observer.observe(el);
-  }
+// The current stop is the last one whose top reached the line under the header. It is read
+// from the positions on each scroll: a #hash jump moves stops past that line without any
+// of them crossing it, which an IntersectionObserver does not report.
+function update() {
+  frame = 0;
+  // The stops land one spacing step under the header (scroll-margin-top); allow a few px more.
+  const line = (header?.offsetHeight ?? 0) + 16;
+  current.value =
+    [...STOPS].reverse().find((s) => (document.getElementById(s.id)?.getBoundingClientRect().top ?? Infinity) <= line)
+      ?.id ?? STOPS[0].id;
+}
+const onScroll = () => {
+  if (frame === 0) frame = requestAnimationFrame(update);
+};
+
+function measure() {
+  // ProjectPage turns this into the stops' scroll-margin-top.
+  document.documentElement.style.setProperty('--sheet-header-h', `${header?.offsetHeight ?? 0}px`);
+  onScroll();
 }
 
 onMounted(() => {
   header = document.querySelector<HTMLElement>('.q-header');
-  measure = () => {
-    const h = header?.offsetHeight ?? 0;
-    // ProjectPage turns this into the stops' scroll-margin-top.
-    document.documentElement.style.setProperty('--sheet-header-h', `${h}px`);
-    watchStops(h);
-  };
   measure();
-  // The band depends on the window height too (a phone's address bar).
-  window.addEventListener('resize', measure);
+  window.addEventListener('scroll', onScroll, { passive: true });
   if (header) {
     resize = new ResizeObserver(measure);
     resize.observe(header);
@@ -95,9 +85,9 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', measure);
+  window.removeEventListener('scroll', onScroll);
+  cancelAnimationFrame(frame);
   resize?.disconnect();
-  observer?.disconnect();
   document.documentElement.style.removeProperty('--sheet-header-h');
 });
 </script>
