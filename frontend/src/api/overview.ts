@@ -191,6 +191,9 @@ export interface Overview {
   units: Units;
   bases: BasisOption[]; // every basis, with whether this building can serve it
   data_type_weighting: 'gwp_fossil_a1_a3' | 'mass' | 'not_computed';
+  // Set when some rows with mass, not all, declare no GWP fossil A1–A3 (N of M).
+  data_type_rows_without_fossil?: number | null;
+  data_type_rows?: number | null;
   data_types: DataTypeShare[];
 }
 

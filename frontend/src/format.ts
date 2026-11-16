@@ -1,4 +1,4 @@
-import type { Units } from '@/api/overview';
+import type { Overview, Units } from '@/api/overview';
 
 // Number formats in the reader's locale; the app has no i18n yet.
 export const NOT_DECLARED = 'not declared';
@@ -26,6 +26,12 @@ export const WEIGHTING: Record<'gwp_fossil_a1_a3' | 'mass' | 'not_computed', str
   mass: 'Weighted by mass: no GWP fossil A1–A3 is declared.',
   not_computed: 'Not computed: neither GWP fossil A1–A3 nor mass is declared.',
 };
+
+// The caption of the data type profile: says how many rows force the mass weighting.
+export const weightingCaption = (o: Overview) =>
+  o.data_type_rows_without_fossil && o.data_type_rows
+    ? `Weighted by mass: ${o.data_type_rows_without_fossil} of ${o.data_type_rows} rows declare no GWP fossil A1–A3.`
+    : WEIGHTING[o.data_type_weighting];
 
 // A General Information value as a reader should see it: numbers in the reader's locale
 // ("2865.0000" reads 2,865), blanks as not declared. A unit follows a number only, so

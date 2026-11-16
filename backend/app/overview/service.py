@@ -237,11 +237,17 @@ def material_rollup(
     of each OpenBDF material class."""
     pairs: dict[MaterialPair, Stages] = defaultdict(
         lambda: (
-            {"gwp": ZERO, "mass": ZERO, "fossil": ZERO} | {k: ZERO for k, _ in STAGES}
+            {"gwp": ZERO, "mass": ZERO, "fossil": ZERO, "rows": ZERO, "no_fossil": ZERO}
+            | {k: ZERO for k, _ in STAGES}
         )
     )
     fossil_parts = ("gwp_f_a1", "gwp_f_a2", "gwp_f_a3")
     for row, stages in rows:
+        if row.mass_kg * row.repetition > ZERO:
+            pairs[material_key(row, naming)]["rows"] += 1
+            # A blank fossil A1–A3, not a declared 0: it would weigh nothing.
+            if all(row.gwp[f] is None for f in ("gwp_f_a1_a3", *fossil_parts)):
+                pairs[material_key(row, naming)]["no_fossil"] += 1
         pair = pairs[material_key(row, naming)]
         pair["gwp"] += sum(stages.values(), ZERO)
         for key, value in stages.items():
@@ -323,14 +329,24 @@ def data_type_key(declared: str) -> str:
 
 def data_type_profile(
     pairs: dict[MaterialPair, Stages], declared: dict[MaterialPair, str]
-) -> tuple[str, list[DataTypeShare]]:
-    weighting = "not_computed"
-    if sum((p["mass"] for p in pairs.values()), ZERO) > ZERO:
+) -> tuple[str, list[DataTypeShare], tuple[int, int] | None]:
+    """The data type shares, weighted by fossil A1–A3 only when every row with mass
+    declares one, else by mass. The counts (rows with no fossil, rows with mass) are
+    given when some rows, not all, force the mass weighting."""
+    mass = sum((p["mass"] for p in pairs.values()), ZERO)
+    fossil = sum((p["fossil"] for p in pairs.values()), ZERO)
+    rows = int(sum((p["rows"] for p in pairs.values()), ZERO))
+    blank = int(sum((p["no_fossil"] for p in pairs.values()), ZERO))
+    counts = None
+    # A fossil sum of zero or below cannot weigh a profile: mass does, as before.
+    if mass > ZERO and (blank or fossil <= ZERO):
         weighting = "mass"
-    if sum((p["fossil"] for p in pairs.values()), ZERO) > ZERO:
+        if 0 < blank < rows:
+            counts = (blank, rows)
+    elif fossil > ZERO:
         weighting = "gwp_fossil_a1_a3"
-    if weighting == "not_computed":
-        return weighting, []
+    else:
+        return "not_computed", [], None
 
     weight_field = "fossil" if weighting == "gwp_fossil_a1_a3" else "mass"
     total = sum((p[weight_field] for p in pairs.values()), ZERO)
@@ -343,10 +359,14 @@ def data_type_profile(
         for key, label in DATA_TYPES
     ]
     undeclared = 1 - sum(share.share for share in shares)
-    return weighting, [
-        *shares,
-        DataTypeShare(key="undeclared", label="Undeclared", share=undeclared),
-    ]
+    return (
+        weighting,
+        [
+            *shares,
+            DataTypeShare(key="undeclared", label="Undeclared", share=undeclared),
+        ],
+        counts,
+    )
 
 
 # The OpenBDF converter fills a blank project ID with this placeholder.
@@ -723,7 +743,7 @@ def build_overview(data: ProjectData) -> Overview:
         if modules.removesuffix(" + D") != scope_label(checks):
             method = None
     summary = headline(data, totals, scope_label(checks, method))
-    weighting, data_types = data_type_profile(pairs, data.data_types)
+    weighting, data_types, no_fossil = data_type_profile(pairs, data.data_types)
     fields = project_fields(data.general)
     by_code = {f.code: f for f in fields}
     project = project_info(data.general)
@@ -775,6 +795,8 @@ def build_overview(data: ProjectData) -> Overview:
         units=units("total"),
         bases=basis_options(project),
         data_type_weighting=weighting,
+        data_type_rows_without_fossil=no_fossil[0] if no_fossil else None,
+        data_type_rows=no_fossil[1] if no_fossil else None,
         data_types=data_types,
     )
 

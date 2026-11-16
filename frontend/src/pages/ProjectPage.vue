@@ -179,7 +179,7 @@
       <!-- Data quality -->
       <section id="data-quality" class="sheet__panel">
         <h2 class="sheet__panel-title">Data type profile</h2>
-        <RankedBars :bars="dataTypeBars" :caption="WEIGHTING[overview.data_type_weighting]" empty-label="Not computed." />
+        <RankedBars :bars="dataTypeBars" :caption="weightingCaption(overview)" empty-label="Not computed." />
       </section>
 
       <section class="sheet__panel">
@@ -222,7 +222,7 @@ import StageMatrix from '@/components/StageMatrix.vue';
 import TimeSection from '@/components/TimeSection.vue';
 import { useOverview } from '@/composables/useOverview';
 import { showModuleD } from '@/dataviz';
-import { amount, fieldText, kg, NOT_DECLARED, percent, WEIGHTING } from '@/format';
+import { amount, fieldText, kg, NOT_DECLARED, percent, weightingCaption } from '@/format';
 
 const { overview, error, basis } = useOverview();
 // Read only where the overview is loaded.
