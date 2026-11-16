@@ -1,16 +1,16 @@
 <template>
   <figure class="gbdi-card bars-chart" :aria-label="caption">
     <p v-if="bars.length === 0" class="u-text-muted">{{ emptyLabel }}</p>
-    <div v-for="bar in drawn" :key="bar.key" class="bars-chart__row">
-      <span class="bars-chart__label"><Term :name="bar.label" /></span>
-      <div class="bars-chart__track">
-        <span
-          aria-hidden="true"
-          class="bars-chart__bar"
-          :class="{ 'bars-chart__bar--missing': bar.missing }"
-          :style="{ width: `calc((100% - 5.5rem) * ${bar.fraction})` }"
-        />
-        <span>{{ bar.display }}</span>
+    <!-- The labels stay HTML beside the chart: an ECharts axis label cannot hold the
+         glossary tooltip of Term. Each label row is as high as its bar's band. -->
+    <div v-else class="bars-chart__plot">
+      <div class="bars-chart__labels">
+        <span v-for="bar in bars" :key="bar.key" class="bars-chart__label" :style="{ height: `${ROW}px` }">
+          <span class="bars-chart__name"><Term :name="bar.label" /></span>
+        </span>
+      </div>
+      <div role="img" :aria-label="summary" :style="{ minHeight: height }">
+        <EChart :option="option" :height="height" />
       </div>
     </div>
     <figcaption class="bars-chart__caption">{{ caption }}</figcaption>
@@ -19,7 +19,13 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import type { ComposeOption } from 'echarts/core';
+import type { BarSeriesOption } from 'echarts/charts';
+import type { GridComponentOption, TooltipComponentOption } from 'echarts/components';
 import Term from '@/components/atoms/Term.vue';
+import { asyncEChart, cssColor } from '@/components/atoms/echarts';
+
+const EChart = asyncEChart(() => import('@/components/atoms/echart-bar'));
 
 export interface Bar {
   key: string;
@@ -31,11 +37,52 @@ export interface Bar {
 
 const props = defineProps<{ bars: Bar[]; caption: string; emptyLabel: string }>();
 
-// Chart geometry only: length relative to the largest magnitude (5.5rem stays for the
-// value label). ponytail: negatives are drawn by magnitude; their label keeps the sign.
-const drawn = computed(() => {
+const ROW = 32; // px per bar: the band of the chart and the height of its HTML label
+const height = computed(() => `${props.bars.length * ROW}px`);
+
+// A clamped label stays readable in full here and in the bar's tooltip.
+const summary = computed(() => `${props.caption} ${props.bars.map((bar) => `${bar.label}: ${bar.display}`).join('; ')}`);
+
+// Labels come from uploaded workbooks: the tooltip is built as text, never as HTML.
+function tip(i: number) {
+  const bar = props.bars[i];
+  const box = document.createElement('div');
+  if (bar) for (const text of [bar.label, bar.display]) box.appendChild(document.createElement('div')).append(text);
+  return box;
+}
+
+// Chart geometry only: length relative to the largest magnitude, pinned, so the largest bar
+// fills the track. ponytail: negatives are drawn by magnitude; their label keeps the sign.
+const option = computed((): ComposeOption<BarSeriesOption | GridComponentOption | TooltipComponentOption> => {
   const largest = Math.max(...props.bars.map((bar) => Math.abs(bar.value)));
-  return props.bars.map((bar) => ({ ...bar, fraction: largest === 0 ? 0 : Math.abs(bar.value) / largest }));
+  const fill = cssColor('var(--gbdi-dataviz-1)');
+  const missing = cssColor('var(--gbdi-color-severity-info)');
+  // Room for the longest value label, at about 7 px a character in the 12 px chart text.
+  const gutter = 8 + 7 * Math.max(...props.bars.map((bar) => bar.display.length));
+  return {
+    grid: { left: 0, right: gutter, top: 0, bottom: 0 },
+    xAxis: { type: 'value', show: false, min: 0, max: largest || 1 },
+    yAxis: { type: 'category', show: false, inverse: true, data: props.bars.map((bar) => bar.key) },
+    tooltip: {
+      trigger: 'item',
+      // The default triggerOn, mousemove|click, also opens it on a tap.
+      confine: true,
+      formatter: (params) => tip([params].flat()[0]?.dataIndex ?? 0),
+    },
+    series: [
+      {
+        type: 'bar',
+        barWidth: 24,
+        data: props.bars.map((bar) => ({ value: Math.abs(bar.value), itemStyle: { color: bar.missing ? missing : fill } })),
+        label: {
+          show: true,
+          position: 'right',
+          color: cssColor('var(--gbdi-color-text-muted)'),
+          formatter: (params) => props.bars[params.dataIndex]?.display ?? '',
+        },
+      },
+    ],
+  };
 });
 </script>
 
@@ -47,36 +94,30 @@ const drawn = computed(() => {
   padding: tokens.$spacing-xl;
 }
 
-.bars-chart__row {
+.bars-chart__plot {
   display: grid;
   // Proportional columns, so the bars keep their length in a narrow card too.
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-  align-items: center;
   gap: tokens.$spacing-md;
-  font-size: tokens.$text-size-xs;
-  color: tokens.$color-text-muted;
 }
 
 .bars-chart__label {
-  text-align: right;
-}
-
-.bars-chart__track {
   display: flex;
   align-items: center;
-  gap: tokens.$spacing-sm;
-  font-variant-numeric: tabular-nums;
+  justify-content: flex-end;
+  text-align: right;
+  font-size: tokens.$text-size-xs;
+  line-height: 1.3;
+  color: tokens.$color-text-muted;
 }
 
-.bars-chart__bar {
-  flex: none;
-  height: tokens.$size-chip;
-  min-width: tokens.$spacing-xxs;
-  background: var(--gbdi-dataviz-1);
-}
-
-.bars-chart__bar--missing {
-  background: tokens.$color-severity-info;
+// Two lines fit the row; a longer name is clamped, and stays whole in the tooltip.
+.bars-chart__name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 .bars-chart__caption {
