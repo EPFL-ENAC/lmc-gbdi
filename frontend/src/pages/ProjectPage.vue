@@ -103,7 +103,7 @@
         </div>
         <p class="u-text-muted">
           {{ num.format(overview.total_mass_kg) }} {{ units.mass }} of materials.
-          {{ measure === 'mass' ? 'Mass' : 'Whole-life carbon' }} by {{ ELEMENTS_BY[naming] }}.
+          {{ measure === 'mass' ? 'Mass' : 'Carbon' }} by {{ ELEMENTS_BY[naming] }}.
         </p>
         <BarsWithTable
           :bars="elementBars"
@@ -113,7 +113,7 @@
           :caption="
             measure === 'mass'
               ? `${units.mass} and share of the total mass. Rows without an element stay visible.`
-              : `${units.carbon} and share of the whole-life total. Rows without an element stay visible.`
+              : `${units.carbon} and share of the total carbon. Rows without an element stay visible.`
           "
           empty-label="No classified building elements in this project."
         />
@@ -161,7 +161,7 @@
       <MaterialWalls :overview="view!" />
 
       <section class="sheet__panel">
-        <h2 class="sheet__panel-title">Cumulative whole-life carbon — top 10 materials</h2>
+        <h2 class="sheet__panel-title">Cumulative carbon — top 10 materials</h2>
         <p class="u-text-muted">How much of the total the ten largest materials account for.</p>
         <CumulativeShare :hotspots="view!.material_hotspots" />
       </section>

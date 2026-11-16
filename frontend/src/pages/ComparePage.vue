@@ -35,7 +35,7 @@
 
       <template v-else>
         <MethodNotice :comparison="comparison" />
-        <section class="sheet__panel" aria-label="Whole-life carbon per m²">
+        <section class="sheet__panel" aria-label="Carbon per m²">
           <div class="duel">
             <article v-for="side in SIDES" :key="side" class="duel__side">
               <p class="duel__code">
@@ -64,7 +64,7 @@
           </div>
           <p v-if="comparison.ratio !== null" class="text-lead">
             Per m², {{ named(comparison.b) }} emits {{ percent.format(comparison.ratio) }} of what
-            {{ named(comparison.a) }} emits over its whole life.
+            {{ named(comparison.a) }} emits, each over its own scope.
           </p>
         </section>
 
@@ -86,7 +86,7 @@
             :a="comparison.a"
             :b="comparison.b"
             unit="kg CO₂e per m²"
-            caption="OpenBDF Tier 2 elements, whole life. Lines without an element code stay visible as Not classified."
+            caption="OpenBDF Tier 2 elements, total carbon. Lines without an element code stay visible as Not classified."
           />
         </section>
 
@@ -101,7 +101,7 @@
             :a="comparison.a"
             :b="comparison.b"
             unit="kg CO₂e per m²"
-            caption="Whole-life carbon of each material class."
+            caption="Carbon of each material class."
           />
           <PairedBars
             :rows="comparison.material_mass"

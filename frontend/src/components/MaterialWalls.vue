@@ -19,11 +19,11 @@
       />
     </div>
     <p class="u-text-muted">
-      {{ rankBy === 'mass' ? 'The ten heaviest materials, and the carbon each carries.' : 'The ten materials with the most whole-life carbon, and what each weighs.' }}
+      {{ rankBy === 'mass' ? 'The ten heaviest materials, and the carbon each carries.' : 'The ten materials with the most carbon, and what each weighs.' }}
       One colour per material in both walls; one brick is one per cent.
     </p>
     <p class="passport__cover">
-      Together, these ten make {{ percent.format(cover.carbon) }} of the whole-life carbon and
+      Together, these ten make {{ percent.format(cover.carbon) }} of the total carbon and
       {{ percent.format(cover.mass) }} of the mass.
     </p>
     <div class="grid-2-col passport__walls">
@@ -33,7 +33,7 @@
       </figure>
       <figure class="passport__wall">
         <figcaption>Carbon ({{ overview.headline.scope }}), {{ num.format(overview.headline.whole_life) }} {{ overview.units.carbon }}</figcaption>
-        <BrickWall :parts="ranked.map((r) => ({ color: r.color, label: r.label, share: r.share }))" label="Whole-life carbon by material" />
+        <BrickWall :parts="ranked.map((r) => ({ color: r.color, label: r.label, share: r.share }))" label="Carbon by material" />
       </figure>
     </div>
     <table class="passport__legend">
@@ -79,7 +79,7 @@
 
   <section class="sheet__panel passport__section">
     <h2 class="sheet__panel-title">Material by stage</h2>
-    <p class="u-text-muted">The ten materials with the most whole-life carbon, stage by stage.</p>
+    <p class="u-text-muted">The ten materials with the most carbon, stage by stage.</p>
     <StageMatrix
       :stages="overview.stages"
       :rows="overview.material_hotspots.map((h) => ({ key: pairKey(h), label: materialLabel(h), gwp_by_stage: h.gwp_by_stage }))"
@@ -92,7 +92,7 @@
   <section class="sheet__panel passport__section">
     <h2 class="sheet__panel-title">Material by material</h2>
     <p class="u-text-muted">
-      The ten materials with the most whole-life carbon. Heavy is not the same as intense: compare the mass with
+      The ten materials with the most carbon. Heavy is not the same as intense: compare the mass with
       the carbon per kg. The bars of every card share one scale.
     </p>
     <div class="grid-2-col">
