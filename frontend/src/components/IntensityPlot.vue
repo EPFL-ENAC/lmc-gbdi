@@ -83,9 +83,9 @@ const $q = useQuasar();
 const phone = computed(() => $q.screen.lt.sm);
 const height = computed(() => (phone.value ? '220px' : '360px'));
 const fmt = computed(() => amount(props.units));
+const BAR = 48; // px, the per-kg bar of the largest intensity
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact' });
 const ISO = [0.01, 0.1, 1, 10];
-const BAR = 48; // px, the per-kg bar of the largest intensity
 
 // Every figure comes from the backend, in its order; the rank is the position.
 const rows = computed(() =>
@@ -206,7 +206,7 @@ const caption = computed(
     `The top ${rows.value.length} materials by carbon. A dot is one material, numbered by its rank. ` +
     `A dashed line is equal carbon per kg, in ${props.units.intensity}: a material above a line is more carbon intense.` +
     (skipped.value > 0
-      ? ` ${kg.format(skipped.value)} with a zero or negative mass or carbon have no dot: a log scale cannot show them.`
+      ? ` No dot for ${kg.format(skipped.value)} ${skipped.value === 1 ? 'material' : 'materials'} with a zero or negative mass or carbon: a log scale cannot show them.`
       : ''),
 );
 </script>
@@ -224,13 +224,6 @@ const caption = computed(
   grid-template-columns: minmax(0, 560px) minmax(0, 1fr);
   gap: tokens.$spacing-xl;
   align-items: start;
-}
-
-@media (max-width: 599.98px) {
-  .intensity__body {
-    grid-template-columns: minmax(0, 1fr);
-    gap: tokens.$spacing-md;
-  }
 }
 
 .intensity__table {
@@ -304,5 +297,26 @@ const caption = computed(
   margin-top: tokens.$spacing-sm;
   font-size: tokens.$text-size-xs;
   color: tokens.$color-text-muted;
+}
+
+@media (max-width: 599.98px) {
+  .intensity__body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: tokens.$spacing-md;
+  }
+
+  // On a phone the name and the headers wrap, so the table fits the screen.
+  .intensity__table th,
+  .intensity__table td {
+    white-space: normal;
+  }
+
+  .intensity__table .intensity__per-kg {
+    white-space: nowrap;
+  }
+
+  .intensity__name {
+    max-width: none;
+  }
 }
 </style>
