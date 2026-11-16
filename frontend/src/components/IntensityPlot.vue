@@ -5,10 +5,11 @@
   <p v-if="!rows.length" class="u-text-muted">No material carbon in this project.</p>
   <figure v-else class="intensity">
     <div class="intensity__body">
-      <div role="img" :aria-label="summary" :style="{ minHeight: height }">
-        <EChart v-if="plotted.length" ref="chart" :option="option" :height="height" @hover="onHover" />
+      <!-- No box at all when no row can sit on the log axes: the table holds the figures. -->
+      <div v-if="plotted.length" role="img" :aria-label="summary" :style="{ minHeight: height }">
+        <EChart ref="chart" :option="option" :height="height" @hover="onHover" />
       </div>
-      <table class="intensity__table">
+      <table class="intensity__table" aria-label="The top materials by carbon: mass, carbon and carbon per kg">
         <colgroup>
           <col class="intensity__col-rank" />
           <col />
@@ -42,7 +43,8 @@
             <td class="num">{{ r.rank }}</td>
             <th scope="row" class="intensity__name" :title="r.name">
               {{ r.name }}
-              <span v-if="phone && active === r.rank" class="intensity__more">
+              <!-- Always in the page on a phone, so a screen reader reads it; shown on a tap. -->
+              <span v-if="phone" class="intensity__more" :class="{ 'intensity__more--hidden': active !== r.rank }">
                 {{ fmt.format(r.mass_kg) }} {{ units.mass }}, {{ fmt.format(r.gwp) }} {{ units.carbon }}
               </span>
             </th>
@@ -61,28 +63,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, h, ref, useTemplateRef, watch } from 'vue';
+import { computed, ref, useTemplateRef, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import type { ComposeOption } from 'echarts/core';
 import type { ScatterSeriesOption } from 'echarts/charts';
 import type { GridComponentOption, MarkLineComponentOption, TooltipComponentOption } from 'echarts/components';
 import type { MaterialHotspot, Units } from '@/api/overview';
+import { asyncEChart } from '@/components/atoms/echarts';
 import { amount, figure, kg, materialName, three } from '@/format';
 import { materialLabel, pairKey } from '@/materials';
 
-// ECharts loads with the chart only, in its own chunk, and this chart registers its own
-// pieces there. One destructured await per import, so the bundler keeps only those pieces.
-// The empty state, the table, the caption and the summary stay here, outside that chunk.
-const EChart = defineAsyncComponent({
-  loader: async () => {
-    const { use } = await import('echarts/core');
-    const { ScatterChart } = await import('echarts/charts');
-    const { GridComponent, MarkLineComponent, TooltipComponent } = await import('echarts/components');
-    use([ScatterChart, GridComponent, MarkLineComponent, TooltipComponent]);
-    return import('@/components/atoms/EChart.vue');
-  },
-  errorComponent: () => h('p', { class: 'u-text-muted' }, 'The chart failed to load.'),
-});
+// ECharts loads with the chart only, in its own chunk, with the scatter pieces this chart
+// registers. The empty state, the table, the caption and the summary stay outside it.
+const EChart = asyncEChart(() => import('@/components/atoms/echart-scatter'));
 
 const props = defineProps<{ hotspots: MaterialHotspot[]; units: Units }>(); // the top 10, by carbon
 
@@ -107,18 +100,22 @@ const skipped = computed(() => rows.value.length - plotted.value.length);
 const active = ref<number | null>(null);
 const chart = useTemplateRef<{ highlight: (dataIndex: number | null) => void }>('chart');
 const onHover = (dataIndex: number | null) => (active.value = dataIndex === null ? null : plotted.value[dataIndex]!.rank);
-watch(active, (rank) => {
+// A redraw (another basis, another naming) clears the chart's own highlight, so the
+// option is a source too and the lit dot follows the lit row again.
+watch([active, () => props.hotspots, () => props.units], ([rank]) => {
   const index = plotted.value.findIndex((r) => r.rank === rank);
   chart.value?.highlight(index < 0 ? null : index);
-});
+}, { flush: 'post' });
 
 const maxPerKg = computed(() => Math.max(0, ...rows.value.map((r) => r.gwp_per_kg ?? 0)));
 const barWidth = (v: number | null) => (v && v > 0 && maxPerKg.value > 0 ? (v / maxPerKg.value) * BAR : 0);
 
 // Axis ends on powers of ten, so the diagonals cross whole decades.
+// One decade of room on each side: a value on an exact power of ten stays off the edge,
+// and one material alone still gets an axis with a span.
 const bounds = (values: number[]) => [
-  10 ** Math.floor(Math.log10(Math.min(...values))),
-  10 ** Math.ceil(Math.log10(Math.max(...values))),
+  10 ** (Math.ceil(Math.log10(Math.min(...values))) - 1),
+  10 ** (Math.floor(Math.log10(Math.max(...values))) + 1),
 ];
 const xDomain = computed(() => bounds(plotted.value.map((r) => r.mass_kg)));
 const yDomain = computed(() => bounds(plotted.value.map((r) => r.gwp)));
@@ -298,6 +295,16 @@ const caption = computed(
   display: block;
   font-size: tokens.$text-size-xs;
   color: tokens.$color-text-muted;
+}
+
+// Off screen for the eye, still read by a screen reader.
+.intensity__more--hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .intensity__table .num {
