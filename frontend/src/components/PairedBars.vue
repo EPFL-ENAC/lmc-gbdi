@@ -90,6 +90,12 @@ const show = (value: number | null) => (value === null ? 'no area' : props.forma
 
 .paired {
   margin: 0;
+  overflow-x: auto; // a phone scrolls the table inside the panel, the page stays still
+}
+
+// The boundary and method line is long: it wraps under the building name.
+.paired__table thead th.paired__head {
+  white-space: normal;
 }
 
 .paired__table {
