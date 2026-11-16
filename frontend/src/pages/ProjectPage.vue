@@ -28,6 +28,11 @@
         </div>
         <q-checkbox v-model="openbdfNames" label="Common OpenBDF names" dense />
       </Teleport>
+      <!-- Below 600 px the controls above fold behind the bar's Display button: the
+           button still names the current basis. -->
+      <Teleport v-if="$q.screen.lt.sm" defer to="#display-summary">{{
+        `: ${overview.bases.find((b) => b.key === basis)?.label}`
+      }}</Teleport>
       <Teleport defer to="#sheet-toc">
         <SheetToc />
       </Teleport>

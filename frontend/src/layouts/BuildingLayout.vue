@@ -19,31 +19,48 @@
           class="building-bar__pick"
           @update:model-value="(next: number) => router.push({ path: buildingPath(next, next === other ? null : other), query: route.query })"
         />
-        <!-- The page's own controls, such as the Overview's basis, teleport here. -->
-        <div id="basis-control" class="building-bar__page" />
-        <div v-if="!draftOnly" class="building-bar__compare">
-          <q-select
-            :model-value="other"
-            :options="comparable.filter((o) => o.id !== id)"
-            option-label="label"
-            option-value="id"
-            emit-value
-            map-options
-            dense
-            outlined
-            options-dense
-            clearable
-            label="Compare with"
-            class="building-bar__pick"
-            @update:model-value="(next: number | null) => router.push({ path: buildingPath(id, next), query: route.query })"
-          />
-          <q-btn
-            v-if="other !== null"
-            flat
-            no-caps
-            label="Swap"
-            @click="router.push({ path: buildingPath(other, id), query: route.query })"
-          />
+        <!-- Below 600 px the display controls fold behind one button, so the bar keeps two
+             lines; the page puts its current basis in the button's label. -->
+        <q-btn
+          v-if="$q.screen.lt.sm && !draftOnly"
+          outline
+          dense
+          no-caps
+          color="dark"
+          class="building-bar__display"
+          :aria-expanded="open"
+          aria-controls="building-bar-more"
+          @click="open = !open"
+        >
+          Display<span id="display-summary" />
+        </q-btn>
+        <div v-show="!$q.screen.lt.sm || open" id="building-bar-more" class="building-bar__more">
+          <!-- The page's own controls, such as the Overview's basis, teleport here. -->
+          <div id="basis-control" class="building-bar__page" />
+          <div v-if="!draftOnly" class="building-bar__compare">
+            <q-select
+              :model-value="other"
+              :options="comparable.filter((o) => o.id !== id)"
+              option-label="label"
+              option-value="id"
+              emit-value
+              map-options
+              dense
+              outlined
+              options-dense
+              clearable
+              label="Compare with"
+              class="building-bar__pick"
+              @update:model-value="(next: number | null) => router.push({ path: buildingPath(id, next), query: route.query })"
+            />
+            <q-btn
+              v-if="other !== null"
+              flat
+              no-caps
+              label="Swap"
+              @click="router.push({ path: buildingPath(other, id), query: route.query })"
+            />
+          </div>
         </div>
         <!-- The page's table of contents, the bar's second line (org#101). -->
         <div id="sheet-toc" class="building-bar__toc" />
@@ -72,6 +89,7 @@ const route = useRoute();
 const router = useRouter();
 const buildings = ref<BuildingSummary[]>([]);
 const settled = ref(false);
+const open = ref(false); // the folded display controls, below 600 px
 const id = computed(() => Number(route.params.id));
 const other = computed(() => (route.params.other === undefined ? null : Number(route.params.other)));
 const options = computed(() =>
@@ -135,5 +153,45 @@ onMounted(async () => {
   align-items: center;
   gap: tokens.$spacing-sm;
   margin-left: auto;
+}
+
+// Wide: a wrapper the flex row does not see, so the bar lays out as before.
+.building-bar__more {
+  display: contents;
+}
+
+// Below 600 px: the link and the building on line 1, Display and Sections on line 2,
+// and the opened display controls under both.
+@media (max-width: 599.98px) {
+  .building-bar {
+    gap: tokens.$spacing-sm;
+    padding: tokens.$spacing-sm tokens.$spacing-md;
+  }
+
+  // A basis wide enough that Display and Sections wrap to line 2.
+  .building-bar__pick {
+    flex: 1 1 12rem;
+    width: auto;
+    min-width: 0;
+  }
+
+  .building-bar__toc {
+    flex: 1 1 0;
+  }
+
+  .building-bar__more {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: tokens.$spacing-sm;
+    flex-basis: 100%;
+    min-width: 0;
+    order: 1;
+  }
+
+  .building-bar__compare {
+    margin-left: 0;
+    width: 100%;
+  }
 }
 </style>
