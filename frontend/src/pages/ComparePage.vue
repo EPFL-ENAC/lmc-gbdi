@@ -289,13 +289,17 @@ watch(
 
 .compare__pickers {
   display: flex;
+  max-width: 100%;
   flex-wrap: wrap;
   align-items: center;
   gap: tokens.$spacing-md;
 }
 
+// 16rem where there is room; on a phone a long name is cut inside the field, not at the card.
 .compare__picker {
-  min-width: 16rem;
+  flex: 1 1 16rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .compare__scope {
