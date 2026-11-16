@@ -15,12 +15,16 @@
         <dd>{{ num.format(hotspot.gwp) }}</dd>
       </div>
       <div>
-        <dt>Share of the building</dt>
+        <dt>Share of the carbon</dt>
         <dd>{{ percent.format(hotspot.share) }}</dd>
       </div>
       <div>
         <dt>Mass, {{ units.mass }}</dt>
         <dd>{{ num.format(hotspot.mass_kg) }}</dd>
+      </div>
+      <div>
+        <dt>Share of the mass</dt>
+        <dd>{{ hotspot.share_of_mass === null ? 'no mass declared' : percent.format(hotspot.share_of_mass) }}</dd>
       </div>
       <div>
         <dt>kg CO₂e per kg</dt>
@@ -108,7 +112,7 @@ const barWidth = (value: number) => (value > 0 && props.largest > 0 ? (value / p
 
 .sheet-card__figures {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: end; // a long unit wraps its label: the figures stay on one line
   margin: 0;
   border-top: tokens.$border-width solid tokens.$color-border;
