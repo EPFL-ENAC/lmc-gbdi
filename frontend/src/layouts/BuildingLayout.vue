@@ -20,7 +20,7 @@
           @update:model-value="(next: number) => router.push({ path: buildingPath(next, next === other ? null : other), query: route.query })"
         />
         <!-- The page's own controls, such as the Overview's basis, teleport here. -->
-        <div id="basis-control" />
+        <div id="basis-control" class="building-bar__page" />
         <div v-if="!draftOnly" class="building-bar__compare">
           <q-select
             :model-value="other"
@@ -45,6 +45,8 @@
             @click="router.push({ path: buildingPath(other, id), query: route.query })"
           />
         </div>
+        <!-- The page's table of contents, the bar's second line (org#101). -->
+        <div id="sheet-toc" class="building-bar__toc" />
       </nav>
     </Teleport>
     <DraftPage v-if="draftOnly" :id="id" />
@@ -109,6 +111,23 @@ onMounted(async () => {
 
 .building-bar__pick {
   width: 14rem;
+}
+
+.building-bar__page {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: tokens.$spacing-md;
+  min-width: 0;
+}
+
+.building-bar__toc {
+  flex-basis: 100%;
+  min-width: 0;
+}
+
+.building-bar__toc:empty {
+  display: none;
 }
 
 .building-bar__compare {
