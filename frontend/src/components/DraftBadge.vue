@@ -19,16 +19,17 @@
       Draft
     </button>
     <!-- ponytail: manual triggers, as a tap fires mouseenter before click: a toggle
-         would close what the tap just opened. -->
-    <q-menu v-model="open" no-parent-event no-focus anchor="bottom left" self="top left">
+         would close what the tap just opened. no-refocus: focus put back on the badge
+         would open it again, and Tab could never leave. -->
+    <q-menu v-model="open" no-parent-event no-focus no-refocus anchor="bottom left" self="top left">
       <div :id="panelId" class="draft-badge__panel" role="note">
         <p class="draft-badge__title">Stored despite these rejects</p>
         <ul class="draft-badge__list">
           <li v-for="r in building.reject_summary" :key="r.code">
             <strong>{{ r.code }}</strong>, {{ kg.format(r.count) }}×: {{ r.message }}
+            <span class="draft-badge__todo">{{ r.what_to_do }}</span>
           </li>
         </ul>
-        <p v-for="todo in todos" :key="todo">{{ todo }}</p>
         <p>Its figures stand; the home page does not count it.</p>
       </div>
     </q-menu>
@@ -36,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useId, watch } from 'vue';
+import { ref, useId, watch } from 'vue';
 import { fetchBuilding, type BuildingSummary } from '@/api/buildings';
 import { kg } from '@/format';
 
@@ -46,8 +47,6 @@ const building = ref<BuildingSummary | null>(null);
 const error = ref<string | null>(null);
 const open = ref(false);
 const panelId = useId();
-// The backend writes one sentence per kind of code: each is said once.
-const todos = computed(() => [...new Set(building.value?.reject_summary.map((r) => r.what_to_do))]);
 
 watch(
   () => props.buildingId,
@@ -106,6 +105,11 @@ watch(
 .draft-badge__panel .draft-badge__title {
   margin: 0;
   font-weight: 600;
+}
+
+.draft-badge__todo {
+  display: block;
+  color: tokens.$color-text-muted;
 }
 
 .draft-badge__list {
