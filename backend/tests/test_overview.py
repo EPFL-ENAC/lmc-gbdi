@@ -383,6 +383,10 @@ def test_module_d_is_one_data_check(tmp_path, rows, flags, check):
     assert [c.module for c in o.module_checks][-2:] == ["C4", "D"]
     assert d_check(o) == check
     assert d_check(o)[1] == o.headline.module_d_present  # one rule for both
+    # The two counts above the grid include the D entry.
+    statuses = [c.status for c in o.module_checks]
+    assert o.modules_declared_without_result == statuses.count("declared_no_result")
+    assert o.modules_with_undeclared_result == statuses.count("result_not_declared")
 
 
 def test_a_d1_credit_and_a_d2_burden_that_cancel_are_a_d_result(tmp_path):
