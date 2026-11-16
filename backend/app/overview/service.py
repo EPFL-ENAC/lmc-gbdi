@@ -406,10 +406,7 @@ def headline(data: ProjectData, totals: Stages, scope: str) -> Headline:
     useful = quantity(data.general, "building_useful_floor_area")
     gross = quantity(data.general, "building_gross_floor_area")
     period = study_period(data.general)
-    module_d = {
-        field: sum((module(row, field) * row.repetition for row in data.rows), ZERO)
-        for field in ("gwp_total_d1", "gwp_total_d2")
-    }
+    module_d = module_d_totals(data)
     return Headline(
         whole_life=float(whole_life),
         scope=scope,
@@ -422,8 +419,22 @@ def headline(data: ProjectData, totals: Stages, scope: str) -> Headline:
         module_d1=float(module_d["gwp_total_d1"]),
         module_d2=float(module_d["gwp_total_d2"]),
         module_d=float(module_d["gwp_total_d1"] + module_d["gwp_total_d2"]),
-        module_d_present=any(round(v, 6) != ZERO for v in module_d.values()),
+        module_d_present=has_module_d(module_d),
     )
+
+
+def module_d_totals(data: ProjectData) -> dict[str, Decimal]:
+    """D1 and D2, each summed over the rows with their repetition."""
+    return {
+        field: sum((module(row, field) * row.repetition for row in data.rows), ZERO)
+        for field in ("gwp_total_d1", "gwp_total_d2")
+    }
+
+
+def has_module_d(totals: dict[str, Decimal]) -> bool:
+    """Module D has a result: D1 or D2 is not zero, each tested alone, so a D1
+    credit and a D2 burden that cancel still count."""
+    return any(round(v, 6) != ZERO for v in totals.values())
 
 
 def project_fields(general: dict[str, str]) -> list[ProjectField]:
@@ -440,12 +451,26 @@ def declared(general: dict[str, str], flag: str) -> bool:
 
 
 def module_checks(data: ProjectData) -> list[ModuleCheck]:
-    """Declared modules against the results present: a plain sum of the Wide column."""
+    """Declared modules against the results present: a plain sum of the Wide column.
+    Module D comes last, as one entry: declared by lca_d, lca_d1 or lca_d2, with a
+    result by the same rule as the headline's module D."""
     checks = []
-    for module_name, flag, field in MODULES:
-        total = sum((row.gwp[field] or ZERO for row in data.rows), ZERO)
-        has_result = round(total, 6) != ZERO
-        is_declared = declared(data.general, flag)
+    entries = [
+        (
+            name,
+            declared(data.general, flag),
+            round(sum((row.gwp[field] or ZERO for row in data.rows), ZERO), 6) != ZERO,
+        )
+        for name, flag, field in MODULES
+    ]
+    entries.append(
+        (
+            "D",
+            any(declared(data.general, f) for f in ("lca_d", "lca_d1", "lca_d2")),
+            has_module_d(module_d_totals(data)),
+        )
+    )
+    for module_name, is_declared, has_result in entries:
         status = "ok"
         if is_declared and not has_result:
             status = "declared_no_result"
@@ -497,6 +522,7 @@ def scope_label(checks: list[ModuleCheck], method: str | None = None) -> str:
     or with a module result where it declares none. One module is enough, so B1–B3
     counts as B. The total itself always adds every module with a result. The
     declared boundary's method, when it names one, follows."""
+    checks = [c for c in checks if c.module in FIELD_OF]  # D is no stage of A to C
     modules = [c.module for c in checks if c.declared] or [
         c.module for c in checks if c.has_result
     ]
@@ -657,7 +683,7 @@ def stage_present(key: str, checks: list[ModuleCheck], held: bool) -> bool:
     on any row is present whatever its modules say, so no figure is ever hidden:
     a credit on one row and a burden on another can cancel in the total."""
     return held or any(
-        FIELD_OF[c.module] in STAGE_FIELDS[key] and (c.declared or c.has_result)
+        FIELD_OF.get(c.module) in STAGE_FIELDS[key] and (c.declared or c.has_result)
         for c in checks
     )
 

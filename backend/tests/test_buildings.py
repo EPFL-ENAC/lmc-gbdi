@@ -168,9 +168,14 @@ def test_a_declared_module_d_with_d1_and_d2_at_zero_is_not_present(tmp_path):
     assert (o.headline.module_d1, o.headline.module_d2) == (0.0, 0.0)
     assert c.has_module_d is False
     assert c.module_d_per_m2 is None
-    # The rule does not touch the data checks: the D flags leave them as they are.
-    assert o.module_checks == plain.module_checks
-    assert o.modules_declared_without_result == plain.modules_declared_without_result
+    # The data checks flag module D as declared with no result, and nothing else.
+    d = o.module_checks[-1]
+    assert (d.module, d.declared, d.has_result) == ("D", True, False)
+    assert d.status == "declared_no_result"
+    assert o.module_checks[:-1] == plain.module_checks[:-1]
+    assert (
+        o.modules_declared_without_result == plain.modules_declared_without_result + 1
+    )
 
 
 @pytest.mark.parametrize(
