@@ -3,6 +3,25 @@
        element by element, material class by material class. -->
   <q-page class="sheet-page">
     <article class="sheet">
+      <!-- Under the bar, at the top of the page: what the figures cover, and the other choice one click away. -->
+      <p v-if="comparison?.case === 'different_stages'" class="compare__banner" role="status">
+        <template v-if="comparison.applied_scope === 'common'">
+          Compared on the stages both cover: {{ comparison.common_stages.join(', ') }}.
+          <template v-for="out in comparison.left_out" :key="out.stage">
+            {{ out.stage }} is left out: {{ named(comparison[out.not_covered_by]) }} does not cover it.
+          </template>
+        </template>
+        <template v-else>Each building on its own scope: the totals do not cover the same stages.</template>
+        <q-btn
+          flat
+          dense
+          no-caps
+          color="primary"
+          class="compare__switch"
+          :label="comparison.applied_scope === 'common' ? 'Show each on its own scope' : 'Compare on the stages both cover'"
+          @click="scope = comparison.applied_scope === 'common' ? 'own' : 'common'"
+        />
+      </p>
       <header class="sheet__title compare__head">
         <h1 v-if="comparison">
           {{ named(comparison.a) }} and {{ named(comparison.b) }}<br />
@@ -60,25 +79,6 @@
       <p v-else-if="comparison === null" class="sheet__panel u-text-muted">Loading the comparison…</p>
 
       <template v-else>
-        <!-- What the figures below cover, and the other choice one click away. -->
-        <p v-if="comparison.case === 'different_stages'" class="compare__banner" role="status">
-          <template v-if="comparison.applied_scope === 'common'">
-            Compared on the stages both cover: {{ comparison.common_stages.join(', ') }}.
-            <template v-for="out in comparison.left_out" :key="out.stage">
-              {{ out.stage }} is left out: {{ named(comparison[out.not_covered_by]) }} does not cover it.
-            </template>
-          </template>
-          <template v-else>Each building on its own scope: the totals do not cover the same stages.</template>
-          <q-btn
-            flat
-            dense
-            no-caps
-            color="primary"
-            class="compare__switch"
-            :label="comparison.applied_scope === 'common' ? 'Show each on its own scope' : 'Compare on the stages both cover'"
-            @click="scope = comparison.applied_scope === 'common' ? 'own' : 'common'"
-          />
-        </p>
         <MethodNotice :comparison="comparison" />
         <section class="sheet__panel" aria-label="Carbon per m²">
           <div class="duel">
