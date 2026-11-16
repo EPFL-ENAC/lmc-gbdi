@@ -6,15 +6,15 @@
 
 <script setup lang="ts">
 // One thin wrapper around ECharts, loaded only with a chart (import it with
-// defineAsyncComponent). Only the pieces in use() reach the bundle: add a chart
-// type or a component there when a chart needs it.
+// asyncEChart from ./echarts). Only the pieces in use() reach the bundle: here the
+// renderer and the components every chart shares; each chart registers its own
+// series type (echart-line.ts, …).
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { init, use, type ECharts, type EChartsCoreOption } from 'echarts/core';
-import { LineChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent } from 'echarts/components';
 import { SVGRenderer } from 'echarts/renderers';
 
-use([LineChart, GridComponent, TooltipComponent, SVGRenderer]);
+use([GridComponent, TooltipComponent, SVGRenderer]);
 
 const props = defineProps<{ option: EChartsCoreOption; height: string }>();
 
