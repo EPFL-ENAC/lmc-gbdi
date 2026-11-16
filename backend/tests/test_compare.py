@@ -10,6 +10,7 @@ from app.buildings.models import Upload
 from app.db import get_session
 from app.main import app
 from app.overview.repo import read_project
+from app.overview.service import build_overview, on_basis
 from tests.test_overview import GENERAL, NO_B, ROWS, write_project
 from tests.test_overview_namings import named
 
@@ -198,3 +199,118 @@ def test_two_buildings_without_a_common_stage_are_not_comparable(client, db):
         {"stage": "A1–A3", "not_covered_by": "b", "value": 0.05},
         {"stage": "C1–C4", "not_covered_by": "a", "value": 0.02},
     ]
+
+
+def test_common_scope_sums_the_common_stages_only(client, different):
+    out = compare(client, "&scope=common")
+    assert out["applied_scope"] == "common"
+    # a without B (M2 B6 6, M3 B4 -2): 91 + 11 + 12 = 114 over 200; b 114 over 100.
+    assert out["a"]["whole_life_per_m2"] == pytest.approx(0.57)
+    assert out["b"]["whole_life_per_m2"] == pytest.approx(1.14)
+    assert out["ratio"] == pytest.approx(2.0)
+    assert out["a"]["upfront_per_m2"] == pytest.approx(0.51)  # (91 + 11) / 200
+    assert out["stages_a"] == out["stages_b"] == out["ratio_stages"] == NO_B_STAGES
+    assert out["upfront_stages"] == ["A1–A3", "A4–A5"]
+    assert out["stages"] == [
+        {"label": "A1–A3", "a": 0.455, "b": 0.91},
+        {"label": "A4–A5", "a": 0.055, "b": 0.11},
+        {"label": "C1–C4", "a": 0.06, "b": 0.12},
+    ]
+
+
+def test_own_scope_is_the_answer_without_a_scope(client, different):
+    own = compare(client, "&scope=own")
+    assert own == compare(client)
+    assert own["applied_scope"] == "own"
+    assert own["stages_a"] == A_TO_C
+    assert own["stages_b"] == NO_B_STAGES
+    assert own["ratio_stages"] is None
+    assert own["a"]["whole_life_per_m2"] == 0.59  # 118 / 200, B included
+
+
+def approx_rows(rows):
+    return [{**r, "a": pytest.approx(r["a"]), "b": pytest.approx(r["b"])} for r in rows]
+
+
+def test_elements_and_materials_sum_their_common_stages(client, different):
+    out = compare(client, "&scope=common")
+    # a: Frame M1 (10 + 1 + 2 + 4) × 3 = 51, M2 6 + 2 = 8 without B6: 59 / 200.
+    # Foundations M3 40 without B4 -2: 40 / 200. M4 15 / 200. b is NO_B on 100 m².
+    assert out["elements"] == approx_rows(
+        [
+            {"label": "1.1 Foundations and piling", "a": 0.2, "b": 0.4},
+            {"label": "2.1 Frame", "a": 0.295, "b": 0.59},
+            {"label": "Not classified", "a": 0.075, "b": 0.15},
+        ]
+    )
+    assert out["material_carbon"] == approx_rows(
+        [
+            {"label": "4.2 Concrete", "a": 0.295, "b": 0.59},
+            {"label": "5.1 Steel", "a": 0.2, "b": 0.4},
+            {"label": "Not classified", "a": 0.075, "b": 0.15},
+        ]
+    )
+    assert out["material_mass"] == PIN["material_mass"]  # mass has no stage
+    for side in "ab":
+        total = out[side]["whole_life_per_m2"]
+        assert sum(r[side] for r in out["elements"]) == pytest.approx(total)
+        assert sum(r[side] for r in out["material_carbon"]) == pytest.approx(total)
+
+
+@pytest.mark.parametrize("scope", ["", "&scope=common", "&scope=own"])
+def test_module_d_is_never_inside_a_total(client, different, scope):
+    out = compare(client, scope)
+    # D1 -5 × 3 on M1, on its own line in every scope.
+    assert out["a"]["module_d_per_m2"] == -0.075
+    assert out["b"]["module_d_per_m2"] == -0.15
+    stages = sum(r["a"] for r in out["stages"])
+    assert out["a"]["whole_life_per_m2"] == pytest.approx(stages)
+    assert all(r["label"] != "D" for r in out["stages"])
+
+
+def one_per_stage(a1_a3, a4, b, c3, b_field="gwp_total_b4"):
+    return [
+        ("M1", "", "", "", "A", "1", {"gwp_total_a1_a3": a1_a3}),
+        ("M2", "", "", "", "B", "1", {"gwp_total_a4": a4}),
+        ("M3", "", "", "", "C", "1", {b_field: b}),
+        ("M4", "", "", "", "D", "1", {"gwp_total_c3": c3}),
+    ]
+
+
+def test_the_example_pair_compares_on_the_stages_both_declare(client, db):
+    """Buildings 53 and 1 of the live data, per m² × 100 on 100 m². b declares A and
+    C only, and carries a stray B2 result: it does not cover B1–B8."""
+    area = {"building_gross_floor_area": "100"}
+    db(1, rows=one_per_stage("-13832.34", "392.22", "-216.32", "29923.15"), **area)
+    flags = {f"lca_{m}": "1" for m in ("a1_3", "a4", "a5", "c1", "c2", "c3", "c4")}
+    b_rows = one_per_stage("-3402.70", "2069.34", "8.27", "24480.62", "gwp_total_b2")
+    db(2, rows=b_rows, **area, **flags)
+    own = compare(client)
+    assert own["case"] == "different_stages"
+    assert own["covered_b"] == NO_B_STAGES
+    assert own["a"]["whole_life_per_m2"] == pytest.approx(162.6671)
+    assert own["b"]["whole_life_per_m2"] == pytest.approx(231.5553)  # B2 included
+    common = compare(client, "&scope=common")
+    # a: -138.3234 + 3.9222 + 299.2315; b: -34.0270 + 20.6934 + 244.8062.
+    assert common["a"]["whole_life_per_m2"] == pytest.approx(164.8303)
+    assert common["b"]["whole_life_per_m2"] == pytest.approx(231.4726)
+    assert common["ratio"] == pytest.approx(231.4726 / 164.8303)
+    assert common["left_out"] == [
+        {"stage": "B1–B8", "not_covered_by": "b", "value": pytest.approx(-2.1632)}
+    ]
+
+
+def test_an_unknown_scope_is_refused(client, different):
+    assert client.get("/api/buildings/compare?a=1&b=2&scope=all").status_code == 422
+
+
+def test_stage_figures_add_up_and_follow_the_basis(tmp_path):
+    o = build_overview(named(read_project(write_project(tmp_path))))
+    per_m2 = on_basis(o, "gfa")  # 200 m²
+    buckets = (*o.elements, o.other_classified, o.not_classified)
+    for row in (*buckets, *o.material_classes):
+        assert sum(row.gwp_by_stage.values()) == pytest.approx(row.gwp)
+    for row, scaled in zip(o.material_classes, per_m2.material_classes, strict=True):
+        assert scaled.gwp_by_stage == pytest.approx(
+            {k: v / 200 for k, v in row.gwp_by_stage.items()}
+        )

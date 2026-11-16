@@ -150,3 +150,9 @@ class Comparison(BaseModel):
     covered_b: list[str]
     common_stages: list[str]
     left_out: list[LeftOut]  # the stages one building covers and the other not
+    stages_a: list[str]  # the stages a's whole-life figure stands for
+    stages_b: list[str]
+    upfront_stages: list[str]  # the stages of both upfront figures
+    # The stages both totals cover, when they cover the same: only then does the
+    # ratio compare like with like. None: each total on its own scope.
+    ratio_stages: list[str] | None

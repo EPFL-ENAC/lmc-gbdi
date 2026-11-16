@@ -66,6 +66,7 @@ class ElementTotal(BaseModel):
     share: float  # of whole-life GWP
     mass_kg: float
     share_of_mass: float | None  # of the total mass; None when no mass is declared
+    gwp_by_stage: dict[str, float]  # stage key → GWP; they add up to gwp
 
 
 class ElementStages(BaseModel):
@@ -97,6 +98,7 @@ class MaterialClassTotal(BaseModel):
     label: str  # OpenBDF material class, "4.2 Concrete"; "Not classified" when blank
     gwp: float
     mass_kg: float
+    gwp_by_stage: dict[str, float]  # stage key → GWP; they add up to gwp
 
 
 class ElementMaterial(BaseModel):

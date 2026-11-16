@@ -383,10 +383,37 @@ def aligned(
     ]
 
 
-def element_totals(o: Overview) -> dict[str, float]:
+# The carbon of a row on some stages: the sum of its per-stage carbon, never a
+# share of its total. None keeps the total, every stage the building has.
+Keys = tuple[str, ...] | None
+
+
+def on_stages(by_stage: dict[str, float], total: float, keys: Keys) -> float:
+    return total if keys is None else sum(by_stage.get(k, 0.0) for k in keys)
+
+
+def element_totals(o: Overview, keys: Keys = None) -> dict[str, float]:
     return {
-        e.element: e.gwp for e in (*o.elements, o.other_classified, o.not_classified)
+        e.element: on_stages(e.gwp_by_stage, e.gwp, keys)
+        for e in (*o.elements, o.other_classified, o.not_classified)
     }
+
+
+UPFRONT = ("a1_a3", "a4_a5")
+
+
+def compared_on(upload: Upload, o: Overview, keys: Keys) -> ComparedBuilding:
+    """compared(), its whole life and upfront figures on `keys` only."""
+    c = compared(upload, o)
+    if keys is None:
+        return c
+    gwp = {s.key: s.gwp for s in o.stages}
+    return c.model_copy(
+        update={
+            "whole_life_per_m2": per_m2(sum(gwp[k] for k in keys), o),
+            "upfront_per_m2": per_m2(sum(gwp[k] for k in keys if k in UPFRONT), o),
+        }
+    )
 
 
 # The field mapping (openbdf_field to standard mapping in v2.0.0) on every gwp_total
@@ -449,29 +476,35 @@ async def compare(
     ua, ub = await repo.get_upload(session, a_id), await repo.get_upload(session, b_id)
     oa = await overview_of(session, a_id, ua.uploaded_at)
     ob = await overview_of(session, b_id, ub.uploaded_at)
-    ea, eb = element_totals(oa), element_totals(ob)
+    method = comparability(oa.project.lcia_methodology, ob.project.lcia_methodology)
+    covered_a = scope_stages(oa.module_checks)
+    covered_b = scope_stages(ob.module_checks)
+    common = tuple(k for k in covered_a if k in covered_b)
+    case = compare_case(method, covered_a, covered_b)
+    # Only "common" on different stages recomputes; every other answer keeps the
+    # sums of before the parameter, each building over its own stages.
+    keys = common if case == "different_stages" and scope == "common" else None
+    merged = case == "same_stages" or keys is not None
+    ea, eb = element_totals(oa, keys), element_totals(ob, keys)
     element_order = [name for _, name in BEC_TIER2]
     element_order += ["Other classified elements", "Not classified"]
     ca = {c.label: c for c in oa.material_classes}
     cb = {c.label: c for c in ob.material_classes}
     classes = sorted(ca.keys() | cb.keys())
-    wa, wb = oa.headline.per_m2_gross, ob.headline.per_m2_gross
-    method = comparability(oa.project.lcia_methodology, ob.project.lcia_methodology)
-    covered_a, covered_b = (
-        scope_stages(oa.module_checks),
-        scope_stages(ob.module_checks),
-    )
-    common = tuple(k for k in covered_a if k in covered_b)
-    case = compare_case(method, covered_a, covered_b)
-    merged = case == "same_stages" or (case == "different_stages" and scope == "common")
+    a, b = compared_on(ua, oa, keys), compared_on(ub, ob, keys)
+    wa, wb = a.whole_life_per_m2, b.whole_life_per_m2
+
+    def labels(stages: tuple[str, ...]) -> list[str]:
+        return [LABEL[k] for k in stages]
+
     return Comparison(
-        a=compared(ua, oa),
-        b=compared(ub, ob),
+        a=a,
+        b=b,
         comparability=method,
         method_note=METHOD_NOTE,
         ratio=wb / wa if wa and wb is not None else None,
         stages=aligned(
-            [s.label for s in oa.stages],
+            [s.label for s in oa.stages if keys is None or s.key in keys],
             {s.label: s.gwp for s in oa.stages},
             {s.label: s.gwp for s in ob.stages},
             oa,
@@ -484,8 +517,8 @@ async def compare(
         ],
         material_carbon=aligned(
             classes,
-            {k: c.gwp for k, c in ca.items()},
-            {k: c.gwp for k, c in cb.items()},
+            {k: on_stages(c.gwp_by_stage, c.gwp, keys) for k, c in ca.items()},
+            {k: on_stages(c.gwp_by_stage, c.gwp, keys) for k, c in cb.items()},
             oa,
             ob,
         ),
@@ -498,8 +531,12 @@ async def compare(
         ),
         case=case,
         applied_scope="common" if merged else "own",
-        covered_a=[LABEL[k] for k in covered_a],
-        covered_b=[LABEL[k] for k in covered_b],
-        common_stages=[LABEL[k] for k in common],
+        covered_a=labels(covered_a),
+        covered_b=labels(covered_b),
+        common_stages=labels(common),
         left_out=left_out(covered_a, covered_b, oa, ob),
+        stages_a=labels(common if merged else covered_a),
+        stages_b=labels(common if merged else covered_b),
+        upfront_stages=labels(tuple(k for k in keys or UPFRONT if k in UPFRONT)),
+        ratio_stages=labels(common) if merged else None,
     )
