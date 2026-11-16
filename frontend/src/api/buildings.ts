@@ -33,6 +33,7 @@ export interface BuildingSummary {
   id: number;
   file_name: string;
   uploaded_at: string;
+  gbdi_id?: string | null; // the generated project id (org#108)
   findings: number;
   project_name: string | null;
   country: string | null;

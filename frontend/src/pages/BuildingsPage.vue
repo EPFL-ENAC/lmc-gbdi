@@ -125,6 +125,7 @@
                   <q-badge v-if="b.draft" outline color="warning" label="Draft" :title="b.rejects.join(' ')" />
                 </span>
                 <span class="u-text-muted">{{ b.country ?? 'Country not declared' }}</span>
+                <span v-if="b.gbdi_id" class="u-text-muted">{{ b.gbdi_id }}</span>
               </td>
               <td class="num">{{ figure(b.gross_floor_area_m2, kg) }}</td>
               <td class="portfolio__plot" aria-hidden="true">

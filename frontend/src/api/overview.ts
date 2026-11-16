@@ -168,6 +168,7 @@ export interface NamingView {
 
 export interface Overview {
   project: ProjectInfo;
+  gbdi_id?: string | null; // the generated project id (org#108)
   project_fields: ProjectField[];
   title_block: TitleField[]; // the 14 the Overview heads with, in #97's order
   rows_read: number;
