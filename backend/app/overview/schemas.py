@@ -45,6 +45,8 @@ class Headline(BaseModel):
     module_d1: float  # material recovery: reuse, recycling, energy recovery
     module_d2: float  # exported utilities
     module_d: float  # D1 + D2, each with its sign, outside the total
+    # The workbook has module D: a D flag declared, or a D1 or D2 result.
+    module_d_present: bool
 
 
 class StageTotal(BaseModel):
@@ -52,6 +54,9 @@ class StageTotal(BaseModel):
     label: str
     gwp: float
     share: float
+    # The workbook has the stage: a module of it declared or with a result. A
+    # declared stage without a result is present; the data checks flag it.
+    present: bool
 
 
 class ElementTotal(BaseModel):

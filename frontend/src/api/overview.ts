@@ -27,6 +27,7 @@ export interface Headline {
   module_d1: number; // material recovery: reuse, recycling, energy recovery
   module_d2: number; // exported utilities
   module_d: number; // D1 + D2, each with its sign, outside the total
+  module_d_present: boolean; // a D flag declared, or a D1 or D2 result
 }
 
 // Module D and its two parts, as the headline and the Time section both send them.
@@ -37,6 +38,7 @@ export interface StageTotal {
   label: string;
   gwp: number;
   share: number;
+  present: boolean; // a module of the stage declared or with a result
 }
 
 export interface ElementTotal {

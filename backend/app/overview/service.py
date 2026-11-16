@@ -422,6 +422,10 @@ def headline(data: ProjectData, totals: Stages, scope: str) -> Headline:
         module_d1=float(module_d["gwp_total_d1"]),
         module_d2=float(module_d["gwp_total_d2"]),
         module_d=float(module_d["gwp_total_d1"] + module_d["gwp_total_d2"]),
+        module_d_present=any(
+            declared(data.general, f) for f in ("lca_d", "lca_d1", "lca_d2")
+        )
+        or any(round(v, 6) != ZERO for v in module_d.values()),
     )
 
 
@@ -651,6 +655,15 @@ def from_views(namings: dict[Naming, NamingView]) -> dict:
     }
 
 
+def stage_present(key: str, checks: list[ModuleCheck], total: Decimal) -> bool:
+    """A module of the stage is declared or has a result. A stage that holds carbon
+    is present whatever its modules say, so a total is never hidden."""
+    return round(total, 6) != ZERO or any(
+        FIELD_OF[c.module] in STAGE_FIELDS[key] and (c.declared or c.has_result)
+        for c in checks
+    )
+
+
 def build_overview(data: ProjectData) -> Overview:
     rows = [(row, stage_gwp(row)) for row in data.rows]
     totals = {key: sum((stages[key] for _, stages in rows), ZERO) for key, _ in STAGES}
@@ -676,6 +689,7 @@ def build_overview(data: ProjectData) -> Overview:
             label=label,
             gwp=float(totals[k]),
             share=float(totals[k] / whole_life),
+            present=stage_present(k, checks, totals[k]),
         )
         for k, label in STAGES
     ]

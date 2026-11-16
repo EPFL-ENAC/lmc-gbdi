@@ -116,6 +116,42 @@ def test_module_d_is_d1_plus_d2_with_their_signs_outside_the_total(tmp_path):
     assert (o.time.module_d1, o.time.module_d2, o.time.module_d) == (-15, 4, -11)
 
 
+def test_the_fixture_has_every_stage_and_module_d(overview):
+    assert [s.present for s in overview.stages] == [True] * 4
+    assert overview.headline.module_d_present  # a D1 result, no D flag
+
+
+NO_D = [(*r[:6], {k: v for k, v in r[6].items() if k != "gwp_total_d1"}) for r in ROWS]
+NO_B = [
+    (*r[:6], {k: v for k, v in r[6].items() if not k.startswith("gwp_total_b")})
+    for r in ROWS
+]
+
+
+def test_a_building_without_module_d_does_not_have_it(tmp_path):
+    o = build_overview(read_project(write_project(tmp_path, rows=NO_D)))
+    assert not o.headline.module_d_present
+    assert o.headline.module_d == 0
+
+
+def test_a_declared_module_d_without_result_is_present(tmp_path):
+    general = {**GENERAL, "lca_d1": "TRUE"}
+    o = build_overview(read_project(write_project(tmp_path, NO_D, general=general)))
+    assert o.headline.module_d_present
+
+
+def test_a_building_without_stage_b_does_not_have_it(tmp_path):
+    o = build_overview(read_project(write_project(tmp_path, rows=NO_B)))
+    present = {s.key: s.present for s in o.stages}
+    assert present == {"a1_a3": True, "a4_a5": True, "b1_b8": False, "c1_c4": True}
+
+
+def test_a_declared_stage_without_result_is_present(tmp_path):
+    general = {**GENERAL, "lca_b4": "TRUE"}
+    o = build_overview(read_project(write_project(tmp_path, NO_B, general=general)))
+    assert next(s for s in o.stages if s.key == "b1_b8").present
+
+
 def test_per_m2_figures_divide_by_floor_area_then_period(overview):
     assert overview.headline.per_m2_useful == pytest.approx(1.18)
     assert overview.headline.per_m2_gross == pytest.approx(0.59)
