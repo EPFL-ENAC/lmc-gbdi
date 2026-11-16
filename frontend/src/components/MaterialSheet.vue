@@ -112,7 +112,7 @@ const barWidth = (value: number) => (value > 0 && props.largest > 0 ? (value / p
 
 .sheet-card__figures {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
   align-items: end; // a long unit wraps its label: the figures stay on one line
   margin: 0;
   border-top: tokens.$border-width solid tokens.$color-border;
