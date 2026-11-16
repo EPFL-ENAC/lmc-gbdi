@@ -118,7 +118,7 @@ def with_module_d(d1: str | None, d2: str | None):
     [
         ("-5", "2", False, (-5 + 2) * 3 / 200),  # results: D1 + D2, per m² GFA
         ("-5", "5", False, 0.0),  # they cancel, but the building has module D
-        (None, None, True, 0.0),  # declared, no result
+        (None, None, True, None),  # declared, no result: no module D
         (None, "3", False, 3 * 3 / 200),  # D2 alone
         ("-5", None, False, -5 * 3 / 200),  # D1 alone
         (None, None, False, None),  # no module D at all: nothing, not 0

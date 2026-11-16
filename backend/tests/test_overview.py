@@ -134,10 +134,10 @@ def test_a_building_without_module_d_does_not_have_it(tmp_path):
     assert o.headline.module_d == 0
 
 
-def test_a_declared_module_d_without_result_is_present(tmp_path):
+def test_a_declared_module_d_without_result_is_not_present(tmp_path):
     general = {**GENERAL, "lca_d1": "TRUE"}
     o = build_overview(read_project(write_project(tmp_path, NO_D, general=general)))
-    assert o.headline.module_d_present
+    assert not o.headline.module_d_present
 
 
 def test_a_building_without_stage_b_does_not_have_it(tmp_path):

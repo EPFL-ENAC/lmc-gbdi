@@ -422,10 +422,7 @@ def headline(data: ProjectData, totals: Stages, scope: str) -> Headline:
         module_d1=float(module_d["gwp_total_d1"]),
         module_d2=float(module_d["gwp_total_d2"]),
         module_d=float(module_d["gwp_total_d1"] + module_d["gwp_total_d2"]),
-        module_d_present=any(
-            declared(data.general, f) for f in ("lca_d", "lca_d1", "lca_d2")
-        )
-        or any(round(v, 6) != ZERO for v in module_d.values()),
+        module_d_present=any(round(v, 6) != ZERO for v in module_d.values()),
     )
 
 
