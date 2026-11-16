@@ -126,10 +126,13 @@ def test_a_rejected_replace_deletes_nothing(monkeypatch):
 
 def fixture_flags() -> dict[str, tuple[bool, bool]]:
     """Field -> (sum into whole life A–C, in upfront A1–A5), from the fixture."""
-    _header, *lines = FIXTURE.read_text().splitlines()
+    header, *lines = FIXTURE.read_text().splitlines()
+    assert header == "field\twhole_life\tupfront"
     flags = {}
     for line in lines:
         field, whole_life, upfront = line.split("\t")
+        assert {whole_life, upfront} <= {"true", "false"}, line
+        assert field not in flags, field
         flags[field] = (whole_life == "true", upfront == "true")
     return flags
 
@@ -154,6 +157,7 @@ def test_the_stages_add_exactly_the_modules_the_mapping_sums():
     """The field mapping says which gwp_total fields go into the whole life (A–C)
     and the upfront (A1–A5); D and the across-stage total go into neither."""
     flags = fixture_flags()
+    assert {f for f in GWP_FIELDS if f.startswith("gwp_total")} <= flags.keys()
     whole_life = {field for field, (whole, _) in flags.items() if whole}
     upfront = {field for field, (_, up) in flags.items() if up}
 
