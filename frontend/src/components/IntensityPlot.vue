@@ -9,6 +9,13 @@
         <EChart v-if="plotted.length" ref="chart" :option="option" :height="height" @hover="onHover" />
       </div>
       <table class="intensity__table">
+        <colgroup>
+          <col class="intensity__col-rank" />
+          <col />
+          <col v-if="!phone" class="intensity__col-figure" />
+          <col v-if="!phone" class="intensity__col-figure" />
+          <col class="intensity__col-per-kg" />
+        </colgroup>
         <thead>
           <tr>
             <th scope="col" class="num">#</th>
@@ -216,18 +223,29 @@ const caption = computed(
 
 .intensity {
   margin: 0;
+  container-type: inline-size;
 }
 
-// The plot keeps a fixed box, so its text keeps its size; the table takes the rest.
+// The plot keeps a fixed height, so its text keeps its size. It sits beside the table
+// only when both fit; below that the table goes under it.
 .intensity__body {
   display: grid;
-  grid-template-columns: minmax(0, 560px) minmax(0, 1fr);
-  gap: tokens.$spacing-xl;
+  grid-template-columns: minmax(0, 1fr);
+  gap: tokens.$spacing-md;
   align-items: start;
 }
 
+@container (min-width: 1120px) {
+  .intensity__body {
+    grid-template-columns: 560px minmax(0, 1fr);
+    gap: tokens.$spacing-xl;
+  }
+}
+
+// A fixed layout, so a long workbook name ends in an ellipsis instead of widening the table.
 .intensity__table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: tokens.$text-size-sm;
 }
@@ -240,7 +258,21 @@ const caption = computed(
   white-space: nowrap;
 }
 
+.intensity__col-rank {
+  width: 2.5rem;
+}
+
+.intensity__col-figure {
+  width: 6.5rem;
+}
+
+.intensity__col-per-kg {
+  width: 9rem;
+}
+
 .intensity__table thead th {
+  white-space: normal;
+  vertical-align: bottom;
   font-size: tokens.$text-size-xs;
   color: tokens.$color-text-muted;
 }
@@ -273,9 +305,7 @@ const caption = computed(
   font-variant-numeric: tabular-nums;
 }
 
-// A long workbook name must not widen the table past its column.
 .intensity__name {
-  max-width: 16rem;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -299,24 +329,20 @@ const caption = computed(
   color: tokens.$color-text-muted;
 }
 
-@media (max-width: 599.98px) {
-  .intensity__body {
-    grid-template-columns: minmax(0, 1fr);
-    gap: tokens.$spacing-md;
-  }
-
-  // On a phone the name and the headers wrap, so the table fits the screen.
-  .intensity__table th,
-  .intensity__table td {
+// On a phone (the width where `phone` hides the mass and carbon columns) the name
+// wraps, even a name without spaces, and a tap shows the rest.
+@media (max-width: tokens.$breakpoint-mobile-max) {
+  .intensity__table .intensity__name {
     white-space: normal;
+    overflow-wrap: anywhere;
   }
 
-  .intensity__table .intensity__per-kg {
-    white-space: nowrap;
+  .intensity__col-rank {
+    width: 2rem;
   }
 
-  .intensity__name {
-    max-width: none;
+  .intensity__col-per-kg {
+    width: 7.5rem;
   }
 }
 </style>
