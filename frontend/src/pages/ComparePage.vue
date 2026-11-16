@@ -55,6 +55,9 @@
                   <dt>Module D, outside the total</dt>
                   <dd>{{ kg.format(comparison[side].module_d_per_m2) }} kg/m²</dd>
                 </div>
+                <!-- Declared, apart from the computed scope above: a reader sees when two columns differ. -->
+                <div><dt>System boundary</dt><dd>{{ comparison[side].system_boundary ?? 'not declared' }}</dd></div>
+                <div><dt>LCIA methodology</dt><dd>{{ comparison[side].lcia_methodology ?? 'not declared' }}</dd></div>
                 <div><dt>Lines read</dt><dd>{{ kg.format(comparison[side].rows_read) }}</dd></div>
               </dl>
             </article>
