@@ -19,7 +19,7 @@ from openbdf.model.tables import (
 from openbdf.model.tables import (
     LCAResultsWideFullRecord as Wide,
 )
-from sqlalchemy import delete
+from sqlalchemy import delete, text
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -121,6 +121,36 @@ async def get_upload(session: AsyncSession, project_id: int) -> Upload:
     if upload is None:
         raise ProjectNotFound(project_id)
     return upload
+
+
+async def locked_upload(session: AsyncSession, project_id: int) -> Upload:
+    """The upload a replace takes its number from, locked until the commit: a second
+    replace of the same building waits, then finds it gone (ProjectNotFound)."""
+    upload = (
+        await session.exec(
+            select(Upload)
+            .where(Upload.project_record_id == project_id)
+            .with_for_update()
+        )
+    ).first()
+    if upload is None:
+        raise ProjectNotFound(project_id)
+    return upload
+
+
+NEXT_NUMBER = text(
+    "INSERT INTO gbdi_counter (country, last_number) VALUES (:country, 1) "
+    "ON CONFLICT (country) DO UPDATE SET last_number = gbdi_counter.last_number + 1 "
+    "RETURNING last_number"
+)
+
+
+async def next_number(session: AsyncSession, country: str) -> int:
+    """The country's next number. One statement: its row stays locked until the
+    upload commits, so two uploads of one country never take the same number, and a
+    rolled back upload gives its number back."""
+    result = await session.exec(NEXT_NUMBER, params={"country": country})
+    return result.scalar_one()
 
 
 async def uploaded_at(session: AsyncSession, project_id: int) -> datetime:
