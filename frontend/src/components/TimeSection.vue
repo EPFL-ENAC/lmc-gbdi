@@ -18,7 +18,7 @@
         :stages="overview.time.stages"
         :upfront="overview.time.upfront"
         :use-per-year="overview.time.use_per_year"
-        :module-d="overview.time.module_d1"
+        :module-d="overview.time"
         :units="overview.units"
         :period="period"
       />
@@ -43,8 +43,11 @@
       </article>
       <article class="time__moment time__moment--beyond">
         <p class="time__when">Beyond</p>
-        <p class="time__figure">{{ num.format(overview.time.module_d1) }}</p>
-        <p class="time__what">{{ overview.units.time }} of benefits from reuse and recycling (D1), outside the total.</p>
+        <p class="time__figure">{{ num.format(overview.time.module_d) }}</p>
+        <p class="time__what">
+          {{ overview.units.time }}, module D, outside the total: D1, material recovery,
+          {{ num.format(overview.time.module_d1) }}; D2, exported utilities, {{ num.format(overview.time.module_d2) }}.
+        </p>
       </article>
     </div>
   </div>

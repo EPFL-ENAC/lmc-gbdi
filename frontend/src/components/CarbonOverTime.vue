@@ -1,13 +1,13 @@
 <template>
   <!-- What each moment of the life emits, on one scale (review #81): a peak at year 0
        (A1–A5), a flat band through the years of use (B1–B8, per year), a peak at the
-       end of life (C1–C4); beyond a dashed boundary, the D1 credit below the axis. -->
+       end of life (C1–C4); beyond a dashed boundary, module D (D1 + D2), outside the total. -->
   <figure class="over-time">
     <ul class="over-time__legend">
       <li v-for="(stage, i) in stages" :key="stage.key">
         <span class="over-time__swatch" :style="{ background: STAGE_COLORS[i] }" /><Term :name="stage.label" />
       </li>
-      <li><span class="over-time__swatch over-time__swatch--credit" />D1, outside the total</li>
+      <li><span class="over-time__swatch over-time__swatch--credit" />Module D, outside the total</li>
     </ul>
     <svg :viewBox="`0 0 ${W} ${H}`" class="over-time__plot" role="img" :aria-label="summary">
       <g class="over-time__grid">
@@ -27,11 +27,14 @@
       <rect
         class="over-time__credit"
         :x="xD"
-        :y="Math.min(y(0), y(moduleD))"
+        :y="Math.min(y(0), y(d))"
         :width="BAR"
-        :height="Math.abs(y(moduleD) - y(0))"
+        :height="Math.abs(y(d) - y(0))"
       >
-        <title>D1: {{ num.format(moduleD) }} {{ units.time }}, outside the whole-life total</title>
+        <title>
+          Module D: {{ num.format(d) }} {{ units.time }}, outside the total. D1, material recovery:
+          {{ num.format(moduleD.module_d1) }}; D2, exported utilities: {{ num.format(moduleD.module_d2) }}.
+        </title>
       </rect>
       <line class="over-time__zero" :x1="L" :x2="xD + BAR" :y1="y(0)" :y2="y(0)" />
       <line class="over-time__boundary" :x1="xBoundary" :x2="xBoundary" :y1="T" :y2="H - B" />
@@ -48,19 +51,19 @@
           B1–B8: about {{ num.format(usePerYear) }} a year
         </text>
         <text :x="xEnd - 8" :y="y(endOfLife) + 4" text-anchor="end">C1–C4: {{ num.format(endOfLife) }}</text>
-        <text :x="xD - 8" :y="y(moduleD) + 4" text-anchor="end">D1: {{ num.format(moduleD) }}</text>
+        <text :x="xD - 8" :y="y(d) + 4" text-anchor="end">Module D: {{ num.format(d) }}</text>
       </g>
     </svg>
     <figcaption class="over-time__caption">
       {{ units.time }} each moment emits, on one scale. B1–B8 is spread evenly over the {{ period }} years, a simplification:
-      replacements really happen in steps. Below the axis, dashed: module D1, outside the whole-life total.
+      replacements really happen in steps. Past the dashed boundary: module D, outside the total.
     </figcaption>
   </figure>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { StageTotal, Units } from '@/api/overview';
+import type { ModuleD, StageTotal, Units } from '@/api/overview';
 import Term from '@/components/atoms/Term.vue';
 import { STAGE_COLORS } from '@/dataviz';
 import { amount } from '@/format';
@@ -69,19 +72,20 @@ const props = defineProps<{
   stages: StageTotal[]; // A1–A3, A4–A5, B1–B8, C1–C4, in that order
   upfront: number; // A1–A5
   usePerYear: number;
-  moduleD: number;
+  moduleD: ModuleD;
   period: number;
   units: Units;
 }>();
 const num = computed(() => amount(props.units));
+const d = computed(() => props.moduleD.module_d); // D1 + D2, summed by the backend
 
 // Drawn at about the size it is shown, so the text keeps its size.
 const W = 1100;
 const H = 420;
 const [L, R, T, B] = [64, 16, 24, 40];
 const BAR = 44; // a peak's width: one moment, not a span of years
-const xD = W - R - BAR; // the D1 credit, past the boundary
-const xBoundary = xD - 140; // room for the D1 label between the boundary and its bar
+const xD = W - R - BAR; // module D, past the boundary
+const xBoundary = xD - 140; // room for the module D label between the boundary and its bar
 const xEnd = xBoundary - 24 - BAR; // the end-of-life bar
 const xUse = L + BAR; // the years of use run between the two peaks
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact' });
@@ -92,7 +96,7 @@ const endOfLife = computed(() => gwp('c1_c4'));
 
 // One scale for every part, zero included, so a negative credit or year shows below it.
 const yMax = computed(() => niceCeiling(Math.max(props.upfront, endOfLife.value, props.usePerYear, 0) * 1.1));
-const yMin = computed(() => -niceCeiling(-Math.min(props.moduleD, props.usePerYear, props.upfront, endOfLife.value, 0) * 1.1));
+const yMin = computed(() => -niceCeiling(-Math.min(d.value, props.usePerYear, props.upfront, endOfLife.value, 0) * 1.1));
 const y = (value: number) => T + ((yMax.value - value) / (yMax.value - yMin.value)) * (H - B - T);
 const yTicks = computed(() => {
   const step = niceCeiling((yMax.value - yMin.value) / 5);
@@ -125,7 +129,7 @@ const summary = computed(
   () =>
     `What each moment emits over ${props.period} years, in ${props.units.time}: ${num.value.format(props.upfront)} at year 0, ` +
     `about ${num.value.format(props.usePerYear)} a year in use, ${num.value.format(endOfLife.value)} at the end of life, ` +
-    `and a credit of ${num.value.format(props.moduleD)} beyond it.`,
+    `and module D, ${num.value.format(d.value)}, beyond it, outside the total.`,
 );
 
 function niceCeiling(value: number) {

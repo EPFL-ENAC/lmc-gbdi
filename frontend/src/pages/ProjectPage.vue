@@ -74,8 +74,10 @@
             {{ units.carbon }} before the building is used, A1–A5:
             {{ percent.format(overview.headline.upfront_share) }} of the total.
           </BigNumber>
-          <BigNumber :value="num.format(overview.headline.module_d1)" tone="purple">
-            {{ units.carbon }} of benefits from reuse and recycling, module D1, outside the total.
+          <BigNumber :value="num.format(overview.headline.module_d)" tone="purple">
+            {{ units.carbon }}, module D, outside the total: D1, material recovery (reuse, recycling, energy
+            recovery), {{ num.format(overview.headline.module_d1) }}; D2, exported utilities,
+            {{ num.format(overview.headline.module_d2) }}.
           </BigNumber>
         </div>
         <!-- org#107: the boundary the workbook declares, next to the modules it computes. -->
@@ -133,7 +135,7 @@
           :stages="overview.stages"
           :whole-life="overview.headline.whole_life"
           :scope="overview.headline.scope"
-          :module-d="overview.headline.module_d1"
+          :module-d="overview.headline"
           :units="units"
         />
       </section>

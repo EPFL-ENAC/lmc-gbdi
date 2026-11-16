@@ -9,7 +9,7 @@
         :style="{ flexGrow: Math.max(stage.gwp, 0), background: STAGE_COLORS[i] }"
       />
       <div class="life-strip__boundary" aria-hidden="true" />
-      <div class="life-strip__beyond" :style="{ flexGrow: Math.abs(moduleD) }" />
+      <div class="life-strip__beyond" :style="{ flexGrow: Math.abs(moduleD.module_d) }" />
     </div>
     <ol class="life-strip__legend">
       <li v-for="(stage, i) in stages" :key="stage.key">
@@ -19,8 +19,11 @@
       </li>
       <li class="life-strip__outside">
         <span class="life-strip__swatch life-strip__swatch--beyond" />
-        <span class="life-strip__name">D1, outside the total</span>
-        <span class="life-strip__value">{{ num.format(moduleD) }} {{ units.carbon }}</span>
+        <span class="life-strip__name">Module D, outside the total</span>
+        <span class="life-strip__value">
+          {{ num.format(moduleD.module_d) }} {{ units.carbon }}: D1 {{ num.format(moduleD.module_d1) }}, D2
+          {{ num.format(moduleD.module_d2) }}
+        </span>
       </li>
     </ol>
     <p v-if="negative.length > 0" class="life-strip__note">
@@ -33,10 +36,10 @@
 import { computed } from 'vue';
 import Term from '@/components/atoms/Term.vue';
 import { STAGE_COLORS } from '@/dataviz';
-import type { StageTotal, Units } from '@/api/overview';
+import type { ModuleD, StageTotal, Units } from '@/api/overview';
 import { amount, percent } from '@/format';
 
-const props = defineProps<{ stages: StageTotal[]; wholeLife: number; scope: string; moduleD: number; units: Units }>();
+const props = defineProps<{ stages: StageTotal[]; wholeLife: number; scope: string; moduleD: ModuleD; units: Units }>();
 const num = computed(() => amount(props.units));
 
 // Shares of a whole only draw positive parts; a negative stage (biogenic carbon
