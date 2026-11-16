@@ -134,6 +134,13 @@ class ProjectField(BaseModel):
     value: str | None  # as declared; None when General Information leaves it blank
 
 
+class TitleField(ProjectField):
+    """A cell of the Overview's title block, in the title block's own words."""
+
+    unit: str | None  # after a numeric value: "m²", "years"
+    scope: bool  # one of the five method fields that decide whether two results compare
+
+
 class ModuleCheck(BaseModel):
     module: str  # A1–A3, A1 … C4, in life-cycle order
     declared: bool  # the module's scope flag in General Information
@@ -170,7 +177,7 @@ class TimeFigures(BaseModel):
 class Overview(BaseModel):
     project: ProjectInfo
     project_fields: list[ProjectField]  # the sheet's Project table, in its order
-    title_block: list[ProjectField]  # the 14 the Overview heads with, in #97's order
+    title_block: list[TitleField]  # the 14 the Overview heads with, in #97's order
     rows_read: int
     module_checks: list[ModuleCheck]
     modules_declared_without_result: int

@@ -33,6 +33,7 @@ from app.overview.schemas import (
     ProjectInfo,
     StageTotal,
     TimeFigures,
+    TitleField,
     Units,
 )
 
@@ -94,21 +95,21 @@ PROJECT_FIELDS = (
 )
 # The Overview's title block, in the order of globalbuildingdatainitiative/org#97: what
 # the project is, then the five attributes that decide whether two results compare.
-TITLE_BLOCK = (
-    "project_id",
-    "project_country",
-    "building_use_type",
-    "building_structure_type",
-    "building_gross_floor_area",
-    "building_gross_floor_area_standard",
-    "lca_reference_study_period",
-    "project_assessment_type",
-    "project_phase_common",
-    "lca_cycle_system_boundary",
-    "lcia_methodology",
-    "lca_biogenic_method",
-    "lca_temporal_approach",
-    "lca_lci_modeling_approach",
+TITLE_BLOCK = (  # (code, label, unit, scope)
+    ("project_id", "Project ID", None, False),
+    ("project_country", "Country", None, False),
+    ("building_use_type", "Building typology", None, False),
+    ("building_structure_type", "Building structure type", None, False),
+    ("building_gross_floor_area", "Gross floor area", "m²", False),
+    ("building_gross_floor_area_standard", "GFA standard", None, False),
+    ("lca_reference_study_period", "Reference study period", "years", False),
+    ("project_assessment_type", "Assessment type", None, False),
+    ("project_phase_common", "Project phase, common definition", None, False),
+    ("lca_cycle_system_boundary", "Life cycle system boundary", None, True),
+    ("lcia_methodology", "LCIA methodology", None, True),
+    ("lca_biogenic_method", "Biogenic carbon accounting", None, True),
+    ("lca_temporal_approach", "LCA temporal approach", None, True),
+    ("lca_lci_modeling_approach", "LCI modelling approach", None, True),
 )
 # Module scope flags of General Information and their Wide result column.
 MODULES = (
@@ -651,7 +652,15 @@ def build_overview(data: ProjectData) -> Overview:
     return Overview(
         project=project,
         project_fields=fields,
-        title_block=[by_code[code] for code in TITLE_BLOCK],
+        title_block=[
+            TitleField(
+                **by_code[code].model_dump(exclude={"label"}),
+                label=label,
+                unit=unit,
+                scope=scope,
+            )
+            for code, label, unit, scope in TITLE_BLOCK
+        ],
         rows_read=len(data.rows),
         module_checks=checks,
         modules_declared_without_result=sum(

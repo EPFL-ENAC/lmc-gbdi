@@ -263,6 +263,24 @@ def test_title_block_lists_the_fourteen_fields_in_the_issue_order(overview):
     assert overview.title_block[0].value == "TEST-1"
 
 
+def test_title_block_tags_the_five_scope_fields_and_carries_units(overview):
+    block = {f.code: f for f in overview.title_block}
+    assert [f.code for f in overview.title_block if f.scope] == [
+        "lca_cycle_system_boundary",
+        "lcia_methodology",
+        "lca_biogenic_method",
+        "lca_temporal_approach",
+        "lca_lci_modeling_approach",
+    ]
+    assert block["building_gross_floor_area"].unit == "m²"
+    assert block["lca_reference_study_period"].unit == "years"
+    assert block["project_id"].unit is None
+    assert block["lca_cycle_system_boundary"].label == "Life cycle system boundary"
+    # The Project details table keeps its own labels.
+    fields = {f.code: f.label for f in overview.project_fields}
+    assert fields["lca_cycle_system_boundary"] == "System boundary"
+
+
 def test_material_hotspots_carry_their_stage_split(overview):
     concrete = overview.material_hotspots[0]
     assert concrete.gwp_by_stage == {"a1_a3": 36, "a4_a5": 11, "b1_b8": 6, "c1_c4": 12}

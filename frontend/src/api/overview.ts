@@ -103,6 +103,12 @@ export interface ProjectField {
   value: string | null; // null: General Information leaves it blank
 }
 
+// A cell of the Overview's title block, in the title block's own words.
+export interface TitleField extends ProjectField {
+  unit: string | null; // after a numeric value: "m²", "years"
+  scope: boolean; // one of the five method fields that decide whether two results compare
+}
+
 export interface ModuleCheck {
   module: string;
   declared: boolean;
@@ -156,7 +162,7 @@ export interface NamingView {
 export interface Overview {
   project: ProjectInfo;
   project_fields: ProjectField[];
-  title_block: ProjectField[]; // the 14 the Overview heads with, in #97's order
+  title_block: TitleField[]; // the 14 the Overview heads with, in #97's order
   rows_read: number;
   module_checks: ModuleCheck[];
   modules_declared_without_result: number;
