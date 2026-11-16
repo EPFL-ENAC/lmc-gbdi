@@ -92,10 +92,16 @@
                 <DraftBadge :building-id="comparison[side].id" />
               </p>
               <p class="duel__figure">{{ figure(comparison[side].whole_life_per_m2, kg) }}</p>
-              <p>kg CO₂e per m², {{ comparison[side].scope }}.</p>
+              <p>
+                kg CO₂e per m²<template v-if="comparison.applied_scope === 'own'">, {{ comparison[side].scope }}</template>.
+              </p>
+              <!-- The stages this figure stands for, named on every headline number. -->
+              <ul class="duel__stages" :aria-label="`Stages in ${code(comparison[side])}'s figure`">
+                <li v-for="stage in comparison[`stages_${side}`]" :key="stage" class="duel__stage">{{ stage }}</li>
+              </ul>
               <dl class="duel__facts">
                 <div><dt>Gross floor area</dt><dd>{{ figure(comparison[side].gross_floor_area_m2, kg) }} m²</dd></div>
-                <div><dt>Upfront, A1–A5</dt><dd>{{ figure(comparison[side].upfront_per_m2, kg) }} kg/m²</dd></div>
+                <div><dt>Upfront, {{ comparison.upfront_stages.join(', ') || 'no stage' }}</dt><dd>{{ figure(comparison[side].upfront_per_m2, kg) }} kg/m²</dd></div>
                 <!-- No module D (no scope flag, no result): nothing, not 0. -->
                 <div v-if="comparison[side].has_module_d">
                   <dt>Module D, outside the total</dt>
@@ -108,26 +114,34 @@
               </dl>
             </article>
           </div>
-          <p v-if="comparison.ratio !== null" class="text-lead">
-            Per m², {{ named(comparison.b) }} emits {{ percent.format(comparison.ratio) }} of what
-            {{ named(comparison.a) }} emits, each over its own scope.
+          <!-- Only when both figures cover the same stages, and it names them. -->
+          <p v-if="comparison.ratio !== null && comparison.ratio_stages" class="text-lead">
+            On {{ comparison.ratio_stages.join(', ') }}, per m², {{ named(comparison.b) }} emits
+            {{ percent.format(comparison.ratio) }} of what {{ named(comparison.a) }} emits.
           </p>
         </section>
 
         <section class="sheet__panel">
           <h2 class="sheet__panel-title">Life-cycle stages</h2>
-          <PairedBars
+          <component
+            :is="bars"
             :rows="comparison.stages"
             :a="comparison.a"
             :b="comparison.b"
             unit="kg CO₂e per m²"
             caption="Below zero: carbon stored or credited, most often biogenic carbon in timber at A1–A3, released again at C3–C4."
           />
+          <p v-for="out in merged ? comparison.left_out : []" :key="out.stage" class="u-text-muted">
+            {{ out.stage }}: left out. {{ code(comparison[out.not_covered_by === 'a' ? 'b' : 'a']) }}
+            {{ out.value === null ? 'no floor area' : kg.format(out.value) }} kg/m²,
+            {{ code(comparison[out.not_covered_by]) }} not covered.
+          </p>
         </section>
 
         <section class="sheet__panel">
           <h2 class="sheet__panel-title">Building elements</h2>
-          <PairedBars
+          <component
+            :is="bars"
             :rows="comparison.elements"
             :a="comparison.a"
             :b="comparison.b"
@@ -142,14 +156,16 @@
             Custom material names never match across projects; the OpenBDF material class does. Carbon and mass rarely
             rank the same.
           </p>
-          <PairedBars
+          <component
+            :is="bars"
             :rows="comparison.material_carbon"
             :a="comparison.a"
             :b="comparison.b"
             unit="kg CO₂e per m²"
             caption="Carbon of each material class."
           />
-          <PairedBars
+          <component
+            :is="bars"
             :rows="comparison.material_mass"
             :a="comparison.a"
             :b="comparison.b"
@@ -178,10 +194,14 @@ import {
 } from '@/api/buildings';
 import DraftBadge from '@/components/DraftBadge.vue';
 import MethodNotice from '@/components/MethodNotice.vue';
+import GroupedBars from '@/components/GroupedBars.vue';
 import PairedBars from '@/components/PairedBars.vue';
 import { figure, kg, percent } from '@/format';
 
 const SIDES = ['a', 'b'] as const;
+// The backend says when both figures cover the same stages: one axis then, else one each.
+const merged = computed(() => comparison.value?.applied_scope === 'common');
+const bars = computed(() => (merged.value ? GroupedBars : PairedBars));
 const SCOPES: { value: CompareScope; label: string; short: string }[] = [
   { value: 'common', label: 'Common stages', short: 'Common stages' },
   { value: 'own', label: 'Each on its own scope', short: 'Own scope' },
@@ -323,6 +343,22 @@ watch(
 
 .duel__side p {
   margin: 0;
+}
+
+.duel__stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: tokens.$spacing-xs;
+  margin: 0 0 tokens.$spacing-md;
+  padding: 0;
+  list-style: none;
+}
+
+.duel__stage {
+  padding: 0 tokens.$spacing-sm;
+  border: tokens.$border-width solid tokens.$color-border;
+  border-radius: 999px;
+  font-size: tokens.$text-size-xs;
 }
 
 .duel__code {
