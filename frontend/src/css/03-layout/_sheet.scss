@@ -20,7 +20,7 @@
   background: tokens.$color-surface;
   border: tokens.$border-width solid tokens.$color-border-control;
   border-radius: tokens.$radius-panel;
-  overflow: hidden;
+  overflow: clip; // clips the corners; `hidden` would stop a sticky bar inside the sheet
 }
 
 .sheet > * + * {

@@ -214,3 +214,6 @@ $link-underline-color: $color-text-link !default;
 $link-underline-offset: opt.$tokens-spacing-2 !default;
 $link-hover-color: $color-text !default;
 $link-hover-underline-color: $color-primary !default;
+
+// A bar that sticks under the page header while its part of the page is on screen.
+$z-index-sticky: opt.$tokens-z-index-sticky !default;

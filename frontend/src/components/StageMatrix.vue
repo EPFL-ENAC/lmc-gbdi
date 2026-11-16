@@ -19,7 +19,9 @@
     </thead>
     <tbody>
       <tr v-for="row in rows" :key="row.key">
-        <th scope="row">{{ row.label }}</th>
+        <th scope="row">
+          <span v-if="row.color" class="matrix__key" :style="{ background: row.color }" />{{ row.label }}
+        </th>
         <td
           v-for="stage in shown"
           :key="stage.key"
@@ -50,6 +52,7 @@ export interface StageRow {
   gwp_by_stage: Record<string, number>;
   dominant_stage?: string; // from the backend; the column shows only when rows carry it
   dominant_share?: number;
+  color?: string; // the row's colour in the charts beside the matrix, as a swatch
 }
 
 const props = defineProps<{
@@ -114,6 +117,14 @@ const shade = (value: number) =>
 
 .matrix .num {
   text-align: right;
+}
+
+.matrix__key {
+  display: inline-block;
+  width: tokens.$spacing-lg;
+  height: tokens.$spacing-sm;
+  margin-right: tokens.$spacing-sm;
+  border-radius: tokens.$radius-xs;
 }
 
 .matrix__legend {
