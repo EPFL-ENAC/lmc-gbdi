@@ -34,7 +34,7 @@
         >
           Display<span id="display-summary" />
         </q-btn>
-        <div v-show="!$q.screen.lt.sm || open" id="building-bar-more" class="building-bar__more">
+        <div v-show="!$q.screen.lt.sm || (open && !draftOnly)" id="building-bar-more" class="building-bar__more">
           <!-- The page's own controls, such as the Overview's basis, teleport here. -->
           <div id="basis-control" class="building-bar__page" />
           <div v-if="!draftOnly" class="building-bar__compare">
@@ -79,7 +79,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { code, fetchBuildings, noCarbon, type BuildingSummary } from '@/api/buildings';
 import { buildingPath } from '@/buildingLayouts';
@@ -91,6 +91,8 @@ const buildings = ref<BuildingSummary[]>([]);
 const settled = ref(false);
 const open = ref(false); // the folded display controls, below 600 px
 const id = computed(() => Number(route.params.id));
+// Another building starts with the controls folded.
+watch(id, () => (open.value = false));
 const other = computed(() => (route.params.other === undefined ? null : Number(route.params.other)));
 const options = computed(() =>
   buildings.value.map((b) => ({ id: b.id, label: `${code(b)}, ${b.project_name ?? 'unnamed'}` })),
@@ -169,6 +171,12 @@ onMounted(async () => {
   }
 
   // A basis wide enough that Display and Sections wrap to line 2.
+  // The building takes the rest of line 1 at every width below 600 px, so Display and
+  // Sections always start line 2.
+  .building-bar > .building-bar__pick {
+    flex-basis: calc(100% - 8rem);
+  }
+
   .building-bar__pick {
     flex: 1 1 12rem;
     width: auto;
