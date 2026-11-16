@@ -1,11 +1,14 @@
 """Ingest without a database: findings are condensed and grouped, and a replace
 deletes the old building only once the new one is stored.
 
-The mapping test reads the gitignored v2.0.0 field mapping from
-backend/data/reference-v2.0.0/, and skips without it.
+The stage test reads the gwp_total flags from gwp_total_mapping.tsv, taken from
+the v2.0.0 field mapping. A second test compares that file with the gitignored
+workbook in backend/data/reference-v2.0.0/ (or GBDI_REFERENCE_DIR), and skips
+without it.
 """
 
 import asyncio
+import os
 from decimal import Decimal
 from pathlib import Path
 
@@ -17,8 +20,13 @@ from app.buildings.models import ProjectRecord
 from app.overview.repo import GWP_FIELDS, MaterialRow
 from app.overview.service import stage_gwp
 
-REFERENCE = Path(__file__).parents[1] / "data" / "reference-v2.0.0"
+REFERENCE = Path(
+    os.environ.get(
+        "GBDI_REFERENCE_DIR", Path(__file__).parents[1] / "data" / "reference-v2.0.0"
+    )
+)
 MAPPING = next(REFERENCE.glob("openbdf_field to standard mapping*.xlsx"), None)
+FIXTURE = Path(__file__).with_name("gwp_total_mapping.tsv")
 
 
 def warning(code: str, row: int, sheet: str = "Bill of Materials") -> Finding:
@@ -116,21 +124,42 @@ def test_a_rejected_replace_deletes_nothing(monkeypatch):
     assert deleted == []
 
 
-def test_the_stages_add_exactly_the_modules_the_mapping_sums():
-    """The field mapping says which gwp_total fields go into the whole life (A–C)
-    and the upfront (A1–A5); D and the across-stage total go into neither."""
-    if MAPPING is None:
-        pytest.skip(f"no field mapping in {REFERENCE}")
+def fixture_flags() -> dict[str, tuple[bool, bool]]:
+    """Field -> (sum into whole life A–C, in upfront A1–A5), from the fixture."""
+    header, *lines = FIXTURE.read_text().splitlines()
+    assert header == "field\twhole_life\tupfront"
+    flags = {}
+    for line in lines:
+        field, whole_life, upfront = line.split("\t")
+        assert {whole_life, upfront} <= {"true", "false"}, line
+        assert field not in flags, field
+        flags[field] = (whole_life == "true", upfront == "true")
+    return flags
+
+
+def workbook_flags() -> dict[str, tuple[bool, bool]]:
     from openpyxl import load_workbook
 
     rows = load_workbook(MAPPING, read_only=True, data_only=True).worksheets[0]
     header, *lines = rows.iter_rows(values_only=True)
     column = {name: i for i, name in enumerate(header)}
-    total = [line for line in lines if str(line[1]).startswith("gwp_total")]
-    whole_life = {
-        line[1] for line in total if line[column["Sum into whole-life A–C"]] is True
+    return {
+        line[1]: (
+            line[column["Sum into whole-life A–C"]] is True,
+            line[column["In upfront A1–A5"]] is True,
+        )
+        for line in lines
+        if str(line[1]).startswith("gwp_total")
     }
-    upfront = {line[1] for line in total if line[column["In upfront A1–A5"]] is True}
+
+
+def test_the_stages_add_exactly_the_modules_the_mapping_sums():
+    """The field mapping says which gwp_total fields go into the whole life (A–C)
+    and the upfront (A1–A5); D and the across-stage total go into neither."""
+    flags = fixture_flags()
+    assert {f for f in GWP_FIELDS if f.startswith("gwp_total")} <= flags.keys()
+    whole_life = {field for field, (whole, _) in flags.items() if whole}
+    upfront = {field for field, (_, up) in flags.items() if up}
 
     # Each field a power of two: a sum names exactly the fields it took.
     gwp = {field: Decimal(2**i) for i, field in enumerate(GWP_FIELDS)}
@@ -138,3 +167,10 @@ def test_the_stages_add_exactly_the_modules_the_mapping_sums():
     stages = stage_gwp(row)
     assert sum(stages.values()) == sum(gwp[f] for f in whole_life)
     assert stages["a1_a3"] + stages["a4_a5"] == sum(gwp[f] for f in upfront)
+
+
+def test_the_fixture_matches_the_mapping_workbook():
+    """A new mapping version shows here as drift from gwp_total_mapping.tsv."""
+    if MAPPING is None:
+        pytest.skip(f"no field mapping in {REFERENCE}")
+    assert fixture_flags() == workbook_flags()
