@@ -232,6 +232,41 @@ def test_the_headline_scope_adds_the_declared_method(tmp_path):
     assert "whole" not in o.headline.scope
 
 
+def test_a_stage_whose_rows_cancel_is_still_present(tmp_path):
+    rows = [
+        (
+            "M1",
+            "",
+            "2.1",
+            "Concrete",
+            "C25/30",
+            "100",
+            {"gwp_total_a1_a3": "10", "gwp_total_b4": "5"},
+        ),
+        (
+            "M2",
+            "",
+            "2.1",
+            "Steel",
+            "S235",
+            "100",
+            {"gwp_total_a1_a3": "10", "gwp_total_b4": "-5"},
+        ),
+    ]
+    o = build_overview(read_project(write_project(tmp_path, rows)))
+    present = {s.key: s.present for s in o.stages}
+    assert present["b1_b8"] is True  # the B total is 0, the rows are not
+
+
+def test_the_headline_scope_drops_a_method_the_modules_contradict(tmp_path):
+    gwp = {"gwp_total_a1_a3": "10", "gwp_total_c3": "5"}
+    rows = [("M1", "", "2.1", "Concrete", "C25/30", "100", gwp)]
+    general = {**GENERAL, "lca_cycle_system_boundary": "Cradle to Gate (A1–A3)"}
+    o = build_overview(read_project(write_project(tmp_path, rows, general=general)))
+    assert o.headline.scope == "A1–A3, C1–C4"  # not "… · cradle to gate"
+    assert o.project.declared_scope == "A1–A3 · cradle to gate"  # still as declared
+
+
 @pytest.mark.parametrize(
     ("row_element", "matches"),
     [("2.1", True), ("2.1.3", True), ("2.1 Frame", True), ("2.10", False), ("", False)],

@@ -655,10 +655,11 @@ def from_views(namings: dict[Naming, NamingView]) -> dict:
     }
 
 
-def stage_present(key: str, checks: list[ModuleCheck], total: Decimal) -> bool:
+def stage_present(key: str, checks: list[ModuleCheck], held: bool) -> bool:
     """A module of the stage is declared or has a result. A stage that holds carbon
-    is present whatever its modules say, so a total is never hidden."""
-    return round(total, 6) != ZERO or any(
+    on any row is present whatever its modules say, so no figure is ever hidden:
+    a credit on one row and a burden on another can cancel in the total."""
+    return held or any(
         FIELD_OF[c.module] in STAGE_FIELDS[key] and (c.declared or c.has_result)
         for c in checks
     )
@@ -677,7 +678,13 @@ def build_overview(data: ProjectData) -> Overview:
     period = study_period(data.general)
     checks = module_checks(data)
     boundary = text(data.general, "lca_cycle_system_boundary")
-    method = BOUNDARIES.get(boundary or "", (None, None))[1]
+    modules, method = BOUNDARIES.get(boundary or "", (None, None))
+    # The method follows only where the declared boundary covers the same modules as
+    # the total: "A1–C · cradle to gate" would contradict itself. "With options" names
+    # no fixed modules, so it always follows.
+    if modules and "options" not in modules:
+        if modules.removesuffix(" + D") != scope_label(checks):
+            method = None
     summary = headline(data, totals, scope_label(checks, method))
     weighting, data_types = data_type_profile(pairs, data.data_types)
     fields = project_fields(data.general)
@@ -689,7 +696,9 @@ def build_overview(data: ProjectData) -> Overview:
             label=label,
             gwp=float(totals[k]),
             share=float(totals[k] / whole_life),
-            present=stage_present(k, checks, totals[k]),
+            present=stage_present(
+                k, checks, any(round(stages[k], 6) != ZERO for _, stages in rows)
+            ),
         )
         for k, label in STAGES
     ]
