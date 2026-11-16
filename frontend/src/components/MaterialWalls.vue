@@ -103,7 +103,7 @@
         :stages="overview.stages"
         :units="overview.units"
         :rank="i + 1"
-        :largest="largestStage"
+        :domain="stageDomain"
       />
     </div>
   </section>
@@ -150,10 +150,11 @@ const cover = computed(() => ({
   mass: ranked.value.reduce((sum, r) => sum + (r.share_of_mass ?? 0), 0),
 }));
 
-// Bar geometry only: the largest positive stage of the ten, one scale for every card.
-const largestStage = computed(() =>
-  Math.max(0, ...props.overview.material_hotspots.flatMap((h) => Object.values(h.gwp_by_stage))),
-);
+// Bar geometry only: the lowest and highest stage of the ten, zero inside, one scale for every card.
+const stageDomain = computed(() => {
+  const values = props.overview.material_hotspots.flatMap((h) => Object.values(h.gwp_by_stage));
+  return [Math.min(0, ...values), Math.max(0, ...values)] as const;
+});
 
 // The materials the wall paints as "every other", in the same ranking.
 const open = ref(false);

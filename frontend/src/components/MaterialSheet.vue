@@ -37,10 +37,13 @@
         <tr v-for="stage in shown" :key="stage.key">
           <th scope="row"><Term :name="stage.label" /></th>
           <td class="sheet-card__bar-cell">
-            <span
-              class="sheet-card__bar"
-              :style="{ width: `${barWidth(hotspot.gwp_by_stage[stage.key])}%`, background: stageColor(stage.key) }"
-            />
+            <span class="sheet-card__track">
+              <span class="sheet-card__zero" :style="{ left: `${at(0)}%` }" />
+              <span
+                class="sheet-card__bar"
+                :style="{ ...bar(hotspot.gwp_by_stage[stage.key]), background: stageColor(stage.key) }"
+              />
+            </span>
           </td>
           <td class="num">{{ num.format(hotspot.gwp_by_stage[stage.key]) }}</td>
         </tr>
@@ -62,13 +65,20 @@ const props = defineProps<{
   stages: StageTotal[];
   rank: number;
   units: Units;
-  largest: number;
+  domain: readonly [number, number]; // lowest and highest stage of all cards, zero inside
 }>();
 const num = computed(() => amount(props.units));
 const shown = computed(() => shownStages(props.stages));
 
-// Bar geometry only: a negative stage keeps its signed figure and draws no bar.
-const barWidth = (value: number) => (value > 0 && props.largest > 0 ? (value / props.largest) * 100 : 0);
+// Bar geometry only, as PairedBars: one shared domain, a negative stage runs left of zero.
+const at = (value: number) => {
+  const [lo, hi] = props.domain;
+  return hi === lo ? 0 : ((value - lo) / (hi - lo)) * 100;
+};
+const bar = (value: number) => ({
+  left: `${at(Math.min(0, value))}%`,
+  width: `${Math.abs(at(value) - at(0))}%`,
+});
 </script>
 
 <style scoped lang="scss">
@@ -170,9 +180,23 @@ const barWidth = (value: number) => (value > 0 && props.largest > 0 ? (value / p
   padding-right: tokens.$spacing-md;
 }
 
-.sheet-card__bar {
+.sheet-card__track {
+  position: relative;
   display: block;
   height: tokens.$spacing-md;
+}
+
+.sheet-card__zero {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: tokens.$border-width solid tokens.$color-text-muted;
+}
+
+.sheet-card__bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
 }
 
 .sheet-card__modules .num {
