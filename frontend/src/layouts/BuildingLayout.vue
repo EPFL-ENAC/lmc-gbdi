@@ -5,7 +5,12 @@
     <Teleport defer to="#building-bar">
       <nav class="building-bar" aria-label="Building">
         <router-link class="link" to="/buildings">All buildings</router-link>
+        <!-- A failed list says so: an empty picker would look like no building at all. -->
+        <p v-if="listError !== null" class="building-bar__error" role="alert">
+          The building list could not be loaded. {{ listError }}
+        </p>
         <q-select
+          v-else
           :model-value="id"
           :options="options"
           option-label="label"
@@ -37,7 +42,7 @@
         <div v-show="!$q.screen.lt.sm || (open && !draftOnly)" id="building-bar-more" class="building-bar__more">
           <!-- The page's own controls, such as the Overview's basis, teleport here. -->
           <div id="basis-control" class="building-bar__page" />
-          <div v-if="!draftOnly" class="building-bar__compare">
+          <div v-if="!draftOnly && listError === null" class="building-bar__compare">
             <q-select
               :model-value="other"
               :options="comparable.filter((o) => o.id !== id)"
@@ -86,6 +91,7 @@ const route = useRoute();
 const router = useRouter();
 const buildings = ref<BuildingSummary[]>([]);
 const settled = ref(false);
+const listError = ref<string | null>(null);
 const open = ref(false); // the folded display controls, below 600 px
 const id = computed(() => Number(route.params.id));
 // Another building starts with the controls folded.
@@ -100,8 +106,12 @@ const current = computed(() => buildings.value.find((b) => b.id === id.value));
 const draftOnly = computed(() => current.value !== undefined && noCarbon(current.value));
 
 onMounted(async () => {
-  // The bar works without the list: only the two building menus need it.
-  buildings.value = await fetchBuildings().catch(() => []);
+  // The page works without the list: only the two building menus need it.
+  try {
+    buildings.value = await fetchBuildings();
+  } catch (e: unknown) {
+    listError.value = e instanceof Error ? e.message : String(e);
+  }
   settled.value = true;
 });
 </script>
@@ -121,6 +131,12 @@ onMounted(async () => {
 
 .building-bar__pick {
   width: 14rem;
+}
+
+.building-bar__error {
+  margin: 0;
+  min-width: 0;
+  color: tokens.$color-status-error;
 }
 
 .building-bar__page {
