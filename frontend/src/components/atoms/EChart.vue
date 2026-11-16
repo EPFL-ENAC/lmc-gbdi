@@ -48,6 +48,7 @@ function theme(el: HTMLElement) {
     textStyle: { fontFamily: style.fontFamily, fontSize, color: token('--gbdi-color-text') },
     categoryAxis: axis,
     valueAxis: axis,
+    logAxis: axis,
     tooltip: {
       backgroundColor: token('--gbdi-color-text'),
       borderWidth: 0,
@@ -82,6 +83,24 @@ onBeforeUnmount(() => {
   chart?.dispose();
   chart = undefined; // a late render must not reach a disposed chart
 });
+
+// Linked highlight, for a chart with a table beside it: the item under the pointer in
+// series 0 goes out as `hover`, and highlight(i) lights item i from outside (null clears).
+const emit = defineEmits<{ hover: [dataIndex: number | null] }>();
+onMounted(() => {
+  chart?.on('mouseover', { seriesIndex: 0 }, (p) => emit('hover', (p as { dataIndex: number }).dataIndex));
+  chart?.on('mouseout', { seriesIndex: 0 }, () => emit('hover', null));
+});
+let lit: number | null = null;
+function highlight(dataIndex: number | null) {
+  if (lit !== null) chart?.dispatchAction({ type: 'downplay', seriesIndex: 0, dataIndex: lit });
+  if (dataIndex !== null) {
+    chart?.dispatchAction({ type: 'highlight', seriesIndex: 0, dataIndex });
+    chart?.dispatchAction({ type: 'showTip', seriesIndex: 0, dataIndex });
+  } else chart?.dispatchAction({ type: 'hideTip' });
+  lit = dataIndex;
+}
+defineExpose({ highlight });
 </script>
 
 <style scoped lang="scss">
