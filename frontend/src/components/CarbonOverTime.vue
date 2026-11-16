@@ -180,8 +180,9 @@ const option = computed((): ComposeOption<CustomSeriesOption | GridComponentOpti
             return {
               type: 'rect',
               shape: { x, y: Math.min(y(part.from), y(part.to)), width, height: Math.max(Math.abs(y(part.to) - y(part.from)), 1) },
-              // Module D is outside the total: an outline, never a fill.
-              style: credit ? { fill: 'none', stroke: muted, lineWidth: 2, lineDash: [4, 3] } : { fill: fills[params.dataIndex] },
+              // Module D is outside the total: an outline, never a visible fill. The clear
+              // fill lets a hover or a tap anywhere in the box open its tooltip.
+              style: credit ? { fill: 'rgba(0,0,0,0)', stroke: muted, lineWidth: 2, lineDash: [4, 3] } : { fill: fills[params.dataIndex] },
             };
           }
           // The moments under the axis, on two lines on a phone. The notes beside the bars
