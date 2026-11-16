@@ -4,8 +4,8 @@ import type { MaterialHotspot } from '@/api/overview';
 // `Overview.materials` on request.
 export type RankBy = 'mass' | 'carbon';
 export const RANKINGS: { label: string; value: RankBy }[] = [
-  { label: 'Top 10 by carbon', value: 'carbon' },
-  { label: 'Top 10 by mass', value: 'mass' },
+  { label: 'By mass', value: 'mass' },
+  { label: 'By carbon', value: 'carbon' },
 ];
 
 type Pair = { material: string; epd_product: string };
