@@ -38,7 +38,7 @@
           <th scope="row"><Term :name="stage.label" /></th>
           <td class="sheet-card__bar-cell">
             <span class="sheet-card__track">
-              <span class="sheet-card__zero" :style="{ left: `${at(0)}%` }" />
+              <span v-if="domain[0] < 0" class="sheet-card__zero" :style="{ left: `${at(0)}%` }" />
               <span
                 class="sheet-card__bar"
                 :style="{ ...bar(hotspot.gwp_by_stage[stage.key]), background: stageColor(stage.key) }"
