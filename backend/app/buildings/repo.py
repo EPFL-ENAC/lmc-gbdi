@@ -169,8 +169,10 @@ async def stamp(session: AsyncSession, project_id: int) -> tuple[datetime, str]:
 
 
 async def delete_project(session: AsyncSession, project_id: int) -> None:
-    """OpenBDF's foreign keys have no ON DELETE: remove children first."""
-    await get_upload(session, project_id)
+    """OpenBDF's foreign keys have no ON DELETE: remove children first. The upload
+    row is locked first, as a replace does: a delete and a replace of one building at
+    the same time then wait for each other, and the second finds the building gone."""
+    await locked_upload(session, project_id)
     lines = select(Line.id).where(Line.project_id == project_id)
     for table in (Wide, LCAResultsTallFullRecord):
         await session.exec(

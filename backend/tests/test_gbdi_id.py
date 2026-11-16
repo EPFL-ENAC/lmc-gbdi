@@ -19,6 +19,7 @@ AUT, MFH = Country.AUT, BuildingTypology.MFH
         (None, START, END, MFH, 1, "xxx_2024_mfh_0001_v1"),
         (AUT, START, END, None, 1, "aut_2024_xxx_0001_v1"),
         (None, None, None, None, 1, "xxx_xxx_xxx_0001_v1"),
+        (AUT, "2024-03-01", END, MFH, 1, "aut_2026_mfh_0001_v1"),  # a text start date
         ("aut", START, END, "mfh", 10000, "aut_2024_mfh_10000_v1"),
     ],
 )

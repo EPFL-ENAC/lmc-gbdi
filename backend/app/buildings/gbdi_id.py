@@ -33,8 +33,9 @@ def typology_code(value: object) -> str:
 
 
 def year_part(start: date | None, end: date | None) -> str:
-    when = start or end
-    return MISSING if when is None else str(when.year)
+    # A value that is not a date (a text the parser let through) counts as missing.
+    year = getattr(start, "year", None) or getattr(end, "year", None)
+    return MISSING if year is None else str(year)
 
 
 def format_id(
