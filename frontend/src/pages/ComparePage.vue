@@ -72,8 +72,8 @@
           <h2 class="sheet__panel-title">Life-cycle stages</h2>
           <PairedBars
             :rows="comparison.stages"
-            :a-label="code(comparison.a)"
-            :b-label="code(comparison.b)"
+            :a="comparison.a"
+            :b="comparison.b"
             unit="kg CO₂e per m²"
             caption="Below zero: carbon stored or credited, most often biogenic carbon in timber at A1–A3, released again at C3–C4."
           />
@@ -83,8 +83,8 @@
           <h2 class="sheet__panel-title">Building elements</h2>
           <PairedBars
             :rows="comparison.elements"
-            :a-label="code(comparison.a)"
-            :b-label="code(comparison.b)"
+            :a="comparison.a"
+            :b="comparison.b"
             unit="kg CO₂e per m²"
             caption="OpenBDF Tier 2 elements, whole life. Lines without an element code stay visible as Not classified."
           />
@@ -96,22 +96,20 @@
             Custom material names never match across projects; the OpenBDF material class does. Carbon and mass rarely
             rank the same.
           </p>
-          <div class="grid-2-col">
-            <PairedBars
-              :rows="comparison.material_carbon"
-              :a-label="code(comparison.a)"
-              :b-label="code(comparison.b)"
-              unit="kg CO₂e per m²"
-              caption="Whole-life carbon of each material class."
-            />
-            <PairedBars
-              :rows="comparison.material_mass"
-              :a-label="code(comparison.a)"
-              :b-label="code(comparison.b)"
-              unit="kg per m²"
-              caption="Mass of each material class."
-            />
-          </div>
+          <PairedBars
+            :rows="comparison.material_carbon"
+            :a="comparison.a"
+            :b="comparison.b"
+            unit="kg CO₂e per m²"
+            caption="Whole-life carbon of each material class."
+          />
+          <PairedBars
+            :rows="comparison.material_mass"
+            :a="comparison.a"
+            :b="comparison.b"
+            unit="kg per m²"
+            caption="Mass of each material class."
+          />
         </section>
       </template>
     </article>
