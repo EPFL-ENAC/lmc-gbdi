@@ -12,7 +12,7 @@
       </circle>
       <g class="cumulative__axis">
         <text v-for="t in yTicks" :key="`yl${t}`" :x="L - 8" :y="y(t) + 4" text-anchor="end">{{ percent.format(t) }}</text>
-        <text :x="x(1)" :y="H - B + 18" text-anchor="middle">1 material</text>
+        <text :x="x(1)" :y="H - B + 18" :text-anchor="n === 1 ? 'end' : 'middle'">1 material</text>
         <text v-if="n > 1" :x="x(n)" :y="H - B + 18" text-anchor="middle">{{ n }}</text>
       </g>
       <text class="cumulative__note" :x="W - R" :y="T - 8" text-anchor="end">{{ headline }}</text>
