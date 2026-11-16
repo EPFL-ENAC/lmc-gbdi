@@ -27,7 +27,7 @@ export interface Headline {
   module_d1: number; // material recovery: reuse, recycling, energy recovery
   module_d2: number; // exported utilities
   module_d: number; // D1 + D2, each with its sign, outside the total
-  module_d_present: boolean; // a D flag declared, or a D1 or D2 result
+  module_d_present: boolean; // a non-zero D1 or D2 result; a declared D flag alone does not count
 }
 
 // Module D and its two parts, as the headline and the Time section both send them.

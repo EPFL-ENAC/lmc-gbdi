@@ -76,7 +76,7 @@ export interface ComparedBuilding {
   whole_life_per_m2: number | null;
   upfront_per_m2: number | null;
   module_d1_per_m2: number | null;
-  has_module_d: boolean; // a scope flag for module D, or a D1 or D2 result
+  has_module_d: boolean; // a non-zero D1 or D2 result; a declared D flag alone does not count
   module_d_per_m2: number | null; // D1 + D2, outside the total; null without module D or without a floor area
 }
 

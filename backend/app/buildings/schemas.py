@@ -91,7 +91,7 @@ class ComparedBuilding(BaseModel):
     whole_life_per_m2: float | None
     upfront_per_m2: float | None
     module_d1_per_m2: float | None
-    # A scope flag for module D, or a D1 or D2 result.
+    # A non-zero D1 or D2 result; a declared D flag alone does not count.
     # Without it the page shows no module D.
     has_module_d: bool
     # D1 + D2, outside the whole-life total.

@@ -45,7 +45,8 @@ class Headline(BaseModel):
     module_d1: float  # material recovery: reuse, recycling, energy recovery
     module_d2: float  # exported utilities
     module_d: float  # D1 + D2, each with its sign, outside the total
-    # The workbook has module D: a D flag declared, or a D1 or D2 result.
+    # The workbook has module D: a non-zero D1 or D2 result, each tested alone. A
+    # declared D flag alone does not count.
     module_d_present: bool
 
 

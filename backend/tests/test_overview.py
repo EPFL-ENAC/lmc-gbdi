@@ -134,10 +134,10 @@ def test_a_building_without_module_d_does_not_have_it(tmp_path):
     assert o.headline.module_d == 0
 
 
-def test_a_declared_module_d_without_result_is_present(tmp_path):
+def test_a_declared_module_d_without_result_is_not_present(tmp_path):
     general = {**GENERAL, "lca_d1": "TRUE"}
     o = build_overview(read_project(write_project(tmp_path, NO_D, general=general)))
-    assert o.headline.module_d_present
+    assert not o.headline.module_d_present
 
 
 def test_a_building_without_stage_b_does_not_have_it(tmp_path):
@@ -361,6 +361,66 @@ def test_module_checks_compare_flags_with_results(tmp_path):
     assert status["B6"] == "result_not_declared"  # M2 has B6, flag says FALSE
     assert status["A2"] == "result_not_declared"  # M2 has A2, no flag at all
     assert status["A5.2"] == "ok"  # neither declared nor present
+
+
+def d_check(o):
+    (d,) = [c for c in o.module_checks if c.module == "D"]
+    return d.declared, d.has_result, d.status
+
+
+@pytest.mark.parametrize(
+    ("rows", "flags", "check"),
+    [
+        (ROWS, {}, (False, True, "result_not_declared")),  # D1 on M1, no flag
+        (ROWS, {"lca_d2": "1"}, (True, True, "ok")),  # any one flag declares D
+        (NO_D, {"lca_d": "TRUE"}, (True, False, "declared_no_result")),
+        (NO_D, {}, (False, False, "ok")),
+    ],
+)
+def test_module_d_is_one_data_check(tmp_path, rows, flags, check):
+    general = {**GENERAL, **flags}
+    o = build_overview(read_project(write_project(tmp_path, rows, general=general)))
+    assert [c.module for c in o.module_checks][-2:] == ["C4", "D"]
+    assert d_check(o) == check
+    assert d_check(o)[1] == o.headline.module_d_present  # one rule for both
+    # The two counts above the grid include the D entry.
+    statuses = [c.status for c in o.module_checks]
+    assert o.modules_declared_without_result == statuses.count("declared_no_result")
+    assert o.modules_with_undeclared_result == statuses.count("result_not_declared")
+
+
+def test_a_d1_credit_and_a_d2_burden_that_cancel_are_a_d_result(tmp_path):
+    rows = [
+        (*r[:6], {**r[6], "gwp_total_d2": "5"}) if r[0] == "M1" else r for r in ROWS
+    ]  # D1 -5 and D2 +5 on M1
+    o = build_overview(read_project(write_project(tmp_path, rows)))
+    assert o.headline.module_d == 0
+    assert o.headline.module_d_present
+    assert d_check(o)[1]
+
+
+@pytest.mark.parametrize("rows", [ROWS, NO_D])
+def test_declaring_only_module_d_changes_no_scope_stage_or_total(tmp_path, rows):
+    (tmp_path / "d").mkdir()
+    (tmp_path / "plain").mkdir()
+    flags = {"lca_d": "TRUE", "lca_d1": "TRUE", "lca_d2": "TRUE"}
+    general = {**GENERAL, **flags}
+    o = build_overview(
+        read_project(write_project(tmp_path / "d", rows, general=general))
+    )
+    plain = build_overview(read_project(write_project(tmp_path / "plain", rows)))
+    assert o.headline.scope == plain.headline.scope == "A1–C"
+    assert o.stages == plain.stages  # presence, totals and shares
+    assert o.headline == plain.headline
+    assert o.elements == plain.elements
+
+
+def test_the_scope_leaves_a_declared_module_d_out():
+    checks = [
+        ModuleCheck(module="D", declared=True, has_result=True, status="ok"),
+        ModuleCheck(module="A1", declared=False, has_result=True, status="ok"),
+    ]
+    assert scope_label(checks) == "A1–A3"
 
 
 def test_project_fields_keep_blanks_as_not_declared(overview):
