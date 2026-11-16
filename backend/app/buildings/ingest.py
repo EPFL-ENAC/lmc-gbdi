@@ -107,9 +107,11 @@ _DATABASE_LINE = (
     "database, with the same material_ref_id."
 )
 WHAT_TO_DO_BY_CODE = {
-    "E001": "Fill the field that the message names in General Information. Then "
-    "upload the workbook again with replace.",
-    "E002": "Choose one of the listed values for the field that the message names.",
+    # E001 comes from every sheet, so the text names no sheet. The E002 message gives
+    # the value and the type, not the field.
+    "E001": "Fill the field that the message names. Then upload the workbook again "
+    "with replace.",
+    "E002": "Replace the value with one of the values that the field allows.",
     "E003": "Give the field that the message names a value of the right type, for "
     "example a number without a unit.",
     "E004": "Give each bill of materials row one row in LCA Result (Wide), in the "
@@ -117,7 +119,10 @@ WHAT_TO_DO_BY_CODE = {
     "E005": "Give the bill of materials row and its results row the same material_id.",
     "E006": "Give the share a value from 0 to 100.",
     "E010": "Set the declared flag of the indicator to true, or remove its results.",
-    **dict.fromkeys(("E011", "E012", "E013", "E014", "E015"), _DATABASE_LINE),
+    "E011": "Remove the project material database line that no bill of materials "
+    "material uses, or add the material.",
+    **dict.fromkeys(("E012", "E013", "E014"), _DATABASE_LINE),
+    "E015": "Give each project material database line its own material_ref_id.",
     "E016": "Give each bill of materials row its own material_id.",
     "E017": "Fill the aggregate stage or its sub-modules, not both. Example: A1–A3, "
     "or A1, A2 and A3.",

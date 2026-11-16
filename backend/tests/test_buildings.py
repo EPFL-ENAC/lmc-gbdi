@@ -449,9 +449,9 @@ def test_each_code_says_what_to_do():
     def todo(*findings):
         return {r.code: r.what_to_do for r in reject_summary(list(findings))}
 
-    assert todo(reject("E001", "General Information"))["E001"] == (
-        "Fill the field that the message names in General Information. Then "
-        "upload the workbook again with replace."
+    assert todo(reject("E001", "Project Material Database"))["E001"] == (
+        "Fill the field that the message names. Then upload the workbook again "
+        "with replace."
     )
     e004 = (
         "Give each bill of materials row one row in LCA Result (Wide), in the "
@@ -492,3 +492,41 @@ def test_a_code_with_a_condensed_entry_takes_the_general_wording():
     ]
     (line,) = reject_summary(findings)
     assert (line.code, line.count, line.message) == ("E003", 25, WORDING["E003"])
+
+
+def test_the_what_to_do_table_holds_the_agreed_texts():
+    """Literal, so a typo in the table fails here."""
+    database_line = (
+        "Give each bill of materials material exactly one line in the project "
+        "material database, with the same material_ref_id."
+    )
+    assert WHAT_TO_DO_BY_CODE == {
+        "E001": "Fill the field that the message names. Then upload the workbook "
+        "again with replace.",
+        "E002": "Replace the value with one of the values that the field allows.",
+        "E003": "Give the field that the message names a value of the right type, "
+        "for example a number without a unit.",
+        "E004": "Give each bill of materials row one row in LCA Result (Wide), in "
+        "the same order.",
+        "E005": "Give the bill of materials row and its results row the same "
+        "material_id.",
+        "E006": "Give the share a value from 0 to 100.",
+        "E010": "Set the declared flag of the indicator to true, or remove its "
+        "results.",
+        "E011": "Remove the project material database line that no bill of "
+        "materials material uses, or add the material.",
+        "E012": database_line,
+        "E013": database_line,
+        "E014": database_line,
+        "E015": "Give each project material database line its own material_ref_id.",
+        "E016": "Give each bill of materials row its own material_id.",
+        "E017": "Fill the aggregate stage or its sub-modules, not both. Example: "
+        "A1–A3, or A1, A2 and A3.",
+        "E018": "Take module D out of the declared total: the total covers the "
+        "modules A to C only.",
+        "E019": "Correct the declared total, or correct the module values that it "
+        "adds.",
+        "E020": "Declare the reference study period in General Information. The "
+        "workbook has results after stage A, and the per-year figures need the "
+        "period.",
+    }
