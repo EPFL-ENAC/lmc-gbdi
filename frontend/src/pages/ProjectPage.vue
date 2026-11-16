@@ -318,8 +318,8 @@ const dataTypeBars = computed<Bar[]>(() =>
   grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
   gap: tokens.$border-width;
   margin: 0;
-  background: tokens.$color-border-control;
-  border: tokens.$border-width solid tokens.$color-border-control;
+  background: tokens.$color-border;
+  border: tokens.$border-width solid tokens.$color-border;
 }
 
 .info-cell {
