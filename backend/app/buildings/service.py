@@ -12,7 +12,16 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.buildings import repo
-from app.buildings.ingest import EXAMPLES, blocked_parts, parse, store
+from app.buildings.ingest import (
+    EXAMPLES,
+    TOTAL_CHECKS,
+    TOTAL_NOTE,
+    WHAT_TO_DO,
+    WORDING,
+    blocked_parts,
+    parse,
+    store,
+)
 from app.buildings.models import Upload
 from app.buildings.schemas import (
     BuildingSummary,
@@ -24,6 +33,7 @@ from app.buildings.schemas import (
     Finding,
     FindingGroup,
     MaterialMass,
+    RejectSummary,
 )
 from app.config import get_settings
 from app.db import engine
@@ -82,6 +92,47 @@ def finding_groups(findings: list[dict]) -> list[FindingGroup]:
     return sorted(
         groups.values(), key=lambda g: (SEVERITY_ORDER.get(g.severity, 2), -g.count)
     )
+
+
+def reject_summary(findings: list[dict]) -> list[RejectSummary]:
+    """The rejects by code, across sheets: the count, one message, what to do.
+
+    The condensed entries ("N more ...", count above 1) add to the count only, and
+    their messages are not stored. So a code with a condensed entry, or with messages
+    that differ, takes the wording of openbdf 0.1.4; a code that has none (a code of
+    an older openbdf) shows its first message as an example. The note on the declared
+    total goes only to a draft whose carbon is shown.
+    """
+    counts: dict[str, int] = {}
+    messages: dict[str, list[str]] = {}
+    condensed: set[str] = set()
+    for f in findings:
+        if f["severity"] != "Reject":
+            continue
+        code, count = f["code"], f.get("count", 1)
+        counts[code] = counts.get(code, 0) + count
+        if count > 1:
+            condensed.add(code)
+        elif f["message"] not in messages.setdefault(code, []):
+            messages[code].append(f["message"])
+    stands = "carbon" not in blocked_parts(findings)
+
+    def message(code: str) -> str:
+        seen = messages.get(code, [])
+        if len(seen) == 1 and code not in condensed:
+            return seen[0]
+        return WORDING.get(code) or (f"For example: {seen[0]}" if seen else code)
+
+    return [
+        RejectSummary(
+            code=code,
+            count=counts[code],
+            message=message(code),
+            what_to_do=WHAT_TO_DO
+            + (TOTAL_NOTE if stands and code in TOTAL_CHECKS else ""),
+        )
+        for code in sorted(counts, key=lambda c: (-counts[c], c))
+    ]
 
 
 async def overview(
@@ -153,6 +204,7 @@ def summary(upload: Upload, o: Overview) -> BuildingSummary:
         lcia_methodology=o.project.lcia_methodology,
         draft=upload.draft,
         rejects=rejects(upload) if upload.draft else [],
+        reject_summary=reject_summary(upload.findings) if upload.draft else [],
     )
 
 
@@ -179,6 +231,7 @@ def draft_summary(
         draft=True,
         blocked=blocked(upload),
         rejects=rejects(upload),
+        reject_summary=reject_summary(upload.findings),
     )
 
 

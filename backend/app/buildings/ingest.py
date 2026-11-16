@@ -73,6 +73,37 @@ PROJECT_SHEETS = ("General Information", "Project Material Database")
 # which the dashboard never reads, so they block nothing.
 TOTAL_CHECKS = frozenset({"E018", "E019"})
 
+# What a reject code means when its messages differ (they hold numbers or names): the
+# class docstrings of openbdf/lib/validation/errors.py at tag 0.1.4, the pinned one.
+# Copied, not imported: stored rows keep the code they were written with, and another
+# openbdf numbers its codes otherwise ("E19" is a different check there).
+WORDING = {
+    "E001": "A required field carries no value",
+    "E002": "A cell holds a value that is not a member of the field enum",
+    "E003": "A cell cannot be read as the type of its field",
+    "E005": "Two rows at the same position carry different material_id values",
+    "E006": "A share is outside the 0 to 100 range",
+    "E009": "One sheet declares the same field code twice",
+    "E010": "An indicator carries results while lca_<indicator>_declared is false",
+    "E011": "A project material database line has no bill of materials material",
+    "E012": "A bill of materials material has no project material database line",
+    "E013": "A bill of materials material has more than one project material "
+    "database line",
+    "E014": "Bill of materials rows carry a material_ref_id that differs from their "
+    "database line",
+    "E015": "One material_ref_id names more than one project material database line",
+    "E016": "Two bill of materials rows share a material_id, so their tall results "
+    "collide",
+    "E017": "An aggregate stage and its sub-modules carry values on one material",
+    "E018": "Module D must not be added to the whole-life total",
+    "E019": "A declared indicator total differs from the sum over the modules A to C "
+    "by 5 per cent or more",
+}
+WHAT_TO_DO = "Correct the workbook and upload it again with replace."
+TOTAL_NOTE = (
+    " The dashboard does not read the declared total, so the figures shown stand."
+)
+
 
 def blocked_parts(findings: list[dict]) -> list[str]:
     """The parts of a stored draft that cannot be shown: "carbon", "materials".

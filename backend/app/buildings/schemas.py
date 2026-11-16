@@ -31,6 +31,15 @@ class FindingGroup(BaseModel):
     examples: list[Finding]  # the first ones, then one entry for the rest
 
 
+class RejectSummary(BaseModel):
+    """Every reject of one code, in one line: what the draft badge lists."""
+
+    code: str
+    count: int  # every reject of the code, the condensed ones included
+    message: str  # the one message, or the validator's wording when they differ
+    what_to_do: str
+
+
 class BuildingSummary(BaseModel):
     id: int
     file_name: str
@@ -51,6 +60,7 @@ class BuildingSummary(BaseModel):
     draft: bool = False  # stored despite reject findings
     blocked: list[str] = []  # the parts its rejects block: "carbon", "materials"
     rejects: list[str] = []  # what the rejects say, for the list and the page
+    reject_summary: list[RejectSummary] = []  # one per code, most frequent first
 
 
 class MaterialMass(BaseModel):

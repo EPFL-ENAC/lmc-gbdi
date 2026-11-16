@@ -14,10 +14,23 @@ from openbdf.model.enums.element_classifications import (
 from openbdf.model.enums.materials import OpenBDFMaterialClassification as Material
 from openbdf.model.tables import ProjectRecord
 
-from app.buildings.ingest import Finding, RejectedWorkbook, blocked_parts
+from app.buildings.ingest import (
+    TOTAL_NOTE,
+    WHAT_TO_DO,
+    WORDING,
+    Finding,
+    RejectedWorkbook,
+    blocked_parts,
+)
 from app.buildings.models import Upload
 from app.buildings.repo import as_text, general_of, material_row
-from app.buildings.service import comparability, compared, draft_summary, summary
+from app.buildings.service import (
+    comparability,
+    compared,
+    draft_summary,
+    reject_summary,
+    summary,
+)
 from app.overview.repo import GWP_FIELDS, read_project
 from app.overview.service import build_overview, declared
 from tests.test_overview import GENERAL, ROWS, write_project
@@ -244,6 +257,58 @@ def test_a_carbon_blocked_draft_lists_without_figures():
     )
 
 
+def stored(code, message, count=1, severity="Reject"):
+    return {
+        "code": code,
+        "severity": severity,
+        "sheet": "LCA Result (Wide)",
+        "row": None,
+        "message": message,
+        "count": count,
+    }
+
+
+def test_a_draft_sums_up_its_rejects_one_line_per_code():
+    module_d = "Module D must not be added to the whole-life total"
+    findings = [
+        *(stored("E018", module_d) for _ in range(20)),
+        stored("E018", "350 more E018 findings on this sheet", 350),
+        *(
+            stored("E019", f"gwp_total_total is {x}, the modules sum to 52.8")
+            for x in "123"
+        ),
+        stored("E05", "Row 3: material_id a in the inventory, b in the results"),
+        stored("E05", "Row 4: material_id c in the inventory, d in the results"),
+        stored("E001", "Field project_country is required and was not provided"),
+        stored("W002", "Row 5 has no mass", severity="Warning"),
+    ]
+    # E05 on the results sheet blocks the carbon, so no line says its figures stand.
+    assert [tuple(r.model_dump().values()) for r in reject_summary(findings)] == [
+        ("E018", 370, module_d, WHAT_TO_DO),
+        ("E019", 3, WORDING["E019"], WHAT_TO_DO),
+        (
+            "E05",
+            2,
+            "For example: Row 3: material_id a in the inventory, b in the results",
+            WHAT_TO_DO,
+        ),
+        (
+            "E001",
+            1,
+            "Field project_country is required and was not provided",
+            WHAT_TO_DO,
+        ),
+    ]
+    upload = Upload(
+        project_record_id=4,
+        file_name="D.xlsx",
+        uploaded_at=datetime.now(UTC),
+        findings=findings,
+        draft=True,
+    )
+    assert draft_summary(upload, {}).reject_summary == reject_summary(findings)
+
+
 def test_rejected_workbook_crosses_processes():
     # The parser process raises it; the API reads its findings for the 422.
     finding = Finding("E05", "Reject", "LCA Results", 3, "misaligned")
@@ -362,3 +427,27 @@ def test_a_replace_is_kept_when_the_client_leaves(client, monkeypatch, tmp_path)
     response = upload(client, 121)
     assert (response.status_code, response.json()["id"]) == (201, 200)
     assert calls == [("ingest", True, 121), ("forget", 121), ("remember",)]
+
+
+def test_the_total_checks_say_the_figures_stand_only_when_carbon_is_shown():
+    module_d = "Module D must not be added to the whole-life total"
+    findings = [
+        stored("E018", module_d),
+        stored("E019", "gwp_total_total is 1, the modules sum to 52.8"),
+    ]
+    stands = WHAT_TO_DO + TOTAL_NOTE
+    assert [r.what_to_do for r in reject_summary(findings)] == [stands, stands]
+    # One more reject on the results sheet blocks the carbon: the note goes.
+    blocked = [*findings, stored("E05", "Row 3: material_id a, b in the results")]
+    assert {r.what_to_do for r in reject_summary(blocked)} == {WHAT_TO_DO}
+
+
+def test_a_code_with_a_condensed_entry_takes_the_general_wording():
+    """The first 20 messages name field a; the 5 condensed ones are not stored and
+    may name another field, so one stored message cannot speak for all 25."""
+    findings = [
+        *(stored("E003", "Field a expects float") for _ in range(20)),
+        stored("E003", "5 more E003 findings on this sheet", 5),
+    ]
+    (line,) = reject_summary(findings)
+    assert (line.code, line.count, line.message) == ("E003", 25, WORDING["E003"])

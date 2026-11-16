@@ -44,6 +44,7 @@
               </p>
               <p class="duel__name">
                 {{ comparison[side].project_name ?? 'Unnamed project' }}, {{ comparison[side].country ?? 'country not declared' }}
+                <DraftBadge :building-id="comparison[side].id" />
               </p>
               <p class="duel__figure">{{ figure(comparison[side].whole_life_per_m2, kg) }}</p>
               <p>kg CO₂e per m², {{ comparison[side].scope }}.</p>
@@ -121,6 +122,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { buildingPath } from '@/buildingLayouts';
 import { code, fetchBuildings, fetchComparison, noCarbon, type BuildingSummary, type ComparedBuilding, type Comparison } from '@/api/buildings';
+import DraftBadge from '@/components/DraftBadge.vue';
 import MethodNotice from '@/components/MethodNotice.vue';
 import PairedBars from '@/components/PairedBars.vue';
 import { figure, kg, percent } from '@/format';
