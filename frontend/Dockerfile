@@ -11,7 +11,7 @@ COPY . .
 RUN npm run build
 
 # Serve: unprivileged nginx (uid 101, port 8080).
-FROM nginxinc/nginx-unprivileged:stable-alpine-slim
+FROM nginx/nginx-unprivileged:stable-alpine-slim
 
 # The alpine base lags its package repo; take every fixed package now
 # (same as co2-calculator). apk needs root.
