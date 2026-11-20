@@ -41,7 +41,10 @@
       <header id="project-info" class="sheet__title">
         <div>
           <h1 class="sheet__name">{{ overview.project.project_name ?? 'Unnamed project' }}</h1>
-          <p class="sheet__subtitle">Building carbon overview<DraftBadge :building-id="Number($route.params.id)" /></p>
+          <p class="sheet__subtitle">Building carbon overview<DraftBadge :building-id="Number($route.params.id)" /><ReferenceBadge
+              :reference="overview.project.project_reference"
+              :doi="overview.project.project_doi"
+          /></p>
         </div>
         <!-- org#106: one cell per field. The five method fields decide whether two
              projects compare, so they are tinted and tagged. -->
@@ -214,6 +217,7 @@ import type { ElementTotal, Naming } from '@/api/overview';
 import BarsWithTable from '@/components/BarsWithTable.vue';
 import CumulativeShare from '@/components/CumulativeShare.vue';
 import DraftBadge from '@/components/DraftBadge.vue';
+import ReferenceBadge from '@/components/ReferenceBadge.vue';
 import ElementMaterials from '@/components/ElementMaterials.vue';
 import IntensityPlot from '@/components/IntensityPlot.vue';
 import LifeCycleStrip from '@/components/LifeCycleStrip.vue';

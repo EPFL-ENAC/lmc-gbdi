@@ -438,6 +438,8 @@ def project_info(general: dict[str, str]) -> ProjectInfo:
     return ProjectInfo(
         project_id=text(general, "project_id"),
         project_name=text(general, "project_name"),
+        project_reference=text(general, "project_reference"),
+        project_doi=text(general, "project_doi"),
         country=text(general, "project_country"),
         gross_floor_area_m2=number("building_gross_floor_area"),
         useful_floor_area_m2=number("building_useful_floor_area"),

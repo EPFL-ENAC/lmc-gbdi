@@ -5,6 +5,8 @@ import { getJson } from './client';
 export interface ProjectInfo {
   project_id: string | null;
   project_name: string | null;
+  project_reference: string | null; // the source publication, to cite (org#115)
+  project_doi: string | null;
   country: string | null;
   gross_floor_area_m2: number | null;
   useful_floor_area_m2: number | null;
