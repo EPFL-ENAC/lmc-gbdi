@@ -47,6 +47,8 @@ export interface BuildingSummary {
   scope: string | null; // of whole_life; null with it
   lcia_methodology: string | null; // as General Information declares it
   draft: boolean; // stored despite reject findings
+  project_reference: string | null; // the source publication, to cite (org#115)
+  project_doi: string | null;
   blocked: ('carbon' | 'materials')[]; // the parts its rejects block
   rejects: string[];
   reject_summary: RejectSummary[];

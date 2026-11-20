@@ -123,6 +123,7 @@
                 <span>
                   {{ b.project_name ?? 'Unnamed project' }}
                   <q-badge v-if="b.draft" outline color="warning" label="Draft" :title="b.rejects.join(' ')" />
+                  <ReferenceBadge :reference="b.project_reference" :doi="b.project_doi" @click.stop />
                 </span>
                 <span class="u-text-muted">{{ b.country ?? 'Country not declared' }}</span>
                 <span v-if="b.gbdi_id" class="u-text-muted">{{ b.gbdi_id }}</span>
@@ -179,6 +180,7 @@ import { useRouter } from 'vue-router';
 import { ApiError } from '@/api/client';
 import { code, fetchBuildings, noCarbon, uploadBuilding, type BuildingSummary, type Rejection } from '@/api/buildings';
 import Term from '@/components/atoms/Term.vue';
+import ReferenceBadge from '@/components/ReferenceBadge.vue';
 import { STAGE_COLORS } from '@/dataviz';
 import { figure, kg } from '@/format';
 
