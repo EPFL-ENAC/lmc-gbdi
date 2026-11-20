@@ -370,6 +370,8 @@ def compared(upload: Upload, o: Overview) -> ComparedBuilding:
         module_d1_per_m2=per_m2(o.headline.module_d1, o),
         has_module_d=has_d,
         module_d_per_m2=per_m2(o.headline.module_d, o) if has_d else None,
+        project_reference=o.project.project_reference,
+        project_doi=o.project.project_doi,
     )
 
 

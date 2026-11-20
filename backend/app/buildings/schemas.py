@@ -110,6 +110,8 @@ class ComparedBuilding(BaseModel):
     # D1 + D2, outside the whole-life total.
     # None without module D or without a floor area.
     module_d_per_m2: float | None
+    project_reference: str | None = None  # the source publication (org#115)
+    project_doi: str | None = None
 
 
 class ComparedRow(BaseModel):

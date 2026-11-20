@@ -26,8 +26,10 @@ from app.buildings.ingest import (
 from app.buildings.models import Upload
 from app.buildings.repo import as_text, general_of, material_row
 from app.buildings.service import (
+    UPFRONT,
     comparability,
     compared,
+    compared_on,
     draft_summary,
     reject_summary,
     summary,
@@ -145,6 +147,23 @@ def test_a_compared_building_carries_its_declared_boundary_and_method(tmp_path):
         "Cradle to Grave + Module D",
         "EN 15804:2012+A2:2019",
     )
+
+
+def test_a_compared_building_carries_its_source_publication(tmp_path):
+    """org#115: a reader comparing two buildings can cite both sources."""
+    general = {
+        **GENERAL,
+        "project_reference": "Doe et al. 2024",
+        "project_doi": "10.1/x",
+    }
+    o = build_overview(read_project(write_project(tmp_path, general=general)))
+    upload = Upload(
+        project_record_id=1, file_name="T.xlsx", uploaded_at=datetime.now(UTC)
+    )
+    c = compared(upload, o)
+    assert (c.project_reference, c.project_doi) == ("Doe et al. 2024", "10.1/x")
+    s = compared_on(upload, o, UPFRONT)
+    assert (s.project_reference, s.project_doi) == ("Doe et al. 2024", "10.1/x")
 
 
 def with_module_d(d1: str | None, d2: str | None):

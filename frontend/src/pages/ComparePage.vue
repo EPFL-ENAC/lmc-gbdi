@@ -90,6 +90,7 @@
               <p class="duel__name">
                 {{ comparison[side].project_name ?? 'Unnamed project' }}, {{ comparison[side].country ?? 'country not declared' }}
                 <DraftBadge :building-id="comparison[side].id" />
+                <ReferenceBadge :reference="comparison[side].project_reference" :doi="comparison[side].project_doi" />
               </p>
               <p class="duel__figure">{{ figure(comparison[side].whole_life_per_m2, kg) }}</p>
               <p>
@@ -193,6 +194,7 @@ import {
   type Comparison,
 } from '@/api/buildings';
 import DraftBadge from '@/components/DraftBadge.vue';
+import ReferenceBadge from '@/components/ReferenceBadge.vue';
 import MethodNotice from '@/components/MethodNotice.vue';
 import GroupedBars from '@/components/GroupedBars.vue';
 import PairedBars from '@/components/PairedBars.vue';
