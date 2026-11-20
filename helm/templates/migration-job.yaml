@@ -1,8 +1,8 @@
 {{- if .Values.backend.migrations.enabled }}
-# Migrations run once per release, before the new backend rolls out (as
-# co2-calculator does): post-install, so the in-chart postgres exists first;
-# pre-upgrade, so the schema is ready before the new image serves. Argo CD
-# maps these to PostSync and PreSync.
+# Migrations run once per release, after postgres and before the new backend.
+# Plain helm: post-install,pre-upgrade hooks. Argo CD ignores all helm hooks once
+# an argocd hook is set, so it runs this as a Sync hook in wave 1: after postgres
+# and the db secret (wave 0), before the backend (wave 2).
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -14,6 +14,9 @@ metadata:
     "helm.sh/hook": post-install,pre-upgrade
     "helm.sh/hook-weight": "-1"
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   backoffLimit: 1
   activeDeadlineSeconds: 600
