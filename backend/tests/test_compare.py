@@ -107,6 +107,8 @@ PIN = {
         "module_d1_per_m2": -0.075,
         "has_module_d": True,
         "module_d_per_m2": -0.075,
+        "project_reference": None,
+        "project_doi": None,
     },
     "b": {
         "id": 2,
@@ -123,6 +125,8 @@ PIN = {
         "module_d1_per_m2": -0.15,
         "has_module_d": True,
         "module_d_per_m2": -0.15,
+        "project_reference": None,
+        "project_doi": None,
     },
     "comparability": "same_method",
     "ratio": 1.9322033898305084,
