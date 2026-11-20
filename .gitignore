@@ -172,3 +172,4 @@ opencode.json
 
 # Playwright MCP screenshots and logs from agent browser checks
 .playwright-mcp/
+.DS_Store
