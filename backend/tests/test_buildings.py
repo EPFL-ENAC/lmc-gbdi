@@ -96,6 +96,39 @@ def test_summary_and_compared_build_from_an_overview(tmp_path):
     assert compared(upload, o).gross_floor_area_m2 == 200
 
 
+def test_a_summary_carries_the_source_publication(tmp_path):
+    """org#115: the list and the page cite the publication the dataset comes from."""
+    general = {
+        **GENERAL,
+        "project_reference": "Doe et al. 2024",
+        "project_doi": "10.1/x",
+    }
+    o = build_overview(read_project(write_project(tmp_path, general=general)))
+    upload = Upload(
+        project_record_id=1,
+        file_name="T.xlsx",
+        uploaded_at=datetime.now(UTC),
+        findings=[],
+    )
+    s = summary(upload, o)
+    assert (s.project_reference, s.project_doi) == ("Doe et al. 2024", "10.1/x")
+    d = draft_summary(upload, general)
+    assert (d.project_reference, d.project_doi) == ("Doe et al. 2024", "10.1/x")
+
+
+def test_a_summary_without_a_source_publication_has_none(tmp_path):
+    o = build_overview(read_project(write_project(tmp_path)))
+    upload = Upload(
+        project_record_id=1,
+        file_name="T.xlsx",
+        uploaded_at=datetime.now(UTC),
+        findings=[],
+    )
+    s = summary(upload, o)
+    assert (s.project_reference, s.project_doi) == (None, None)
+    assert (o.project.project_reference, o.project.project_doi) == (None, None)
+
+
 def test_a_compared_building_carries_its_declared_boundary_and_method(tmp_path):
     """Side by side, each column says what it covers."""
     general = {

@@ -19,6 +19,8 @@ Naming = Literal["openbdf", "custom"]
 class ProjectInfo(BaseModel):
     project_id: str | None
     project_name: str | None
+    project_reference: str | None  # the source publication (org#115)
+    project_doi: str | None
     country: str | None
     gross_floor_area_m2: float | None
     useful_floor_area_m2: float | None

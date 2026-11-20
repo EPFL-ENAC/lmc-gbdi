@@ -47,6 +47,8 @@ class BuildingSummary(BaseModel):
     gbdi_id: str | None = None  # the generated project id (org#108)
     findings: int  # openbdf findings kept with the upload
     project_name: str | None
+    project_reference: str | None = None  # the source publication (org#115)
+    project_doi: str | None = None
     country: str | None
     gross_floor_area_m2: float | None
     useful_floor_area_m2: float | None
